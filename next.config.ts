@@ -26,6 +26,8 @@ const withPWA = withPWAInit({
 const nextConfig: NextConfig = {
   // Avoid picking a parent directory lockfile when multiple exist on the machine.
   outputFileTracingRoot: rootDir,
+  // Allow dev over a local DNS name (see README: /etc/hosts → karriqi.test).
+  allowedDevOrigins: ["karriqi.test"],
 };
 
 export default withPWA(nextConfig);

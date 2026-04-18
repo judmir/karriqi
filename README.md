@@ -20,7 +20,13 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Protected routes redirect to `/auth/sign-in` when there is no session.
+**Dev URL:** [http://localhost:3010](http://localhost:3010) (`pnpm dev` binds to port **3010**).
+
+**Optional — `karriqi.test`:** add `127.0.0.1 karriqi.test` to `/etc/hosts`, then use [http://karriqi.test:3010](http://karriqi.test:3010). Add that origin under **Supabase → Authentication → URL configuration** if you use redirects/OAuth.
+
+**Secrets:** copy `.env.example` to `.env.local` and put real keys only in `.env.local` (never commit `.env.local`). The example file must stay placeholder-only.
+
+Protected routes redirect to `/auth/sign-in` when there is no session.
 
 ## Scripts
 
