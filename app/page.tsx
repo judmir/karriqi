@@ -33,31 +33,20 @@ export default async function HomePage() {
                 Open app
               </Link>
             ) : (
-              <>
-                <Link
-                  href={ROUTES.signIn}
-                  className={cn(
-                    buttonVariants({ size: "lg" }),
-                    "min-h-11 w-full sm:w-auto",
-                  )}
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href={ROUTES.signUp}
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "lg" }),
-                    "min-h-11 w-full sm:w-auto",
-                  )}
-                >
-                  Create account
-                </Link>
-              </>
+              <Link
+                href={ROUTES.signIn}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "min-h-11 w-full sm:w-auto",
+                )}
+              >
+                Sign in
+              </Link>
             )}
           </div>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            Installable PWA · Supabase-ready · Built with Next.js, Tailwind, and
-            shadcn/ui.
+            Household accounts are added in Supabase; use Sign in with your
+            email. · Installable PWA · Next.js, Tailwind, shadcn/ui.
           </p>
         </div>
       </main>

@@ -1,31 +1,8 @@
-import { SignUpForm } from "@/components/auth/sign-up-form";
-import { SupabaseRequired } from "@/components/auth/supabase-required";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { isSupabaseConfigured } from "@/lib/env";
+import { redirect } from "next/navigation";
 
+import { ROUTES } from "@/config/routes";
+
+/** Self-service sign-up is disabled; accounts are created in the Supabase dashboard. */
 export default function SignUpPage() {
-  if (!isSupabaseConfigured()) {
-    return <SupabaseRequired />;
-  }
-
-  return (
-    <Card className="border-border/80 shadow-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-xl">Create account</CardTitle>
-        <CardDescription>
-          Sign up is wired to Supabase Auth. Confirm email if your project
-          requires it.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <SignUpForm />
-      </CardContent>
-    </Card>
-  );
+  redirect(ROUTES.signIn);
 }

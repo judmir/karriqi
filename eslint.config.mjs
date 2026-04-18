@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // next-pwa / Workbox emits minified bundles into public/
+    "public/sw.js",
+    "public/workbox-*.js",
   ]),
 ]);
 

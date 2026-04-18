@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -94,15 +93,6 @@ export function SignInForm({ className }: { className?: string }) {
       >
         {form.formState.isSubmitting ? "Signing in…" : "Sign in"}
       </Button>
-      <p className="text-muted-foreground text-center text-sm">
-        No account?{" "}
-        <Link
-          href={ROUTES.signUp}
-          className="text-primary font-medium underline-offset-4 hover:underline"
-        >
-          Sign up
-        </Link>
-      </p>
     </form>
   );
 }

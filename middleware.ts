@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (pathname === ROUTES.signIn || pathname === ROUTES.signUp)) {
+  if (user && pathname === ROUTES.signIn) {
     const url = request.nextUrl.clone();
     url.pathname = safeNextPath(request.nextUrl.searchParams.get("next"));
     url.search = "";

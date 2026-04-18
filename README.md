@@ -46,7 +46,7 @@ Validated lightly in [`lib/env.ts`](lib/env.ts). Without them, protected routes 
 ## Architecture (short)
 
 - **`app/(main)/`** — Authenticated shell (`AppShell`: header, desktop sidebar, mobile bottom nav). Routes: `/dashboard`, `/shopping`, `/todo`, `/calendar`, `/settings`.
-- **`app/auth/`** — Sign-in, sign-up, OAuth/magic-link **`/auth/callback`** handler.
+- **`app/auth/`** — Sign-in only; **`/auth/sign-up`** redirects to sign-in. OAuth/magic-link **`/auth/callback`** handler.
 - **`middleware.ts`** — Refreshes Supabase session; guards paths listed in [`config/routes.ts`](config/routes.ts).
 - **`config/navigation.ts`** — Single nav config for mobile + desktop.
 - **`components/patterns/`** — Page header, section, list placeholder, placeholder module page.
@@ -79,7 +79,7 @@ flowchart LR
 - Mobile-first layout: bottom navigation + desktop sidebar
 - Placeholder pages for all routes in the spec
 - Supabase client/server helpers, middleware session refresh, protected routes
-- Minimal sign-in / sign-up forms (`react-hook-form` + Zod)
+- Minimal sign-in form (`react-hook-form` + Zod); add users in Supabase (no self-service sign-up)
 - PWA manifest + installability baseline
 - Notification **contracts** and README map (no realtime, no push)
 

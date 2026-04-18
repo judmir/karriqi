@@ -21,7 +21,8 @@ export default function SignInPage() {
       <CardHeader className="space-y-1">
         <CardTitle className="text-xl">Sign in</CardTitle>
         <CardDescription>
-          Use your Supabase Auth credentials. This UI is intentionally minimal.
+          Sign in with the email and password for your account (created in the
+          Supabase dashboard). There is no public registration.
         </CardDescription>
       </CardHeader>
       <CardContent>

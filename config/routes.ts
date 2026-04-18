@@ -6,7 +6,6 @@ export const ROUTES = {
   calendar: "/calendar",
   settings: "/settings",
   signIn: "/auth/sign-in",
-  signUp: "/auth/sign-up",
   authCallback: "/auth/callback",
 } as const;
 
