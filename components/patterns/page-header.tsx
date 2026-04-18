@@ -4,7 +4,7 @@ export function PageHeader({
   eyebrow,
 }: {
   title: string;
-  description: string;
+  description?: string;
   eyebrow?: string;
 }) {
   return (
@@ -15,9 +15,11 @@ export function PageHeader({
         </p>
       ) : null}
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground max-w-prose text-sm leading-relaxed">
-        {description}
-      </p>
+      {description ? (
+        <p className="text-muted-foreground max-w-prose text-sm leading-relaxed">
+          {description}
+        </p>
+      ) : null}
     </header>
   );
 }
