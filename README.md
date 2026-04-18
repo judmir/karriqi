@@ -2,6 +2,8 @@
 
 Production-minded **scaffold only**: app shell, routing, Supabase Auth wiring, PWA baseline, and a small design system. No shopping, todos, calendar, meals, chat, or real notifications.
 
+**Deeper reference:** see the [`doc/`](./doc/README.md) folder (architecture, auth, dev setup, PWA, notifications, roadmap).
+
 ## Stack
 
 - **Next.js** (App Router) · **TypeScript** · **pnpm**
@@ -30,22 +32,22 @@ Protected routes redirect to `/auth/sign-in` when there is no session.
 
 ## Scripts
 
-| Command            | Purpose                |
-| ------------------ | ---------------------- |
-| `pnpm dev`         | Development server     |
-| `pnpm build`       | Production build       |
-| `pnpm start`       | Run production server  |
-| `pnpm lint`        | ESLint                 |
-| `pnpm typecheck`   | TypeScript (`noEmit`)  |
-| `pnpm format`      | Prettier write         |
-| `pnpm format:check`| Prettier check         |
+| Command             | Purpose               |
+| ------------------- | --------------------- |
+| `pnpm dev`          | Development server    |
+| `pnpm build`        | Production build      |
+| `pnpm start`        | Run production server |
+| `pnpm lint`         | ESLint                |
+| `pnpm typecheck`    | TypeScript (`noEmit`) |
+| `pnpm format`       | Prettier write        |
+| `pnpm format:check` | Prettier check        |
 
 ## Environment variables
 
-| Variable                          | Required for auth | Notes                                      |
-| --------------------------------- | ----------------- | ------------------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`        | Yes               | Project URL                                |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | Yes               | Public anon key (never use service role here) |
+| Variable                        | Required for auth | Notes                                         |
+| ------------------------------- | ----------------- | --------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes               | Project URL                                   |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes               | Public anon key (never use service role here) |
 
 Validated lightly in [`lib/env.ts`](lib/env.ts). Without them, protected routes still redirect to sign-in, which shows a “Configure Supabase” card.
 
@@ -102,7 +104,7 @@ flowchart LR
 1. Add Supabase tables + RLS for lists/items.
 2. Generate types: `supabase gen types typescript` into `types/`.
 3. Implement `lib/repositories/shopping-repository.ts` and a `modules/shopping` entry component.
-4. Swap [`app/(main)/shopping/page.tsx`](app/(main)/shopping/page.tsx) to render the real module root — keep `AppShell` and `config/navigation` unchanged.
+4. Swap [`app/(main)/shopping/page.tsx`](<app/(main)/shopping/page.tsx>) to render the real module root — keep `AppShell` and `config/navigation` unchanged.
 
 ## Extra decisions
 
