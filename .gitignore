@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# PWA service worker (generated on `pnpm build`)
+/public/sw.js
+/public/workbox-*.js
 
 # vercel
 .vercel
