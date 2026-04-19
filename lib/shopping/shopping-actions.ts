@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
+import { notifyShoppingListSaved } from "@/lib/notifications/notification-events";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { createClient } from "@/lib/supabase/server";
 import type { ShoppingListItem } from "@/types/shopping";
@@ -159,6 +160,7 @@ export async function saveShoppingListItems(
   }
 
   if (items.length === 0) {
+    void notifyShoppingListSaved(user.id);
     revalidatePath(ROUTES.shopping);
     return { ok: true };
   }
@@ -181,6 +183,8 @@ export async function saveShoppingListItems(
   if (insError) {
     return { ok: false, message: insError.message };
   }
+
+  void notifyShoppingListSaved(user.id);
 
   revalidatePath(ROUTES.shopping);
   return { ok: true };

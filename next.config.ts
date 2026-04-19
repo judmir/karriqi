@@ -6,9 +6,15 @@ import withPWAInit from "@ducanh2912/next-pwa";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
+/** Default: PWA (service worker) is off in `next dev` for faster reloads. Set `ENABLE_PWA_IN_DEV=true` in `.env.local` to test Web Push locally. */
+const disablePwa =
+  process.env.NODE_ENV === "development" &&
+  process.env.ENABLE_PWA_IN_DEV !== "true" &&
+  process.env.ENABLE_PWA_IN_DEV !== "1";
+
 const withPWA = withPWAInit({
   dest: "public",
-  disable: process.env.NODE_ENV === "development",
+  disable: disablePwa,
   register: true,
   scope: "/",
   /**

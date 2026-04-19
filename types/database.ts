@@ -143,6 +143,7 @@ export type Database = {
           assigned_user_id: string | null;
           created_at: string;
           updated_at: string;
+          last_stale_notification_at: string | null;
         };
         Insert: {
           id?: string;
@@ -158,6 +159,7 @@ export type Database = {
           assigned_user_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          last_stale_notification_at?: string | null;
         };
         Update: {
           id?: string;
@@ -173,6 +175,43 @@ export type Database = {
           assigned_user_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          last_stale_notification_at?: string | null;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          body: string | null;
+          href: string | null;
+          metadata: Json | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          body?: string | null;
+          href?: string | null;
+          metadata?: Json | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          kind?: string;
+          title?: string;
+          body?: string | null;
+          href?: string | null;
+          metadata?: Json | null;
+          read_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
