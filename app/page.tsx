@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import { buttonVariants } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { getSessionUser } from "@/lib/supabase/server";
@@ -16,7 +17,8 @@ export default async function HomePage() {
             <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               Phase 1 scaffold
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
+              <KarriqiLogoMark className="size-10 text-primary md:size-12" />
               Karriqi
             </h1>
             <p className="text-muted-foreground max-w-prose text-base leading-relaxed">

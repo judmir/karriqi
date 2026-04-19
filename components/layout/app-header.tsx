@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
@@ -18,9 +19,10 @@ export function AppHeader({ userEmail }: { userEmail: string }) {
         <div className="min-w-0">
           <Link
             href={ROUTES.dashboard}
-            className="text-muted-foreground hover:text-foreground text-xs font-medium tracking-wide uppercase transition-colors"
+            className="text-muted-foreground hover:text-foreground inline-flex min-w-0 items-center gap-2 text-xs font-medium tracking-wide uppercase transition-colors"
           >
-            Karriqi
+            <KarriqiLogoMark className="size-7 text-primary" />
+            <span className="truncate">Karriqi</span>
           </Link>
         </div>
         <UserMenu email={userEmail} />
