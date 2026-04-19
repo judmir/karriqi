@@ -12,17 +12,16 @@ import { Label } from "@/components/ui/label";
 import { todoTaskPath } from "@/config/routes";
 import { createTodoItem, reorderTodoList, updateTodoItem } from "@/lib/todo/todo-actions";
 import { cn } from "@/lib/utils";
-import type { TodoItem, TodoStatus } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
 
 export function TodoBoardClient({
   initialTodos,
   persistence,
-  ownerEmail,
+  assignableUsers,
 }: {
   initialTodos: TodoItem[];
   persistence: boolean;
-  /** Shown on cards (avatar initials). */
-  ownerEmail: string;
+  assignableUsers: TodoAssignableMember[];
 }) {
   const router = useRouter();
   const [draftTitle, setDraftTitle] = useState("");
@@ -79,6 +78,21 @@ export function TodoBoardClient({
       return;
     }
     const r = await updateTodoItem({ id: item.id, status });
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  async function onAssign(item: TodoItem, userId: string | null) {
+    if (!persistence) {
+      toast.error(
+        "Tasks are not syncing. Configure Supabase and run db push before saving.",
+      );
+      return;
+    }
+    const r = await updateTodoItem({ id: item.id, assignedUserId: userId });
     if (!r.ok) {
       toast.error(r.message);
       return;
@@ -200,10 +214,11 @@ export function TodoBoardClient({
                   listIndex={index}
                   listLength={sorted.length}
                   persistence={persistence}
-                  ownerEmail={ownerEmail}
+                  assignableUsers={assignableUsers}
                   onOpen={() => router.push(todoTaskPath(item.id))}
                   onStatusChange={(s) => void onStatusChange(item, s)}
                   onMoveInList={(d) => void onMoveInList(item, d)}
+                  onAssign={(email) => void onAssign(item, email)}
                 />
               </li>
             ))}

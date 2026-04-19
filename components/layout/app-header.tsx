@@ -1,22 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import { UserMenu } from "@/components/layout/user-menu";
-import { mainNavItems } from "@/config/navigation";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
 export function AppHeader({ userEmail }: { userEmail: string }) {
-  const pathname = usePathname();
-  const current = mainNavItems.find(
-    (item) =>
-      pathname === item.href ||
-      (item.href !== "/" && pathname.startsWith(`${item.href}/`)),
-  );
-  const title = current?.label ?? "Karriqi";
-
   return (
     <header
       className={cn(
@@ -32,9 +22,6 @@ export function AppHeader({ userEmail }: { userEmail: string }) {
           >
             Karriqi
           </Link>
-          <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">
-            {title}
-          </h1>
         </div>
         <UserMenu email={userEmail} />
       </div>

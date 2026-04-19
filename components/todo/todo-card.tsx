@@ -3,6 +3,7 @@
 import {
   ArrowRight,
   Calendar,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -22,17 +23,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { todoStatusCardLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
-import type { TodoItem, TodoStatus } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
-function initialsFromEmail(email: string) {
-  const safe = email.trim();
-  if (safe.includes("@")) {
-    const local = safe.split("@")[0] ?? "";
-    if (local.length >= 2) return local.slice(0, 2).toUpperCase();
-    return local.toUpperCase() || "?";
+function initialsFromDisplayName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const a = parts[0]?.[0] ?? "";
+    const b = parts[1]?.[0] ?? "";
+    const s = (a + b).toUpperCase();
+    return s || "?";
   }
-  return safe.length >= 2 ? safe.slice(0, 2).toUpperCase() : safe.toUpperCase() || "?";
+  const p = parts[0] ?? name.trim();
+  if (p.length >= 2) return p.slice(0, 2).toUpperCase();
+  return p.toUpperCase() || "?";
+}
+
+function displayNameForAssignee(
+  assigneeUserId: string | null,
+  members: TodoAssignableMember[],
+): string | null {
+  if (!assigneeUserId) return null;
+  return (
+    members.find((m) => m.userId === assigneeUserId)?.displayName ?? null
+  );
 }
 
 function formatDueBadge(iso: string | null): string | null {
@@ -77,21 +91,30 @@ export function TodoCard({
   listIndex,
   listLength,
   persistence,
-  ownerEmail,
+  assignableUsers,
   onOpen,
   onStatusChange,
   onMoveInList,
+  onAssign,
 }: {
   item: TodoItem;
   listIndex: number;
   listLength: number;
   persistence: boolean;
-  ownerEmail: string;
+  assignableUsers: TodoAssignableMember[];
   onOpen: () => void;
   onStatusChange: (status: TodoStatus) => void;
   onMoveInList: (direction: -1 | 1) => void;
+  onAssign: (userId: string | null) => void;
 }) {
-  const initials = initialsFromEmail(ownerEmail);
+  const assigneeUserId = item.assignedUserId;
+  const assigneeLabel =
+    displayNameForAssignee(assigneeUserId, assignableUsers) ??
+    (assigneeUserId ? "Unknown" : null);
+  const initials =
+    assigneeUserId && assigneeLabel
+      ? initialsFromDisplayName(assigneeLabel)
+      : "?";
   const dueShort = formatDueBadge(item.dueAt);
   const attachmentCount = item.comments.length + item.subtasks.length;
   const { prev: prevStatus, next: nextStatus } = adjacentStatuses(item.status);
@@ -107,14 +130,81 @@ export function TodoCard({
       {/* Top: assignee + status pill | status step controls */}
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Avatar
-            size="sm"
-            className="ring-background shrink-0 ring-2 ring-offset-0"
-          >
-            <AvatarFallback className="text-[10px] font-medium">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "ring-background shrink-0 rounded-full ring-2 ring-offset-0 outline-none",
+                "focus-visible:ring-ring focus-visible:ring-2",
+                "data-[state=open]:ring-ring",
+              )}
+              disabled={!persistence || assignableUsers.length === 0}
+              title={
+                assignableUsers.length === 0
+                  ? "Add rows in household_members (Supabase) to assign others"
+                  : assigneeUserId
+                    ? assigneeLabel
+                      ? `Assigned — ${assigneeLabel} · ${assigneeUserId}`
+                      : `Assigned — ${assigneeUserId}`
+                    : "Assign task"
+              }
+              aria-label={
+                assigneeUserId
+                  ? assigneeLabel
+                    ? `Assigned to ${assigneeLabel}. Change assignee`
+                    : `Assigned. Change assignee`
+                  : "Assign task"
+              }
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Avatar
+                size="sm"
+                className={cn(
+                  "pointer-events-none ring-background ring-2 ring-offset-0",
+                  !assigneeUserId && "opacity-80",
+                )}
+              >
+                <AvatarFallback
+                  className={cn(
+                    "text-[10px] font-medium",
+                    !assigneeUserId && "text-muted-foreground",
+                  )}
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="min-w-48"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DropdownMenuItem
+                onClick={() => onAssign(null)}
+                className="flex items-center justify-between gap-2"
+              >
+                <span>Unassigned</span>
+                {!assigneeUserId ? (
+                  <Check className="text-foreground size-4 shrink-0" aria-hidden />
+                ) : null}
+              </DropdownMenuItem>
+              {assignableUsers.map((m) => {
+                const selected = assigneeUserId === m.userId;
+                return (
+                  <DropdownMenuItem
+                    key={m.userId}
+                    title={m.userId}
+                    onClick={() => onAssign(m.userId)}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="truncate">{m.displayName}</span>
+                    {selected ? (
+                      <Check className="text-foreground size-4 shrink-0" aria-hidden />
+                    ) : null}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div
             className={cn(
               "border-border text-foreground inline-flex min-w-0 items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium",

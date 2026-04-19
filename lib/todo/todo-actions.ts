@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
 import { isUuid } from "@/lib/shopping/is-uuid";
+import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { TodoStatus } from "@/types/todo";
@@ -82,6 +83,7 @@ export async function createTodoItem(input: {
     .from("todo_items")
     .insert({
       user_id: user.id,
+      assigned_user_id: user.id,
       title,
       status,
       position,
@@ -108,6 +110,7 @@ export async function updateTodoItem(input: {
   dueAt?: string | null;
   progressPercent?: number | null;
   status?: TodoStatus;
+  assignedUserId?: string | null;
 }): Promise<UpdateTodoResult> {
   if (!isUuid(input.id)) {
     return { ok: false, message: "Invalid item id." };
@@ -174,6 +177,24 @@ export async function updateTodoItem(input: {
       user.id,
       input.status,
     );
+  }
+
+  if (input.assignedUserId !== undefined) {
+    const v =
+      input.assignedUserId === null || input.assignedUserId.trim() === ""
+        ? null
+        : input.assignedUserId.trim();
+    if (v !== null && !isUuid(v)) {
+      return { ok: false, message: "Invalid assignee." };
+    }
+    const allowed = await userMayAssignTask(supabase, user.id, v);
+    if (!allowed) {
+      return {
+        ok: false,
+        message: "That assignee is not allowed for your account.",
+      };
+    }
+    patch.assigned_user_id = v;
   }
 
   if (Object.keys(patch).length === 0) {

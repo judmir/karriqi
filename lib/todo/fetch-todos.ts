@@ -29,6 +29,7 @@ type ItemRow = {
   list_order: number;
   due_at: string | null;
   progress_percent: number | null;
+  assigned_user_id: string | null;
   created_at: string;
   updated_at: string;
   todo_comments: CommentRow[] | null;
@@ -74,6 +75,7 @@ function mapItem(row: ItemRow): TodoItem {
   return {
     id: row.id,
     userId: row.user_id,
+    assignedUserId: row.assigned_user_id,
     title: row.title,
     category: row.category,
     description: row.description,

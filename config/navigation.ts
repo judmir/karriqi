@@ -3,7 +3,6 @@ import {
   CalendarDays,
   LayoutDashboard,
   ListTodo,
-  Settings,
   ShoppingCart,
 } from "lucide-react";
 
@@ -41,11 +40,5 @@ export const mainNavItems: MainNavItem[] = [
     label: "Calendar",
     shortLabel: "Cal",
     icon: CalendarDays,
-  },
-  {
-    href: ROUTES.settings,
-    label: "Settings",
-    shortLabel: "More",
-    icon: Settings,
   },
 ];

@@ -1,17 +1,23 @@
 import { TodoBoardClient } from "@/components/todo/todo-board-client";
 import { isSupabaseConfigured } from "@/lib/env";
+import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
 import { fetchTodosForUser } from "@/lib/todo/fetch-todos";
 import { getSessionUser } from "@/lib/supabase/server";
-import type { TodoItem } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem } from "@/types/todo";
 
 export default async function TodoPage() {
   let todos: TodoItem[] = [];
   let persistence = false;
-  let ownerEmail = "";
+  let assignableUsers: TodoAssignableMember[] = [];
 
   if (isSupabaseConfigured()) {
+    try {
+      assignableUsers = await fetchAssignableMembers();
+    } catch {
+      assignableUsers = [];
+    }
+
     const user = await getSessionUser();
-    ownerEmail = user?.email ?? "";
     if (user) {
       try {
         todos = await fetchTodosForUser();
@@ -27,7 +33,7 @@ export default async function TodoPage() {
     <TodoBoardClient
       initialTodos={todos}
       persistence={persistence}
-      ownerEmail={ownerEmail}
+      assignableUsers={assignableUsers}
     />
   );
 }

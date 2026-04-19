@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOutIcon } from "lucide-react";
+import { LogOutIcon, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ROUTES } from "@/config/routes";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +62,11 @@ export function UserMenu({ email }: { email: string }) {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem onClick={() => router.push(ROUTES.settings)}>
+          <Settings className="size-4" />
+          User settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void signOut()}>
           <LogOutIcon className="size-4" />
           Sign out
         </DropdownMenuItem>

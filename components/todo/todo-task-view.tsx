@@ -22,7 +22,7 @@ import {
 } from "@/lib/todo/todo-actions";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
-import type { TodoItem, TodoStatus } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
 const NO_SYNC_TOAST =
@@ -51,9 +51,11 @@ const textareaClassName = cn(
 export function TodoTaskView({
   initialItem,
   persistence,
+  assignableUsers,
 }: {
   initialItem: TodoItem;
   persistence: boolean;
+  assignableUsers: TodoAssignableMember[];
 }) {
   const router = useRouter();
 
@@ -65,6 +67,9 @@ export function TodoTaskView({
     initialItem.progressPercent != null ? String(initialItem.progressPercent) : "",
   );
   const [status, setStatus] = useState<TodoStatus>(initialItem.status);
+  const [assignedUserId, setAssignedUserId] = useState<string | null>(
+    initialItem.assignedUserId ?? null,
+  );
   const [saving, setSaving] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const [subtaskDraft, setSubtaskDraft] = useState("");
@@ -102,6 +107,7 @@ export function TodoTaskView({
       dueAt: fromLocalDatetimeValue(dueLocal),
       progressPercent,
       status,
+      assignedUserId,
     });
     setSaving(false);
     if (!r.ok) {
@@ -168,6 +174,23 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
+    router.refresh();
+  }
+
+  async function onAssigneeChange(next: string | null) {
+    if (!persistence) {
+      toast.error(NO_SYNC_TOAST);
+      return;
+    }
+    const r = await updateTodoItem({
+      id: initialItem.id,
+      assignedUserId: next,
+    });
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
+    setAssignedUserId(next);
     router.refresh();
   }
 
@@ -245,7 +268,7 @@ export function TodoTaskView({
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <div className="space-y-2">
             <Label htmlFor="task-status">Status</Label>
             <select
@@ -296,6 +319,31 @@ export function TodoTaskView({
               value={progressText}
               onChange={(e) => setProgressText(e.target.value)}
             />
+          </div>
+          <div className="space-y-2 sm:col-span-2 xl:col-span-1">
+            <Label htmlFor="task-assignee">Assigned to</Label>
+            <select
+              id="task-assignee"
+              className={cn(
+                "border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm outline-none",
+                "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+                "dark:bg-input/30",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+              )}
+              value={assignedUserId ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                void onAssigneeChange(v === "" ? null : v);
+              }}
+              disabled={!persistence || assignableUsers.length === 0}
+            >
+              <option value="">Unassigned</option>
+              {assignableUsers.map((m) => (
+                <option key={m.userId} value={m.userId} title={m.userId}>
+                  {m.displayName}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

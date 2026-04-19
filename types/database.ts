@@ -104,6 +104,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      household_members: {
+        Row: {
+          id: string;
+          owner_user_id: string;
+          member_user_id: string;
+          display_name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_user_id: string;
+          member_user_id: string;
+          display_name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_user_id?: string;
+          member_user_id?: string;
+          display_name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       todo_items: {
         Row: {
           id: string;
@@ -116,6 +140,7 @@ export type Database = {
           list_order: number;
           due_at: string | null;
           progress_percent: number | null;
+          assigned_user_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -130,6 +155,7 @@ export type Database = {
           list_order?: number;
           due_at?: string | null;
           progress_percent?: number | null;
+          assigned_user_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -144,6 +170,7 @@ export type Database = {
           list_order?: number;
           due_at?: string | null;
           progress_percent?: number | null;
+          assigned_user_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
