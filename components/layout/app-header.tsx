@@ -19,10 +19,13 @@ export function AppHeader({ userEmail }: { userEmail: string }) {
         <div className="min-w-0">
           <Link
             href={ROUTES.dashboard}
-            className="text-muted-foreground hover:text-foreground inline-flex min-w-0 items-center gap-2 text-xs font-medium tracking-wide uppercase transition-colors"
+            aria-label="Karriqi home"
+            className={cn(
+              "text-primary hover:opacity-90 inline-flex shrink-0 items-center rounded-md transition-opacity",
+              "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+            )}
           >
-            <KarriqiLogoMark className="size-7 text-primary" />
-            <span className="truncate">Karriqi</span>
+            <KarriqiLogoMark className="size-7" />
           </Link>
         </div>
         <UserMenu email={userEmail} />
