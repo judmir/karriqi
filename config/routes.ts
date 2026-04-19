@@ -6,6 +6,7 @@ export const ROUTES = {
   todo: "/todo",
   calendar: "/calendar",
   settings: "/settings",
+  dev: "/dev",
   signIn: "/auth/sign-in",
   authCallback: "/auth/callback",
 } as const;
@@ -22,6 +23,7 @@ export const PROTECTED_ROUTE_PREFIXES: string[] = [
   ROUTES.todo,
   ROUTES.calendar,
   ROUTES.settings,
+  ROUTES.dev,
 ];
 
 export function isProtectedPath(pathname: string): boolean {

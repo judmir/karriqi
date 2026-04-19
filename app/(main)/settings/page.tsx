@@ -1,6 +1,12 @@
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
+import { DevMenuSettings } from "@/components/settings/dev-menu-settings";
+import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
 import { PageHeader } from "@/components/patterns/page-header";
 import { PlaceholderPage } from "@/components/patterns/placeholder-page";
+import {
+  isDevMenuEmail,
+  isDevMenuEnabledInMetadata,
+} from "@/lib/dev/dev-access";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getSessionUser } from "@/lib/supabase/server";
 import { displayNameFromUserMeta } from "@/lib/todo/assignable-members";
@@ -32,6 +38,10 @@ export default async function SettingsPage() {
       user.user_metadata as Record<string, unknown>,
     ) ?? "";
 
+  const meta = user.user_metadata as Record<string, unknown>;
+  const devMenuInitial =
+    isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -42,9 +52,20 @@ export default async function SettingsPage() {
       <section className="space-y-3">
         <h2 className="text-foreground text-sm font-semibold">Profile</h2>
         <ProfileSettingsForm
+          key={initialDisplayName || user.id}
           email={user.email ?? ""}
           initialDisplayName={initialDisplayName}
         />
+      </section>
+      {isDevMenuEmail(user.email) ? (
+        <section className="space-y-3">
+          <h2 className="text-foreground text-sm font-semibold">Developer</h2>
+          <DevMenuSettings initialEnabled={devMenuInitial} />
+        </section>
+      ) : null}
+      <section className="space-y-3">
+        <h2 className="text-foreground text-sm font-semibold">Notifications</h2>
+        <PushNotificationsSettings />
       </section>
     </div>
   );

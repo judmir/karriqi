@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,
+  Code2,
   LayoutDashboard,
   ListTodo,
   ShoppingCart,
@@ -42,3 +43,10 @@ export const mainNavItems: MainNavItem[] = [
     icon: CalendarDays,
   },
 ];
+
+export const devNavItem: MainNavItem = {
+  href: ROUTES.dev,
+  label: "Dev",
+  shortLabel: "Dev",
+  icon: Code2,
+};

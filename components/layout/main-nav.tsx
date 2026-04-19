@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { mainNavItems } from "@/config/navigation";
+import { devNavItem, mainNavItems } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
 function NavLink({
@@ -43,7 +43,12 @@ function NavLink({
   );
 }
 
-export function MainNavMobile() {
+function navItemsFor(includeDev: boolean) {
+  return includeDev ? [...mainNavItems, devNavItem] : mainNavItems;
+}
+
+export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
+  const items = navItemsFor(includeDevNav ?? false);
   return (
     <nav
       className="border-border bg-background/90 supports-[backdrop-filter]:bg-background/75 fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-md md:hidden"
@@ -55,7 +60,7 @@ export function MainNavMobile() {
           paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
         }}
       >
-        {mainNavItems.map((item) => (
+        {items.map((item) => (
           <NavLink
             key={item.href}
             href={item.href}
@@ -69,7 +74,8 @@ export function MainNavMobile() {
   );
 }
 
-export function MainNavDesktop() {
+export function MainNavDesktop({ includeDevNav }: { includeDevNav?: boolean }) {
+  const items = navItemsFor(includeDevNav ?? false);
   return (
     <nav
       className="border-border bg-sidebar hidden w-56 shrink-0 flex-col gap-1 border-r p-3 md:flex"
@@ -78,7 +84,7 @@ export function MainNavDesktop() {
       <p className="text-muted-foreground px-3 pb-2 text-xs font-medium tracking-wider uppercase">
         Family
       </p>
-      {mainNavItems.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.href}
           href={item.href}
