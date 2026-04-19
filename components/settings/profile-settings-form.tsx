@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useState, useTransition } from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,6 @@ export function ProfileSettingsForm({
   const router = useRouter();
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setDisplayName(initialDisplayName);
-  }, [initialDisplayName]);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();

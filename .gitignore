@@ -37,6 +37,7 @@ yarn-error.log*
 # PWA service worker (generated on `pnpm build`)
 /public/sw.js
 /public/workbox-*.js
+/public/worker-*.js
 
 # vercel
 .vercel

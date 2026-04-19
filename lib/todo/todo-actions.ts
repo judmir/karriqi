@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
 import { isUuid } from "@/lib/shopping/is-uuid";
+import { notifyTodoCommentMentions } from "@/lib/notifications/notification-events";
 import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
@@ -17,6 +18,18 @@ function ok<T extends { ok: true }>(x: T): T {
 }
 
 type Err = { ok: false; message: string };
+
+async function clearStaleTaskReminder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  todoItemId: string,
+  ownerUserId: string,
+): Promise<void> {
+  await supabase
+    .from("todo_items")
+    .update({ last_stale_notification_at: null })
+    .eq("id", todoItemId)
+    .eq("user_id", ownerUserId);
+}
 
 async function nextPositionForStatus(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -201,6 +214,8 @@ export async function updateTodoItem(input: {
     return ok({ ok: true });
   }
 
+  patch.last_stale_notification_at = null;
+
   const { error } = await supabase
     .from("todo_items")
     .update(patch)
@@ -271,7 +286,7 @@ export async function addTodoComment(input: {
 
   const { data: parent } = await supabase
     .from("todo_items")
-    .select("id")
+    .select("id, title, user_id")
     .eq("id", input.todoItemId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -289,6 +304,16 @@ export async function addTodoComment(input: {
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  await clearStaleTaskReminder(supabase, input.todoItemId, user.id);
+
+  void notifyTodoCommentMentions({
+    todoOwnerUserId: parent.user_id,
+    todoItemId: input.todoItemId,
+    todoTitle: parent.title ?? "",
+    commentBody: body,
+    authorUserId: user.id,
+  });
 
   return ok({ ok: true });
 }
@@ -347,6 +372,8 @@ export async function addTodoSubtask(input: {
     return { ok: false, message: error.message };
   }
 
+  await clearStaleTaskReminder(supabase, input.todoItemId, user.id);
+
   return ok({ ok: true });
 }
 
@@ -369,6 +396,16 @@ export async function setTodoSubtaskDone(input: {
     return { ok: false, message: "Not signed in." };
   }
 
+  const { data: subRow, error: readErr } = await supabase
+    .from("todo_subtasks")
+    .select("todo_item_id")
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (readErr || !subRow) {
+    return { ok: false, message: readErr?.message ?? "Subtask not found." };
+  }
+
   const { error } = await supabase
     .from("todo_subtasks")
     .update({ done: input.done })
@@ -377,6 +414,8 @@ export async function setTodoSubtaskDone(input: {
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  await clearStaleTaskReminder(supabase, subRow.todo_item_id, user.id);
 
   return ok({ ok: true });
 }
@@ -399,11 +438,23 @@ export async function deleteTodoSubtask(input: {
     return { ok: false, message: "Not signed in." };
   }
 
+  const { data: subRow, error: readErr } = await supabase
+    .from("todo_subtasks")
+    .select("todo_item_id")
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (readErr || !subRow) {
+    return { ok: false, message: readErr?.message ?? "Subtask not found." };
+  }
+
   const { error } = await supabase.from("todo_subtasks").delete().eq("id", input.id);
 
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  await clearStaleTaskReminder(supabase, subRow.todo_item_id, user.id);
 
   return ok({ ok: true });
 }
@@ -447,7 +498,7 @@ export async function reorderTodoList(input: {
   for (let i = 0; i < input.orderedIds.length; i++) {
     const { error } = await supabase
       .from("todo_items")
-      .update({ list_order: i })
+      .update({ list_order: i, last_stale_notification_at: null })
       .eq("id", input.orderedIds[i])
       .eq("user_id", user.id);
 
