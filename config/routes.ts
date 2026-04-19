@@ -10,6 +10,11 @@ export const ROUTES = {
   authCallback: "/auth/callback",
 } as const;
 
+/** Single task view/edit (e.g. Jira-style page). */
+export function todoTaskPath(id: string) {
+  return `/todo/${id}`;
+}
+
 /** URL prefixes that require an authenticated session (middleware). */
 export const PROTECTED_ROUTE_PREFIXES: string[] = [
   ROUTES.dashboard,

@@ -8,6 +8,8 @@ import type { ShoppingListItem } from "@/types/shopping";
 
 const REVEAL_PX = 72;
 const DELETE_THRESHOLD_PX = 44;
+/** Max horizontal movement (px) to count as a tap on the row (toggle checked). */
+const TAP_TOGGLE_PX = 10;
 
 function ShoppingListRow({
   item,
@@ -55,6 +57,8 @@ function ShoppingListRow({
     setDragging(false);
     if (finalOffset <= -DELETE_THRESHOLD_PX) {
       onRemove();
+    } else if (Math.abs(dx) < TAP_TOGGLE_PX) {
+      onToggle();
     }
     setOffset(0);
   }
@@ -69,23 +73,22 @@ function ShoppingListRow({
       </div>
       <div
         className={cn(
-          "bg-background relative z-10 flex w-full items-start gap-0.5 py-2.5",
+          "bg-background relative z-10 flex w-full cursor-pointer touch-pan-y select-none items-start gap-0.5 py-2.5",
           !dragging && "transition-transform duration-200 ease-out",
         )}
         style={{ transform: `translateX(${offset}px)` }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={finishPointer}
+        onPointerCancel={finishPointer}
       >
-        <div
-          className="flex min-w-0 flex-1 touch-pan-y select-none items-start gap-3"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={finishPointer}
-          onPointerCancel={finishPointer}
-        >
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <input
             type="checkbox"
             checked={item.checked}
             onChange={onToggle}
-            className="border-input text-primary focus-visible:ring-ring mt-0.5 size-4 shrink-0 rounded border bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            onClick={(e) => e.stopPropagation()}
+            className="border-input text-primary focus-visible:ring-ring mt-0.5 size-4 shrink-0 cursor-pointer rounded border bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             aria-label={`Got ${item.name}`}
           />
           <span

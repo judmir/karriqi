@@ -1,7 +1,7 @@
 /**
- * Replace with generated types from Supabase CLI, for example:
+ * Supabase schema types. Regenerate after migrations, e.g.:
  * `pnpm supabase gen types typescript --project-id <id> > types/database.generated.ts`
- * then re-export Database from here.
+ * and merge into this file.
  */
 export type Json =
   | string
@@ -11,4 +11,196 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type Database = Record<string, never>;
+export type Database = {
+  public: {
+    Tables: {
+      staples: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          category: string | null;
+          unit: string | null;
+          typical_interval_days: number | null;
+          last_purchased_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          category?: string | null;
+          unit?: string | null;
+          typical_interval_days?: number | null;
+          last_purchased_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          category?: string | null;
+          unit?: string | null;
+          typical_interval_days?: number | null;
+          last_purchased_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      purchase_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          staple_id: string | null;
+          item_name: string;
+          purchased_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          staple_id?: string | null;
+          item_name: string;
+          purchased_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          staple_id?: string | null;
+          item_name?: string;
+          purchased_at?: string;
+        };
+        Relationships: [];
+      };
+      shopping_list_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          staple_id: string | null;
+          name: string;
+          quantity: string | null;
+          checked: boolean;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          staple_id?: string | null;
+          name: string;
+          quantity?: string | null;
+          checked?: boolean;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          staple_id?: string | null;
+          name?: string;
+          quantity?: string | null;
+          checked?: boolean;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      todo_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          category: string | null;
+          description: string | null;
+          status: string;
+          position: number;
+          list_order: number;
+          due_at: string | null;
+          progress_percent: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          category?: string | null;
+          description?: string | null;
+          status?: string;
+          position?: number;
+          list_order?: number;
+          due_at?: string | null;
+          progress_percent?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          category?: string | null;
+          description?: string | null;
+          status?: string;
+          position?: number;
+          list_order?: number;
+          due_at?: string | null;
+          progress_percent?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      todo_comments: {
+        Row: {
+          id: string;
+          todo_item_id: string;
+          user_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          todo_item_id: string;
+          user_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          todo_item_id?: string;
+          user_id?: string;
+          body?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      todo_subtasks: {
+        Row: {
+          id: string;
+          todo_item_id: string;
+          label: string;
+          done: boolean;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          todo_item_id: string;
+          label: string;
+          done?: boolean;
+          position?: number;
+        };
+        Update: {
+          id?: string;
+          todo_item_id?: string;
+          label?: string;
+          done?: boolean;
+          position?: number;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};

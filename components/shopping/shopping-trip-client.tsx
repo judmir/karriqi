@@ -1,11 +1,18 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isUuid } from "@/lib/shopping/is-uuid";
 import { newShoppingListItemId } from "@/lib/shopping/new-list-item-id";
+import {
+  createStaple,
+  recordPurchase,
+  saveShoppingListItems,
+} from "@/lib/shopping/shopping-actions";
+import { rankDueSoonStaples } from "@/lib/shopping/suggestions";
 import { cn } from "@/lib/utils";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 
@@ -43,17 +50,38 @@ function TripProgress({ done, total }: { done: number; total: number }) {
 export function ShoppingTripClient({
   initialItems,
   staples,
+  purchasePersistence = false,
+  listPersistence = false,
+  medianIntervalByStapleId = {},
 }: {
   initialItems: ShoppingListItem[];
   staples: StapleItem[];
+  purchasePersistence?: boolean;
+  /** When true, list changes are saved to Supabase (requires shopping_list_items migration). */
+  listPersistence?: boolean;
+  /** Learned days-between-buys per staple id (from DB); empty when offline / mock. */
+  medianIntervalByStapleId?: Record<string, number>;
 }) {
   const [trip, setTrip] = useState<TripState>({
     items: initialItems,
     catalog: [...staples],
   });
   const [draft, setDraft] = useState("");
+  const skipListPersistRef = useRef(true);
 
   const { items, catalog } = trip;
+
+  useEffect(() => {
+    if (!listPersistence) return;
+    if (skipListPersistRef.current) {
+      skipListPersistRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      void saveShoppingListItems(items);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [items, listPersistence]);
 
   const doneCount = useMemo(
     () => items.filter((i) => i.checked).length,
@@ -65,6 +93,26 @@ export function ShoppingTripClient({
     () =>
       new Set(items.map((i) => i.stapleId).filter(Boolean) as string[]),
     [items],
+  );
+
+  const dueSoon = useMemo(
+    () =>
+      rankDueSoonStaples({
+        staples: catalog,
+        excludeStapleIds: stapleIdsOnList,
+        medianIntervalByStapleId,
+      }),
+    [catalog, stapleIdsOnList, medianIntervalByStapleId],
+  );
+
+  const dueSoonStapleIds = useMemo(
+    () => new Set(dueSoon.map((d) => d.staple.id)),
+    [dueSoon],
+  );
+
+  const suggestedCatalog = useMemo(
+    () => catalog.filter((s) => !dueSoonStapleIds.has(s.id)),
+    [catalog, dueSoonStapleIds],
   );
 
   function addFromStaple(staple: StapleItem) {
@@ -97,13 +145,75 @@ export function ShoppingTripClient({
     setDraft("");
   }
 
-  function promoteFreeTextToSuggested(itemId: string) {
-    setTrip((t) => {
-      const item = t.items.find((i) => i.id === itemId);
-      if (!item || item.stapleId) return t;
-      const name = item.name.trim();
-      if (!name) return t;
+  function handleItemsChange(next: ShoppingListItem[]) {
+    if (purchasePersistence) {
+      const prevById = new Map(items.map((i) => [i.id, i]));
+      for (const item of next) {
+        const prev = prevById.get(item.id);
+        if (prev && !prev.checked && item.checked) {
+          const rawId = item.stapleId ?? null;
+          const stapleId = rawId && isUuid(rawId) ? rawId : null;
+          void recordPurchase({
+            stapleId,
+            itemName: item.name,
+          }).then((r) => {
+            if (
+              r.ok &&
+              r.stapleIdForCatalog &&
+              r.purchasedAt
+            ) {
+              setTrip((cur) => ({
+                ...cur,
+                catalog: cur.catalog.map((s) =>
+                  s.id === r.stapleIdForCatalog
+                    ? { ...s, lastPurchasedAt: r.purchasedAt }
+                    : s,
+                ),
+              }));
+            }
+          });
+        }
+      }
+    }
+    setTrip((t) => ({ ...t, items: next }));
+  }
 
+  async function promoteFreeTextToSuggested(itemId: string) {
+    const item = items.find((i) => i.id === itemId);
+    if (!item || item.stapleId) return;
+    const name = item.name.trim();
+    if (!name) return;
+
+    if (purchasePersistence) {
+      const r = await createStaple({
+        name,
+        unit: item.quantity,
+      });
+      if (!r.ok) return;
+      const stapleId = r.id;
+      const createdAt = new Date().toISOString();
+      setTrip((t) => {
+        const existingMeta = t.catalog.find((s) => s.id === stapleId);
+        const catalogNext = existingMeta
+          ? t.catalog
+          : [
+              ...t.catalog,
+              {
+                id: stapleId,
+                name,
+                unit: item.quantity,
+                createdAt,
+              },
+            ];
+        const itemsNext = t.items.map((i) =>
+          i.id === itemId ? { ...i, stapleId } : i,
+        );
+        return { catalog: catalogNext, items: itemsNext };
+      });
+      return;
+    }
+
+    setTrip((t) => {
       const existing = t.catalog.find(
         (s) => s.name.trim().toLowerCase() === name.toLowerCase(),
       );
@@ -134,13 +244,43 @@ export function ShoppingTripClient({
     <div className="space-y-8">
       <div className="space-y-2">
         <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Due soon
+        </h2>
+        {dueSoon.length === 0 ? (
+          <p className="text-muted-foreground text-sm">—</p>
+        ) : (
+          <ul className="flex flex-col gap-2" role="list">
+            {dueSoon.map(({ staple, detail }) => (
+                <li key={staple.id}>
+                  <button
+                    type="button"
+                    title={detail}
+                    onClick={() => addFromStaple(staple)}
+                    aria-label={`Add ${staple.name}. ${detail}`}
+                    className={cn(
+                      "border-border bg-background hover:bg-muted/60 flex w-full max-w-md flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left text-sm transition-colors",
+                    )}
+                  >
+                    <span className="font-medium">{staple.name}</span>
+                    <span className="text-muted-foreground text-xs leading-snug">
+                      {detail}
+                    </span>
+                  </button>
+                </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           Suggested
         </h2>
-        {catalog.length === 0 ? (
+        {suggestedCatalog.length === 0 ? (
           <p className="text-muted-foreground text-sm">—</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {catalog.map((staple) => {
+            {suggestedCatalog.map((staple) => {
               const onList = stapleIdsOnList.has(staple.id);
               return (
                 <button
@@ -188,8 +328,8 @@ export function ShoppingTripClient({
         <TripProgress done={doneCount} total={items.length} />
         <ShoppingList
           items={items}
-          onItemsChange={(next) => setTrip((t) => ({ ...t, items: next }))}
-          onPromoteToSuggested={promoteFreeTextToSuggested}
+          onItemsChange={handleItemsChange}
+          onPromoteToSuggested={(id) => void promoteFreeTextToSuggested(id)}
         />
       </div>
     </div>

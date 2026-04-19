@@ -1,0 +1,11 @@
+---
+description: Schema and DB changes must ship as Supabase migrations for db push
+alwaysApply: true
+---
+
+# Supabase: use migrations for `db push`
+
+- **`supabase db push` only applies** timestamped SQL under **`supabase/migrations/`**. It does **not** run ad-hoc files such as `supabase/seed_*.sql` or one-off scripts unless they are folded into a migration.
+- Whenever you add or change **tables, columns, indexes, RLS policies, functions, triggers, or seed/backfill data** that must run on linked / remote databases, **add a new migration** (e.g. `supabase/migrations/YYYYMMDDHHMMSS_short_description.sql`) instead of only editing standalone SQL outside `migrations/`.
+- Prefer **idempotent** data steps where reasonable (`where not exists`, `on conflict`, etc.) so re-runs and partial deploys are safe.
+- If you document a manual step for humans, still put the authoritative DDL/DML in **`migrations/`** so `db push` is the single apply path.

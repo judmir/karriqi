@@ -1,11 +1,33 @@
-import { PlaceholderPage } from "@/components/patterns/placeholder-page";
+import { TodoBoardClient } from "@/components/todo/todo-board-client";
+import { isSupabaseConfigured } from "@/lib/env";
+import { fetchTodosForUser } from "@/lib/todo/fetch-todos";
+import { getSessionUser } from "@/lib/supabase/server";
+import type { TodoItem } from "@/types/todo";
 
-export default function TodoPage() {
+export default async function TodoPage() {
+  let todos: TodoItem[] = [];
+  let persistence = false;
+  let ownerEmail = "";
+
+  if (isSupabaseConfigured()) {
+    const user = await getSessionUser();
+    ownerEmail = user?.email ?? "";
+    if (user) {
+      try {
+        todos = await fetchTodosForUser();
+        persistence = true;
+      } catch {
+        todos = [];
+        persistence = false;
+      }
+    }
+  }
+
   return (
-    <PlaceholderPage
-      eyebrow="Module"
-      title="To-do"
-      description="Tasks and reminders will show up here in a later phase."
+    <TodoBoardClient
+      initialTodos={todos}
+      persistence={persistence}
+      ownerEmail={ownerEmail}
     />
   );
 }

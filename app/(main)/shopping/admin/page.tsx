@@ -8,34 +8,58 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isSupabaseConfigured } from "@/lib/env";
+import { fetchStaplesWithDefaults } from "@/lib/shopping/fetch-staples-with-defaults";
 import { mockStaples } from "@/lib/shopping/mock-staples";
+import { getSessionUser } from "@/lib/supabase/server";
 
-export default function ShoppingAdminPage() {
+export default async function ShoppingAdminPage() {
+  let initialStaples = mockStaples;
+  let persistCatalog = false;
+
+  if (isSupabaseConfigured()) {
+    const user = await getSessionUser();
+    if (user) {
+      try {
+        initialStaples = await fetchStaplesWithDefaults();
+        persistCatalog = true;
+      } catch {
+        initialStaples = mockStaples;
+        persistCatalog = false;
+      }
+    }
+  }
+
+  const catalogKey = initialStaples.map((s) => s.id).join("|");
+
   return (
     <div className="space-y-10">
       <PageHeader
         eyebrow="Shopping"
         title="Admin"
-        description="Define staples, categories, units, and typical restock intervals. This catalog will feed suggested items and habit-style nudges in the next phase."
+        description="Define staples, categories, units, and typical restock intervals. Checking items off on the list records a purchase and updates last bought."
       />
 
-      <StapleCatalogSection initialStaples={mockStaples} />
+      <StapleCatalogSection
+        key={catalogKey}
+        initialStaples={initialStaples}
+        persistCatalog={persistCatalog}
+      />
 
       <Section title="Purchase history and insights">
         <Card size="sm" className="border-dashed">
           <CardHeader>
             <CardTitle className="text-muted-foreground">
-              Coming after persistence
+              Coming later
             </CardTitle>
             <CardDescription>
-              When checkoffs are saved, you will see purchase frequency and
-              clearer &ldquo;you may need this soon&rdquo; hints—using last
-              bought date and your typical interval per staple.
+              Purchase events are stored when you check items off the list.
+              Charts and habit hints can build on that history next.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-muted-foreground text-sm">
-            No data yet; connect Supabase and list events to unlock this
-            section.
+            Query <code className="text-xs">purchase_events</code> in Supabase
+            to inspect logs.
           </CardContent>
         </Card>
       </Section>

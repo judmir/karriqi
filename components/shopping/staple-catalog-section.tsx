@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
 import { Section } from "@/components/patterns/section";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createStaple } from "@/lib/shopping/shopping-actions";
 import type { StapleItem } from "@/types/shopping";
 
 function formatRelativeDays(iso: string | undefined) {
@@ -26,9 +28,12 @@ function formatRelativeDays(iso: string | undefined) {
 
 export function StapleCatalogSection({
   initialStaples,
+  persistCatalog = false,
 }: {
   initialStaples: StapleItem[];
+  persistCatalog?: boolean;
 }) {
+  const router = useRouter();
   const [staples, setStaples] = useState<StapleItem[]>(initialStaples);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -40,7 +45,7 @@ export function StapleCatalogSection({
     [staples],
   );
 
-  function addStaple(e: FormEvent) {
+  async function addStaple(e: FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -48,6 +53,28 @@ export function StapleCatalogSection({
     const interval = typicalIntervalDays.trim();
     const intervalNum =
       interval === "" ? undefined : Number.parseInt(interval, 10);
+    const typical =
+      intervalNum !== undefined && !Number.isNaN(intervalNum)
+        ? intervalNum
+        : undefined;
+
+    if (persistCatalog) {
+      const r = await createStaple({
+        name: trimmed,
+        category: category.trim() || undefined,
+        unit: unit.trim() || undefined,
+        typicalIntervalDays: typical,
+      });
+      if (r.ok) {
+        setName("");
+        setCategory("");
+        setUnit("");
+        setTypicalIntervalDays("");
+        router.refresh();
+      }
+      return;
+    }
+
     const next: StapleItem = {
       id:
         typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -56,10 +83,7 @@ export function StapleCatalogSection({
       name: trimmed,
       category: category.trim() || undefined,
       unit: unit.trim() || undefined,
-      typicalIntervalDays:
-        intervalNum !== undefined && !Number.isNaN(intervalNum)
-          ? intervalNum
-          : undefined,
+      typicalIntervalDays: typical,
       createdAt: new Date().toISOString(),
     };
     setStaples((prev) => [next, ...prev]);
@@ -72,15 +96,17 @@ export function StapleCatalogSection({
   return (
     <Section title="Staple catalog">
       <p className="text-muted-foreground max-w-prose text-sm leading-relaxed">
-        Items you buy often. Phase 2 will use cadence and last purchase to
-        suggest what to add to your list.
+        Items you buy often. Last purchase is updated when you check an item off
+        on the shopping list.
       </p>
 
       <Card size="sm">
         <CardHeader>
           <CardTitle>Add staple</CardTitle>
           <CardDescription>
-            Saved only in this session (mock data until Supabase).
+            {persistCatalog
+              ? "Saved to your account."
+              : "Saved only in this session when not signed in with Supabase."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -187,7 +213,7 @@ export function StapleCatalogSection({
                     </div>
                     <div>
                       <dt className="font-medium text-foreground">
-                        Last purchased (mock)
+                        Last purchased
                       </dt>
                       <dd>{last ?? "—"}</dd>
                     </div>

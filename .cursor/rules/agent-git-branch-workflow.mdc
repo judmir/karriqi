@@ -1,0 +1,33 @@
+---
+description: Per-agent git branches; commit and push; merge only when asked
+alwaysApply: true
+---
+
+# Agent Git Workflow
+
+`main` stays stable. **Do not commit feature work directly on `main`.**
+
+## New agent session (first substantive change)
+
+1. **Fetch** and ensure a clean working tree (stash or commit WIP if needed).
+2. **Create and switch** to a new branch from `main` (or the user’s named base):
+   - Name: `agent/YYYY-MM-DD-<short-slug>` (slug: topic, e.g. `todo-card-status`, `fix-login`).
+   - Example: `agent/2026-04-19-todo-card-status`.
+3. If the user already named a branch, use that instead.
+
+## During the session
+
+- After each **logical chunk** of work (or before context handoff): **commit** with a clear message, then **push** the branch to `origin`:
+  - `git add -A` (or scoped paths), `git commit -m "…"`, `git push -u origin HEAD`.
+- Prefer small, focused commits over one giant commit.
+- If push fails (auth, remote), report the error and what succeeded locally.
+
+## Merge / release
+
+- **Do not merge to `main`** or delete the branch unless the user **explicitly** asks (e.g. “merge this branch”, “open a PR”, “GG” if the project maps that to merge—follow project docs).
+- When asked to merge: summarize what changed, confirm CI/tests if applicable, then merge via the project’s usual process (PR or local merge).
+
+## Exceptions
+
+- **Docs-only or rule-only** tweaks the user asked for on `main`: follow user instruction if they override this rule.
+- **Hotfix on `main`**: only if the user explicitly requests it.
