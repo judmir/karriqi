@@ -1,3 +1,4 @@
+import { PageContainer } from "@/components/layout/page-container";
 import { ShoppingTripClient } from "@/components/shopping/shopping-trip-client";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
@@ -46,12 +47,14 @@ export default async function ShoppingPage() {
   }
 
   return (
-    <ShoppingTripClient
-      initialItems={listItems}
-      staples={staples}
-      purchasePersistence={purchasePersistence}
-      listPersistence={listPersistence}
-      medianIntervalByStapleId={medianIntervalByStapleId}
-    />
+    <PageContainer width="wide">
+      <ShoppingTripClient
+        initialItems={listItems}
+        staples={staples}
+        purchasePersistence={purchasePersistence}
+        listPersistence={listPersistence}
+        medianIntervalByStapleId={medianIntervalByStapleId}
+      />
+    </PageContainer>
   );
 }

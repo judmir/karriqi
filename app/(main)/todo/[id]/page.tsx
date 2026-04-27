@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { PageContainer } from "@/components/layout/page-container";
 import { TodoTaskView } from "@/components/todo/todo-task-view";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
@@ -47,11 +48,13 @@ export default async function TodoTaskPage({ params }: Props) {
   }
 
   return (
-    <TodoTaskView
-      key={item.updatedAt}
-      initialItem={item}
-      persistence
-      assignableUsers={assignableUsers}
-    />
+    <PageContainer>
+      <TodoTaskView
+        key={item.updatedAt}
+        initialItem={item}
+        persistence
+        assignableUsers={assignableUsers}
+      />
+    </PageContainer>
   );
 }

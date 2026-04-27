@@ -10,7 +10,7 @@ export default async function HomePage() {
   const user = await getSessionUser();
 
   return (
-    <div className="from-background via-background to-muted/30 flex min-h-[100dvh] flex-col bg-gradient-to-b">
+    <div className="from-background via-background to-card flex min-h-[100dvh] flex-col bg-gradient-to-b">
       <main className="flex flex-1 flex-col justify-center px-6 py-16">
         <div className="mx-auto w-full max-w-lg space-y-8">
           <div className="space-y-3">

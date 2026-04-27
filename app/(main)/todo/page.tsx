@@ -1,3 +1,4 @@
+import { PageContainer } from "@/components/layout/page-container";
 import { TodoBoardClient } from "@/components/todo/todo-board-client";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
@@ -30,10 +31,12 @@ export default async function TodoPage() {
   }
 
   return (
-    <TodoBoardClient
-      initialTodos={todos}
-      persistence={persistence}
-      assignableUsers={assignableUsers}
-    />
+    <PageContainer width="wide">
+      <TodoBoardClient
+        initialTodos={todos}
+        persistence={persistence}
+        assignableUsers={assignableUsers}
+      />
+    </PageContainer>
   );
 }
