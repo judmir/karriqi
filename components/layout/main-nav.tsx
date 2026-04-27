@@ -27,13 +27,13 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "flex min-h-11 min-w-[3.25rem] items-center justify-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
+        "flex min-h-10 min-w-[3.25rem] items-center justify-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors",
         compact
           ? "flex-col gap-0.5 py-1.5 text-[0.65rem] leading-tight"
-          : "py-2.5 md:justify-start",
+          : "py-2 md:justify-start",
         active
-          ? "bg-muted text-foreground"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
       )}
     >
       <Icon
@@ -87,7 +87,7 @@ export function MainNavDesktop({
   return (
     <nav
       className={cn(
-        "border-border bg-sidebar w-56 shrink-0 flex-col gap-1 border-r p-3",
+        "border-sidebar-border bg-sidebar w-60 shrink-0 flex-col gap-0.5 border-r px-3 py-4",
         open ? "hidden md:flex" : "hidden",
       )}
       aria-label="Main navigation"
@@ -97,14 +97,14 @@ export function MainNavDesktop({
         href={ROUTES.dashboard}
         aria-label="Karriqi home"
         className={cn(
-          "text-foreground hover:bg-muted/60 mb-2 flex items-center gap-2 rounded-xl px-3 py-2 transition-colors",
+          "text-foreground hover:bg-sidebar-accent/60 border-sidebar-border mb-3 flex items-center gap-2.5 rounded-lg border-b px-3 pt-1.5 pb-3 transition-colors",
           "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
         )}
       >
         <KarriqiLogoMark className="text-primary size-6" />
-        <span className="text-sm font-semibold tracking-tight">Karriqi</span>
+        <span className="text-base font-semibold tracking-tight">Karriqi</span>
       </Link>
-      <p className="text-muted-foreground px-3 pb-2 text-xs font-medium tracking-wider uppercase">
+      <p className="text-muted-foreground px-3 pb-1.5 text-[0.7rem] font-medium tracking-[0.12em] uppercase">
         Family
       </p>
       {items.map((item) => (

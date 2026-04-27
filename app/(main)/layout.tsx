@@ -1,5 +1,4 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { PageContainer } from "@/components/layout/page-container";
 import { canUseDevMenu } from "@/lib/dev/dev-access";
 import { getSessionUser } from "@/lib/supabase/server";
 
@@ -18,7 +17,7 @@ export default async function MainLayout({
       userEmail={userEmail}
       includeDevNav={includeDevNav}
     >
-      <PageContainer>{children}</PageContainer>
+      {children}
     </AppShell>
   );
 }
