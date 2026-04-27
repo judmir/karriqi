@@ -57,16 +57,6 @@ function TooltipContent({
           )}
           {...props}
         >
-          <TooltipPrimitive.Arrow
-            data-slot="tooltip-arrow"
-            className={cn(
-              "size-0",
-              "data-[side=top]:border-x-[5px] data-[side=top]:border-x-transparent data-[side=top]:border-t-[6px] data-[side=top]:border-t-primary",
-              "data-[side=bottom]:border-x-[5px] data-[side=bottom]:border-x-transparent data-[side=bottom]:border-b-[6px] data-[side=bottom]:border-b-primary",
-              "data-[side=left]:border-y-[5px] data-[side=left]:border-y-transparent data-[side=left]:border-l-[6px] data-[side=left]:border-l-primary",
-              "data-[side=right]:border-y-[5px] data-[side=right]:border-y-transparent data-[side=right]:border-r-[6px] data-[side=right]:border-r-primary",
-            )}
-          />
           {children}
         </TooltipPrimitive.Popup>
       </TooltipPrimitive.Positioner>
