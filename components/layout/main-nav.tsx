@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import { devNavItem, mainNavItems } from "@/config/navigation";
+import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
 function NavLink({
@@ -74,13 +76,34 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
   );
 }
 
-export function MainNavDesktop({ includeDevNav }: { includeDevNav?: boolean }) {
+export function MainNavDesktop({
+  includeDevNav,
+  open = true,
+}: {
+  includeDevNav?: boolean;
+  open?: boolean;
+}) {
   const items = navItemsFor(includeDevNav ?? false);
   return (
     <nav
-      className="border-border bg-sidebar hidden w-56 shrink-0 flex-col gap-1 border-r p-3 md:flex"
+      className={cn(
+        "border-border bg-sidebar w-56 shrink-0 flex-col gap-1 border-r p-3",
+        open ? "hidden md:flex" : "hidden",
+      )}
       aria-label="Main navigation"
+      aria-hidden={!open}
     >
+      <Link
+        href={ROUTES.dashboard}
+        aria-label="Karriqi home"
+        className={cn(
+          "text-foreground hover:bg-muted/60 mb-2 flex items-center gap-2 rounded-xl px-3 py-2 transition-colors",
+          "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+        )}
+      >
+        <KarriqiLogoMark className="text-primary size-6" />
+        <span className="text-sm font-semibold tracking-tight">Karriqi</span>
+      </Link>
       <p className="text-muted-foreground px-3 pb-2 text-xs font-medium tracking-wider uppercase">
         Family
       </p>
