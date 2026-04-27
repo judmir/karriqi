@@ -17,10 +17,10 @@ export function AppShell({
 }) {
   useNotificationSubscription(userId);
   return (
-    <div className="bg-background flex min-h-[100dvh] flex-1 flex-col md:flex-row">
-      <MainNavDesktop includeDevNav={includeDevNav} />
-      <div className="flex min-h-0 min-h-[100dvh] flex-1 flex-col">
-        <AppHeader userEmail={userEmail} />
+    <div className="bg-background flex min-h-[100dvh] flex-1 flex-col">
+      <AppHeader userEmail={userEmail} />
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <MainNavDesktop includeDevNav={includeDevNav} />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[max(5.5rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-8">
           {children}
         </div>
