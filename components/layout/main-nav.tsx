@@ -3,8 +3,13 @@
 import { HouseHeart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef } from "react";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { devNavItem, mainNavItems } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +32,7 @@ function DesktopNavLink({
   collapsed?: boolean;
 }) {
   const active = useIsActive(href);
+  const iconRef = useRef<HTMLSpanElement>(null);
 
   const link = (
     <Link
@@ -44,9 +50,12 @@ function DesktopNavLink({
       )}
     >
       <span
+        ref={iconRef}
         className={cn(
           "inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
-          collapsed && active && "bg-sidebar-accent text-sidebar-accent-foreground",
+          collapsed &&
+            active &&
+            "bg-sidebar-accent text-sidebar-accent-foreground",
           collapsed &&
             !active &&
             "group-hover/nav:bg-primary/10 group-hover/nav:text-foreground",
@@ -72,7 +81,7 @@ function DesktopNavLink({
   return (
     <Tooltip>
       <TooltipTrigger render={link} />
-      <TooltipContent side="right" sideOffset={8}>
+      <TooltipContent side="right" sideOffset={6} anchor={iconRef}>
         {label}
       </TooltipContent>
     </Tooltip>
