@@ -1,10 +1,10 @@
 "use client";
 
-import { HouseHeart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef } from "react";
 
+import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import {
   Tooltip,
   TooltipContent,
@@ -164,12 +164,7 @@ export function MainNavDesktop({
     >
       <div className="flex w-64 flex-col gap-2 p-2">
         <div className="text-foreground flex h-10 items-center gap-2 rounded-md p-2">
-          <span
-            className="inline-flex shrink-0 items-center justify-center rounded-[5px] bg-[#020202] p-1.5"
-            aria-hidden
-          >
-            <HouseHeart className="text-primary size-5 shrink-0" aria-hidden />
-          </span>
+          <KarriqiLogoMark className="size-8" />
           <span
             className={cn(
               "text-base font-semibold tracking-tight transition-opacity duration-200",

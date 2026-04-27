@@ -29,22 +29,23 @@ export default async function TodoTaskPage({ params }: Props) {
     notFound();
   }
 
-  let item = null;
-  try {
-    item = await fetchTodoByIdForUser(id);
-  } catch {
+  const [itemResult, assignableResult] = await Promise.allSettled([
+    fetchTodoByIdForUser(id),
+    fetchAssignableMembers(user),
+  ]);
+
+  if (itemResult.status === "rejected") {
     notFound();
   }
 
+  const item = itemResult.value;
   if (!item) {
     notFound();
   }
 
   let assignableUsers: TodoAssignableMember[] = [];
-  try {
-    assignableUsers = await fetchAssignableMembers();
-  } catch {
-    assignableUsers = [];
+  if (assignableResult.status === "fulfilled") {
+    assignableUsers = assignableResult.value;
   }
 
   return (

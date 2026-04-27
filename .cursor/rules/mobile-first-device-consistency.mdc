@@ -1,0 +1,12 @@
+---
+description: Require mobile-first, cross-device consistency for every change
+alwaysApply: true
+---
+
+# Mobile-First Device Consistency
+
+- Treat mobile as the starting point for UI and UX changes, then scale up to tablet and desktop with responsive classes or component variants.
+- Keep brand, navigation, copy, and core actions consistent across mobile and desktop unless the difference is intentional and user-approved.
+- Prefer shared components for repeated UI across breakpoints instead of separate mobile and desktop implementations drifting apart.
+- When changing layout, spacing, typography, icons, or interaction states, check the smallest supported mobile width and a laptop/desktop width before considering the change complete.
+- If a view cannot be verified on every relevant device size, mention that gap in the final response.

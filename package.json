@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack --port 3010",
+    "dev": "ENABLE_PWA_IN_DEV=0 next dev --turbopack --port 3010",
+    "dev:pwa": "ENABLE_PWA_IN_DEV=1 next dev --webpack --port 3010",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",

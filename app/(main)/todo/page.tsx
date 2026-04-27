@@ -12,20 +12,20 @@ export default async function TodoPage() {
   let assignableUsers: TodoAssignableMember[] = [];
 
   if (isSupabaseConfigured()) {
-    try {
-      assignableUsers = await fetchAssignableMembers();
-    } catch {
-      assignableUsers = [];
-    }
-
     const user = await getSessionUser();
     if (user) {
-      try {
-        todos = await fetchTodosForUser();
+      const [assignableResult, todosResult] = await Promise.allSettled([
+        fetchAssignableMembers(user),
+        fetchTodosForUser(),
+      ]);
+
+      if (assignableResult.status === "fulfilled") {
+        assignableUsers = assignableResult.value;
+      }
+
+      if (todosResult.status === "fulfilled") {
+        todos = todosResult.value;
         persistence = true;
-      } catch {
-        todos = [];
-        persistence = false;
       }
     }
   }

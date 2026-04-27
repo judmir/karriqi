@@ -19,29 +19,25 @@ export default async function ShoppingPage() {
   if (isSupabaseConfigured()) {
     const user = await getSessionUser();
     if (user) {
-      try {
-        staples = await fetchStaplesWithDefaults();
+      const [staplesResult, listResult, eventsResult] =
+        await Promise.allSettled([
+          fetchStaplesWithDefaults(),
+          fetchShoppingListForUser(),
+          fetchRecentPurchaseEventsForCadence(),
+        ]);
+
+      if (staplesResult.status === "fulfilled") {
+        staples = staplesResult.value;
         purchasePersistence = true;
-      } catch {
-        staples = mockStaples;
-        purchasePersistence = false;
       }
 
-      if (purchasePersistence) {
-        try {
-          listItems = await fetchShoppingListForUser();
-          listPersistence = true;
-        } catch {
-          listItems = [];
-          listPersistence = false;
-        }
+      if (listResult.status === "fulfilled") {
+        listItems = listResult.value;
+        listPersistence = true;
+      }
 
-        try {
-          const events = await fetchRecentPurchaseEventsForCadence();
-          medianIntervalByStapleId = medianGapDaysByStaple(events);
-        } catch {
-          medianIntervalByStapleId = {};
-        }
+      if (eventsResult.status === "fulfilled") {
+        medianIntervalByStapleId = medianGapDaysByStaple(eventsResult.value);
       }
     }
   }

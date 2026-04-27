@@ -25,10 +25,11 @@
 
 ## Build vs dev
 
-| Mode         | Bundler               | PWA SW                       |
-| ------------ | --------------------- | ---------------------------- |
-| `pnpm dev`   | Webpack (`--webpack`) | Off                          |
-| `pnpm build` | Webpack               | On (written under `public/`) |
+| Mode           | Bundler               | PWA SW                       |
+| -------------- | --------------------- | ---------------------------- |
+| `pnpm dev`     | Turbopack             | Off                          |
+| `pnpm dev:pwa` | Webpack (`--webpack`) | On                           |
+| `pnpm build`   | Webpack               | On (written under `public/`) |
 
 ## Future: web push
 

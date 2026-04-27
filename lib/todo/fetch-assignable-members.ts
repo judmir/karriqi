@@ -1,3 +1,5 @@
+import type { User } from "@supabase/supabase-js";
+
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TodoAssignableMember } from "@/types/todo";
@@ -48,16 +50,16 @@ async function fetchAssignableMembersFromAuthAdmin(): Promise<
 }
 
 /** People you can assign tasks to: all Auth users (with service role), else `household_members` + self. */
-export async function fetchAssignableMembers(): Promise<TodoAssignableMember[]> {
+export async function fetchAssignableMembers(
+  currentUser?: User | null,
+): Promise<TodoAssignableMember[]> {
   const fromAuth = await fetchAssignableMembersFromAuthAdmin();
   if (fromAuth !== null) {
     return fromAuth;
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = currentUser ?? (await supabase.auth.getUser()).data.user;
 
   if (!user) return [];
 
