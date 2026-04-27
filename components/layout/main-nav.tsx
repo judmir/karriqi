@@ -4,6 +4,7 @@ import { HouseHeart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { devNavItem, mainNavItems } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
@@ -27,20 +28,32 @@ function DesktopNavLink({
 }) {
   const active = useIsActive(href);
 
-  return (
+  const link = (
     <Link
       href={href}
-      title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
       className={cn(
-        "flex h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm transition-colors",
+        "group/nav flex h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm transition-colors",
         "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
-        active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
+        !collapsed &&
+          (active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"),
+        collapsed &&
+          (active ? "text-sidebar-accent-foreground" : "text-muted-foreground"),
       )}
     >
-      <Icon className="size-4 shrink-0" aria-hidden />
+      <span
+        className={cn(
+          "inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
+          collapsed && active && "bg-sidebar-accent text-sidebar-accent-foreground",
+          collapsed &&
+            !active &&
+            "group-hover/nav:bg-primary/10 group-hover/nav:text-foreground",
+        )}
+      >
+        <Icon className="size-4 shrink-0" aria-hidden />
+      </span>
       <span
         className={cn(
           "truncate transition-opacity duration-200",
@@ -50,6 +63,19 @@ function DesktopNavLink({
         {label}
       </span>
     </Link>
+  );
+
+  if (!collapsed) {
+    return link;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={link} />
+      <TooltipContent side="right" sideOffset={8}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
