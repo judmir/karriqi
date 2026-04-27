@@ -49,19 +49,21 @@
 }
 
 :root {
-  --background: oklch(0.13 0 0);
+  /* Reference palette from shadcnuikit dashboard:
+     main content #0F0F11, card #0B0A0B, sidebar #18181A. */
+  --background: #0f0f11;
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0 0);
+  --card: #0b0a0b;
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0 0);
+  --popover: #0b0a0b;
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.95 0 0);
-  --primary-foreground: oklch(0.18 0 0);
-  --secondary: oklch(0.22 0 0);
+  --primary-foreground: #0b0a0b;
+  --secondary: #1f1f22;
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.22 0 0);
+  --muted: #1f1f22;
   --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.22 0 0);
+  --accent: #1f1f22;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 8%);
@@ -73,11 +75,11 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.875rem;
-  --sidebar: oklch(0.13 0 0);
+  --sidebar: #18181a;
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.95 0 0);
-  --sidebar-primary-foreground: oklch(0.18 0 0);
-  --sidebar-accent: oklch(0.22 0 0);
+  --sidebar-primary-foreground: #18181a;
+  --sidebar-accent: #232326;
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.5 0 0);
