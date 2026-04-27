@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelLeft } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 
 import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
@@ -17,6 +17,7 @@ export function AppHeader({
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 }) {
+  const ToggleIcon = sidebarOpen ? PanelLeftClose : PanelLeftOpen;
   return (
     <header
       className={cn(
@@ -28,14 +29,14 @@ export function AppHeader({
         <button
           type="button"
           className={cn(
-            "text-muted-foreground hover:text-foreground hidden size-7 shrink-0 items-center justify-center bg-transparent transition-colors md:inline-flex",
+            "border-border text-muted-foreground hover:text-foreground hidden size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-transparent transition-colors md:inline-flex",
             "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
           )}
           aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           aria-expanded={sidebarOpen}
           onClick={onToggleSidebar}
         >
-          <PanelLeft className="size-4" aria-hidden />
+          <ToggleIcon className="size-4" aria-hidden />
         </button>
         <Link
           href={ROUTES.dashboard}
