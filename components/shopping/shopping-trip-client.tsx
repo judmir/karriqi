@@ -28,8 +28,134 @@ type TripState = {
   catalog: StapleItem[];
 };
 
+const SUGGESTED_REVEAL_PX = 72;
+const SUGGESTED_DELETE_THRESHOLD_PX = 44;
+const SUGGESTED_TAP_PX = 10;
+
 function normalizeItemLabel(label: string) {
   return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function SuggestedItemChip({
+  staple,
+  dueDetail,
+  onAdd,
+  onDelete,
+}: {
+  staple: StapleItem;
+  dueDetail?: string;
+  onAdd: () => void;
+  onDelete: () => void;
+}) {
+  const [offset, setOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startOffset: number } | null>(null);
+  const suppressClickRef = useRef(false);
+  const isDueSoon = Boolean(dueDetail);
+  const showDeleteReveal = dragging || offset < -1;
+
+  function clamp(n: number) {
+    return Math.min(0, Math.max(-SUGGESTED_REVEAL_PX, n));
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    dragRef.current = { startX: e.clientX, startOffset: offset };
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.startX;
+    setOffset(clamp(dragRef.current.startOffset + dx));
+  }
+
+  function finishPointer(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+    const dx = e.clientX - dragRef.current.startX;
+    const finalOffset = clamp(dragRef.current.startOffset + dx);
+    dragRef.current = null;
+    setDragging(false);
+    if (finalOffset <= -SUGGESTED_DELETE_THRESHOLD_PX) {
+      suppressClickRef.current = true;
+      onDelete();
+    } else if (Math.abs(dx) < SUGGESTED_TAP_PX) {
+      suppressClickRef.current = true;
+      onAdd();
+    }
+    setOffset(0);
+  }
+
+  const chip = (
+    <button
+      type="button"
+      onClick={() => {
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          return;
+        }
+        onAdd();
+      }}
+      aria-label={
+        isDueSoon
+          ? `Add ${staple.name} to list. ${dueDetail}`
+          : `Add ${staple.name} to list`
+      }
+      className={cn(
+        "cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors",
+        isDueSoon
+          ? "border-primary/35 bg-background text-foreground hover:bg-primary/10"
+          : "border-border bg-background text-foreground hover:bg-muted/80",
+      )}
+    >
+      {isDueSoon ? (
+        <span
+          className="mr-1 inline-block size-1.5 rounded-full bg-primary/80 align-middle"
+          aria-hidden
+        />
+      ) : null}
+      {staple.name}
+    </button>
+  );
+
+  return (
+    <div className="relative overflow-hidden rounded-full">
+      <div
+        className={cn(
+          "bg-destructive/15 text-destructive absolute inset-y-0 right-0 flex w-[4.5rem] items-center justify-center text-xs font-medium transition-opacity duration-150",
+          showDeleteReveal ? "opacity-100" : "opacity-0",
+        )}
+        aria-hidden
+      >
+        Delete
+      </div>
+      <div
+        className={cn(
+          "relative z-10 w-fit touch-pan-y",
+          !dragging && "transition-transform duration-200 ease-out",
+        )}
+        style={{ transform: `translateX(${offset}px)` }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={finishPointer}
+        onPointerCancel={finishPointer}
+      >
+        {isDueSoon && dueDetail ? (
+          <Tooltip>
+            <TooltipTrigger render={chip} />
+            <TooltipContent>{dueDetail}</TooltipContent>
+          </Tooltip>
+        ) : (
+          chip
+        )}
+      </div>
+    </div>
+  );
 }
 
 function TripProgress({ done, total }: { done: number; total: number }) {
@@ -135,10 +261,14 @@ export function ShoppingTripClient({
 
   const suggestedCatalog = useMemo(
     () => [
-      ...catalog.filter((s) => dueSoonStapleIds.has(s.id)),
-      ...catalog.filter((s) => !dueSoonStapleIds.has(s.id)),
+      ...catalog.filter(
+        (s) => dueSoonStapleIds.has(s.id) && !stapleIdsOnList.has(s.id),
+      ),
+      ...catalog.filter(
+        (s) => !dueSoonStapleIds.has(s.id) && !stapleIdsOnList.has(s.id),
+      ),
     ],
-    [catalog, dueSoonStapleIds],
+    [catalog, dueSoonStapleIds, stapleIdsOnList],
   );
 
   function addFromStaple(staple: StapleItem) {
@@ -154,6 +284,13 @@ export function ShoppingTripClient({
       addedAt: new Date().toISOString(),
     };
     setTrip((t) => ({ ...t, items: [...t.items, next] }));
+  }
+
+  function removeSuggestedStaple(stapleId: string) {
+    setTrip((t) => ({
+      ...t,
+      catalog: t.catalog.filter((s) => s.id !== stapleId),
+    }));
   }
 
   function addFreeText(e: FormEvent) {
@@ -209,6 +346,14 @@ export function ShoppingTripClient({
       }
     }
     setTrip((t) => ({ ...t, items: next }));
+  }
+
+  function setAllChecked(checked: boolean) {
+    handleItemsChange(items.map((item) => ({ ...item, checked })));
+  }
+
+  function removeAllItems() {
+    handleItemsChange([]);
   }
 
   async function promoteFreeTextToSuggested(itemId: string) {
@@ -287,44 +432,14 @@ export function ShoppingTripClient({
           <div className="flex flex-wrap gap-2">
             {suggestedCatalog.map((staple) => {
               const dueDetail = dueSoonDetailByStapleId.get(staple.id);
-              const isDueSoon = Boolean(dueDetail);
-
-              const chip = (
-                <button
-                  key={staple.id}
-                  type="button"
-                  onClick={() => addFromStaple(staple)}
-                  aria-label={
-                    isDueSoon
-                      ? `Add ${staple.name} to list. ${dueDetail}`
-                      : `Add ${staple.name} to list`
-                  }
-                  className={cn(
-                    "cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors",
-                    isDueSoon
-                      ? "border-primary/35 bg-primary/5 text-foreground hover:bg-primary/10"
-                      : "border-border bg-background text-foreground hover:bg-muted/80",
-                  )}
-                >
-                  {isDueSoon ? (
-                    <span
-                      className="mr-1 inline-block size-1.5 rounded-full bg-primary/80 align-middle"
-                      aria-hidden
-                    />
-                  ) : null}
-                  {staple.name}
-                </button>
-              );
-
-              if (!isDueSoon || !dueDetail) {
-                return chip;
-              }
-
               return (
-                <Tooltip key={staple.id}>
-                  <TooltipTrigger render={chip} />
-                  <TooltipContent>{dueDetail}</TooltipContent>
-                </Tooltip>
+                <SuggestedItemChip
+                  key={staple.id}
+                  staple={staple}
+                  dueDetail={dueDetail}
+                  onAdd={() => addFromStaple(staple)}
+                  onDelete={() => removeSuggestedStaple(staple.id)}
+                />
               );
             })}
           </div>
@@ -356,6 +471,34 @@ export function ShoppingTripClient({
           </p>
         ) : null}
         <TripProgress done={doneCount} total={items.length} />
+        {items.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setAllChecked(true)}
+            >
+              Check all
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setAllChecked(false)}
+            >
+              Uncheck all
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={removeAllItems}
+            >
+              Remove all ({items.length})
+            </Button>
+          </div>
+        ) : null}
         <ShoppingList
           items={items}
           onItemsChange={handleItemsChange}
