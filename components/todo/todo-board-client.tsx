@@ -134,11 +134,7 @@ export function TodoBoardClient({
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Module"
-        title="To-do"
-        description="Open a card to view or edit the full task — description, checklist, and comments."
-      />
+      <PageHeader segments={["To-do"]} />
 
       {!persistence ? (
         <p className="text-muted-foreground border-border rounded-lg border border-dashed p-4 text-sm">

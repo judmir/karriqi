@@ -36,11 +36,7 @@ export default async function ShoppingAdminPage() {
   return (
     <PageContainer width="wide">
       <div className="space-y-6">
-        <PageHeader
-          eyebrow="Shopping"
-          title="Admin"
-          description="Define staples, categories, units, and typical restock intervals. Checking items off on the list records a purchase and updates last bought."
-        />
+        <PageHeader segments={["Shopping", "Admin"]} />
 
         <StapleCatalogSection
           key={catalogKey}

@@ -20,9 +20,8 @@ export default async function DevPage() {
     return (
       <PageContainer>
         <PlaceholderPage
-          eyebrow="Module"
-          title="Dev"
-          description="Connect Supabase to use dev tools."
+          segments={["Dev"]}
+          note="Connect Supabase to use dev tools."
         />
       </PageContainer>
     );
@@ -36,11 +35,7 @@ export default async function DevPage() {
   return (
     <PageContainer>
       <div className="space-y-8">
-        <PageHeader
-          eyebrow="Module"
-          title="Dev"
-          description="Internal tools for testing app behavior. Only visible when enabled in Settings."
-        />
+        <PageHeader segments={["Dev"]} />
         <Card>
           <CardHeader>
             <CardTitle>Tests</CardTitle>
