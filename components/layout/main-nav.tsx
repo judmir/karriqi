@@ -33,7 +33,7 @@ function DesktopNavLink({
         "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+          : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
       )}
     >
       <Icon className="size-4 shrink-0" aria-hidden />

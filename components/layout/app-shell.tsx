@@ -34,7 +34,7 @@ export function AppShell({
           sidebarOpen={sidebarOpen}
           onToggleSidebar={toggleSidebar}
         />
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[max(5.5rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[max(5.5rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-0">
           {children}
         </div>
       </div>
