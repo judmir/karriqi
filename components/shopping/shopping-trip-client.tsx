@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
+import { PageHeader } from "@/components/patterns/page-header";
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -241,19 +242,12 @@ export function ShoppingTripClient({
   }
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Module
-        </p>
-        <h1 className="font-heading text-foreground text-2xl font-semibold">
-          Shopping
-        </h1>
-        <p className="text-muted-foreground max-w-xl text-sm">
-          Suggestions from your staples, then build and check off your trip
-          list.
-        </p>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Module"
+        title="Shopping"
+        description="Suggestions from your staples, then build and check off your trip list."
+      />
 
       <div className="space-y-2">
         <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">

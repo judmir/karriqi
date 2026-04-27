@@ -4,9 +4,17 @@ import { type FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { PageHeader } from "@/components/patterns/page-header";
 import { Section } from "@/components/patterns/section";
 import { TodoCard } from "@/components/todo/todo-card";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { todoTaskPath } from "@/config/routes";
@@ -125,31 +133,24 @@ export function TodoBoardClient({
   }
 
   return (
-    <>
-      <div className="space-y-8">
-        <header className="space-y-1">
-          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            Module
-          </p>
-          <h1 className="font-heading text-foreground text-2xl font-semibold">
-            To-do
-          </h1>
-          <p className="text-muted-foreground max-w-xl text-sm">
-            Open a card to view or edit the full task — description, checklist,
-            and comments.
-          </p>
-        </header>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Module"
+        title="To-do"
+        description="Open a card to view or edit the full task — description, checklist, and comments."
+      />
 
-        {!persistence ? (
-          <p className="text-muted-foreground border-border rounded-lg border border-dashed p-4 text-sm">
-            Saved tasks could not be loaded. If you just added the latest todo
-            migration, run{" "}
-            <code className="text-xs">supabase db push</code> and reload.
-          </p>
-        ) : null}
+      {!persistence ? (
+        <p className="text-muted-foreground border-border rounded-lg border border-dashed p-4 text-sm">
+          Saved tasks could not be loaded. If you just added the latest todo
+          migration, run{" "}
+          <code className="text-xs">supabase db push</code> and reload.
+        </p>
+      ) : null}
 
-        {persistence && listProgress.total > 0 ? (
-          <div className="space-y-2">
+      {persistence && listProgress.total > 0 ? (
+        <Card size="sm">
+          <CardContent className="space-y-2">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-foreground text-sm font-medium">
                 List progress
@@ -167,14 +168,22 @@ export function TodoBoardClient({
               aria-label="Share of tasks marked completed"
             >
               <div
-                className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-[width] duration-300"
+                className="bg-emerald-400 h-2 rounded-full transition-[width] duration-300"
                 style={{ width: `${listProgress.pct}%` }}
               />
             </div>
-          </div>
-        ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
-        <Section title="New card">
+      <Card>
+        <CardHeader>
+          <CardTitle>New card</CardTitle>
+          <CardDescription>
+            Add a quick task — refine details after creating.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <form
             onSubmit={(e) => void onCreate(e)}
             className="flex flex-col gap-3"
@@ -203,37 +212,37 @@ export function TodoBoardClient({
               <Button type="submit">Add card</Button>
             </div>
           </form>
-        </Section>
+        </CardContent>
+      </Card>
 
-        <Section title="Tasks">
-          <ul className="flex flex-col gap-4">
-            {sorted.map((item, index) => (
-              <li key={item.id} className="list-none">
-                <TodoCard
-                  item={item}
-                  listIndex={index}
-                  listLength={sorted.length}
-                  persistence={persistence}
-                  assignableUsers={assignableUsers}
-                  onOpen={() => router.push(todoTaskPath(item.id))}
-                  onStatusChange={(s) => void onStatusChange(item, s)}
-                  onMoveInList={(d) => void onMoveInList(item, d)}
-                  onAssign={(email) => void onAssign(item, email)}
-                />
-              </li>
-            ))}
-          </ul>
-          {sorted.length === 0 && persistence ? (
-            <p
-              className={cn(
-                "text-muted-foreground border-border rounded-xl border border-dashed p-6 text-center text-sm",
-              )}
-            >
-              No tasks yet. Add a card above.
-            </p>
-          ) : null}
-        </Section>
-      </div>
-    </>
+      <Section title="Tasks">
+        <ul className="flex flex-col gap-4">
+          {sorted.map((item, index) => (
+            <li key={item.id} className="list-none">
+              <TodoCard
+                item={item}
+                listIndex={index}
+                listLength={sorted.length}
+                persistence={persistence}
+                assignableUsers={assignableUsers}
+                onOpen={() => router.push(todoTaskPath(item.id))}
+                onStatusChange={(s) => void onStatusChange(item, s)}
+                onMoveInList={(d) => void onMoveInList(item, d)}
+                onAssign={(email) => void onAssign(item, email)}
+              />
+            </li>
+          ))}
+        </ul>
+        {sorted.length === 0 && persistence ? (
+          <p
+            className={cn(
+              "text-muted-foreground border-border rounded-xl border border-dashed p-6 text-center text-sm",
+            )}
+          >
+            No tasks yet. Add a card above.
+          </p>
+        ) : null}
+      </Section>
+    </div>
   );
 }

@@ -30,9 +30,9 @@ export function todoStatusCardLabel(status: TodoStatus): string {
 export function todoStatusAccentClass(status: TodoStatus): string {
   switch (status) {
     case "done":
-      return "bg-emerald-500";
+      return "bg-emerald-400";
     case "in_progress":
-      return "bg-sky-500";
+      return "bg-sky-400";
     case "backlog":
       return "bg-muted-foreground/60";
     default:

@@ -29,7 +29,7 @@ export function DevPushTest() {
   }
 
   return (
-    <div className="border-border bg-card/40 space-y-3 rounded-xl border p-4">
+    <div className="space-y-3">
       <div>
         <h3 className="text-foreground text-sm font-semibold">
           Push notifications

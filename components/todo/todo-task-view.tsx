@@ -7,9 +7,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { CommentBody } from "@/components/todo/comment-body";
 import { ROUTES, todoTaskPath } from "@/config/routes";
 import {
@@ -347,24 +352,27 @@ export function TodoTaskView({
           </div>
         </div>
 
-        <Separator />
+        <Card>
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <textarea
+              id="task-desc"
+              className={textareaClassName}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What needs to happen, links, context…"
+            />
+          </CardContent>
+        </Card>
 
-        <section className="space-y-3">
-          <h2 className="text-foreground text-sm font-semibold">Description</h2>
-          <textarea
-            id="task-desc"
-            className={textareaClassName}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="What needs to happen, links, context…"
-          />
-        </section>
-
-        <Separator />
-
-        <section className="space-y-3">
-          <h2 className="text-foreground text-sm font-semibold">Checklist</h2>
-          <ul className="space-y-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Checklist</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ul className="space-y-2">
             {initialItem.subtasks.map((s) => (
               <li key={s.id} className="flex items-start gap-2 text-sm">
                 <input
@@ -395,59 +403,70 @@ export function TodoTaskView({
               </li>
             ))}
           </ul>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a step"
-              value={subtaskDraft}
-              onChange={(e) => setSubtaskDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void onAddSubtask();
-                }
-              }}
-            />
-            <Button type="button" variant="secondary" onClick={() => void onAddSubtask()}>
-              Add
-            </Button>
-          </div>
-        </section>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a step"
+                value={subtaskDraft}
+                onChange={(e) => setSubtaskDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void onAddSubtask();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void onAddSubtask()}
+              >
+                Add
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-        <Separator />
-
-        <section className="space-y-3">
-          <h2 className="text-foreground text-sm font-semibold">Comments</h2>
-          <p className="text-muted-foreground text-xs">
-            Use <code className="text-xs">@name</code> so mentions stand out. Same account
-            unless you add shared access later.
-          </p>
-          <ul className="border-border space-y-4 border-l-2 pl-4">
-            {initialItem.comments.map((c) => (
-              <li key={c.id} className="space-y-1">
-                <CommentBody text={c.body} className="text-foreground text-sm" />
-                <p className="text-muted-foreground text-xs tabular-nums">
-                  {new Date(c.createdAt).toLocaleString()}
-                </p>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              placeholder="Add a comment… @Jamie"
-              value={commentDraft}
-              onChange={(e) => setCommentDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void onAddComment();
-                }
-              }}
-            />
-            <Button type="button" variant="secondary" onClick={() => void onAddComment()}>
-              Post
-            </Button>
-          </div>
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Comments</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-xs">
+              Use <code className="text-xs">@name</code> so mentions stand out. Same account
+              unless you add shared access later.
+            </p>
+            <ul className="border-border space-y-4 border-l-2 pl-4">
+              {initialItem.comments.map((c) => (
+                <li key={c.id} className="space-y-1">
+                  <CommentBody text={c.body} className="text-foreground text-sm" />
+                  <p className="text-muted-foreground text-xs tabular-nums">
+                    {new Date(c.createdAt).toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                placeholder="Add a comment… @Jamie"
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void onAddComment();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void onAddComment()}
+              >
+                Post
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

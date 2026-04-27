@@ -18,10 +18,7 @@ export function CommentBody({
       {parts.map((part, i) => {
         if (part.startsWith("@")) {
           return (
-            <span
-              key={i}
-              className="text-sky-600 font-medium dark:text-sky-400"
-            >
+            <span key={i} className="text-sky-300 font-medium">
               {part}
             </span>
           );

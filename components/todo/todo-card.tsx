@@ -75,7 +75,7 @@ function StatusPillIcon({ status }: { status: TodoStatus }) {
   if (status === "done") {
     return (
       <span
-        className="border-emerald-500 bg-emerald-500/15 inline-flex size-3.5 shrink-0 items-center justify-center rounded-full border"
+        className="border-emerald-400 bg-emerald-400/15 inline-flex size-3.5 shrink-0 items-center justify-center rounded-full border"
         aria-hidden
       />
     );
@@ -122,9 +122,9 @@ export function TodoCard({
   return (
     <div
       className={cn(
-        "ring-border/50 bg-card/90 relative overflow-hidden rounded-2xl ring-1",
-        "shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset]",
-        "backdrop-blur-sm transition-[box-shadow,transform] hover:shadow-lg hover:ring-border/70",
+        "border-border bg-card relative overflow-hidden rounded-2xl border",
+        "shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset]",
+        "transition-[box-shadow,border-color] hover:border-border/80 hover:shadow-lg",
       )}
     >
       {/* Top: assignee + status pill | status step controls */}
@@ -263,7 +263,7 @@ export function TodoCard({
             </button>
           ) : (
             <span
-              className="text-emerald-500/90 inline-flex size-8 items-center justify-center"
+              className="text-emerald-400 inline-flex size-8 items-center justify-center"
               title="Completed"
               aria-hidden
             >
@@ -299,7 +299,6 @@ export function TodoCard({
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
                 "bg-lime-400 text-lime-950 shadow-sm",
-                "dark:bg-lime-400 dark:text-lime-950",
               )}
             >
               <Calendar className="size-3.5 shrink-0 opacity-90" aria-hidden />

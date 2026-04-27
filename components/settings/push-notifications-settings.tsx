@@ -293,7 +293,7 @@ export function PushNotificationsSettings() {
       )}
 
       {serviceWorkerHint && (
-        <p className="text-amber-600 dark:text-amber-400/90 text-sm leading-relaxed">
+        <p className="text-amber-300 text-sm leading-relaxed">
           {serviceWorkerHint}
         </p>
       )}

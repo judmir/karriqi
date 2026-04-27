@@ -36,10 +36,7 @@ export function ProfileSettingsForm({
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="border-border bg-card/40 max-w-md space-y-4 rounded-xl border p-4"
-    >
+    <form onSubmit={onSubmit} className="max-w-md space-y-4">
       <div className="space-y-2">
         <Label htmlFor="profile-email">Email</Label>
         <Input

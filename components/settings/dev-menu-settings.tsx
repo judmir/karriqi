@@ -33,7 +33,7 @@ export function DevMenuSettings({
   }
 
   return (
-    <div className="border-border bg-card/40 max-w-md space-y-3 rounded-xl border p-4">
+    <div className="max-w-md space-y-3">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-foreground text-sm font-medium">Dev menu</p>
