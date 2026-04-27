@@ -243,11 +243,7 @@ export function ShoppingTripClient({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Module"
-        title="Shopping"
-        description="Suggestions from your staples, then build and check off your trip list."
-      />
+      <PageHeader segments={["Shopping"]} />
 
       <div className="space-y-2">
         <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">

@@ -1,27 +1,36 @@
-export function PageHeader({
-  title,
-  description,
-  eyebrow,
-}: {
-  title: string;
-  description?: string;
-  eyebrow?: string;
-}) {
+export function PageHeader({ segments }: { segments: string[] }) {
+  if (segments.length === 0) return null;
   return (
-    <header className="space-y-2">
-      {eyebrow ? (
-        <p className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.12em] uppercase">
-          {eyebrow}
-        </p>
-      ) : null}
-      <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-        {title}
-      </h1>
-      {description ? (
-        <p className="text-muted-foreground max-w-prose text-sm leading-relaxed md:text-base">
-          {description}
-        </p>
-      ) : null}
+    <header>
+      <nav aria-label="Breadcrumb" className="text-sm">
+        <ol className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          {segments.map((label, i) => {
+            const isLast = i === segments.length - 1;
+            return (
+              <li
+                key={`${i}-${label}`}
+                className="flex min-w-0 items-center gap-1.5"
+              >
+                {i > 0 ? (
+                  <span aria-hidden className="text-muted-foreground/50">
+                    /
+                  </span>
+                ) : null}
+                <span
+                  className={
+                    isLast
+                      ? "text-foreground font-medium"
+                      : "min-w-0 truncate"
+                  }
+                  aria-current={isLast ? "page" : undefined}
+                >
+                  {label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
     </header>
   );
 }

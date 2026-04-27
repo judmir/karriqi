@@ -24,9 +24,8 @@ export default async function SettingsPage() {
     return (
       <PageContainer>
         <PlaceholderPage
-          eyebrow="Module"
-          title="Settings"
-          description="Connect Supabase to manage your profile and preferences."
+          segments={["Settings"]}
+          note="Connect Supabase to manage your profile and preferences."
         />
       </PageContainer>
     );
@@ -37,9 +36,8 @@ export default async function SettingsPage() {
     return (
       <PageContainer>
         <PlaceholderPage
-          eyebrow="Module"
-          title="Settings"
-          description="Sign in to edit your profile."
+          segments={["Settings"]}
+          note="Sign in to edit your profile."
         />
       </PageContainer>
     );
@@ -57,11 +55,7 @@ export default async function SettingsPage() {
   return (
     <PageContainer>
       <div className="space-y-8">
-        <PageHeader
-          eyebrow="Module"
-          title="Settings"
-          description="Account details used across the app."
-        />
+        <PageHeader segments={["Settings"]} />
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>

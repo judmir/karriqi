@@ -11,21 +11,23 @@ import { PageHeader } from "@/components/patterns/page-header";
 import { Section } from "@/components/patterns/section";
 
 export function PlaceholderPage({
-  title,
-  description,
-  eyebrow,
+  segments,
+  note,
 }: {
-  title: string;
-  description: string;
-  eyebrow?: string;
+  segments: string[];
+  /** Muted line below the breadcrumb (e.g. unconfigured or signed-out hints). */
+  note?: string;
 }) {
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow={eyebrow}
-        title={title}
-        description={description}
-      />
+      <div className="space-y-2">
+        <PageHeader segments={segments} />
+        {note ? (
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {note}
+          </p>
+        ) : null}
+      </div>
       <Section title="Preview">
         <ListPlaceholder />
       </Section>
