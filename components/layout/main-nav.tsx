@@ -1,11 +1,10 @@
 "use client";
 
+import { HouseHeart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import { devNavItem, mainNavItems } from "@/config/navigation";
-import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
 function NavLink({
@@ -87,23 +86,16 @@ export function MainNavDesktop({
   return (
     <nav
       className={cn(
-        "border-sidebar-border bg-sidebar w-60 shrink-0 flex-col gap-0.5 border-r px-3 py-4",
+        "bg-sidebar w-60 shrink-0 flex-col gap-0.5 px-3 py-4",
         open ? "hidden md:flex" : "hidden",
       )}
       aria-label="Main navigation"
       aria-hidden={!open}
     >
-      <Link
-        href={ROUTES.dashboard}
-        aria-label="Karriqi home"
-        className={cn(
-          "text-foreground hover:bg-sidebar-accent/60 border-sidebar-border mb-3 flex items-center gap-2.5 rounded-lg border-b px-3 pt-1.5 pb-3 transition-colors",
-          "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
-        )}
-      >
-        <KarriqiLogoMark className="text-primary size-6" />
+      <div className="text-foreground mb-3 flex items-center gap-2.5 px-3 pt-1.5 pb-3">
+        <HouseHeart className="text-primary size-6" aria-hidden />
         <span className="text-base font-semibold tracking-tight">Karriqi</span>
-      </Link>
+      </div>
       <p className="text-muted-foreground px-3 pb-1.5 text-[0.7rem] font-medium tracking-[0.12em] uppercase">
         Family
       </p>

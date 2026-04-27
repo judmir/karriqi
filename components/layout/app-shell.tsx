@@ -26,9 +26,9 @@ export function AppShell({
   );
 
   return (
-    <div className="bg-background flex min-h-[100dvh] flex-1 flex-col md:flex-row">
+    <div className="bg-sidebar flex min-h-[100dvh] flex-1 flex-col md:flex-row md:pt-2">
       <MainNavDesktop includeDevNav={includeDevNav} open={sidebarOpen} />
-      <div className="flex min-h-0 min-h-[100dvh] flex-1 flex-col">
+      <div className="bg-background flex min-h-0 min-h-[100dvh] flex-1 flex-col md:min-h-0 md:overflow-hidden md:rounded-t-2xl">
         <AppHeader
           userEmail={userEmail}
           sidebarOpen={sidebarOpen}

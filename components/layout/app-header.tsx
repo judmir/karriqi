@@ -5,7 +5,6 @@ import Link from "next/link";
 
 import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import { UserMenu } from "@/components/layout/user-menu";
-import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
@@ -26,17 +25,18 @@ export function AppHeader({
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 md:px-6">
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="hidden md:inline-flex"
+          className={cn(
+            "text-muted-foreground hover:text-foreground hidden size-8 shrink-0 items-center justify-center bg-transparent transition-colors md:inline-flex",
+            "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+          )}
           aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           aria-expanded={sidebarOpen}
           onClick={onToggleSidebar}
         >
-          <PanelLeft className="size-4" aria-hidden />
-        </Button>
+          <PanelLeft className="size-5" aria-hidden />
+        </button>
         <Link
           href={ROUTES.dashboard}
           aria-label="Karriqi home"
