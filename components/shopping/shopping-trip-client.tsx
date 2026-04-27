@@ -1,11 +1,17 @@
 "use client";
 
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { PageHeader } from "@/components/patterns/page-header";
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { newShoppingListItemId } from "@/lib/shopping/new-list-item-id";
 import {
@@ -21,6 +27,10 @@ type TripState = {
   items: ShoppingListItem[];
   catalog: StapleItem[];
 };
+
+function normalizeItemLabel(label: string) {
+  return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
 
 function TripProgress({ done, total }: { done: number; total: number }) {
   if (total === 0) return null;
@@ -71,6 +81,13 @@ export function ShoppingTripClient({
   const skipListPersistRef = useRef(true);
 
   const { items, catalog } = trip;
+  const itemLabelSet = useMemo(
+    () => new Set(items.map((item) => normalizeItemLabel(item.name))),
+    [items],
+  );
+  const normalizedDraft = normalizeItemLabel(draft);
+  const draftHasDuplicateLabel =
+    normalizedDraft.length > 0 && itemLabelSet.has(normalizedDraft);
 
   useEffect(() => {
     if (!listPersistence) return;
@@ -111,12 +128,24 @@ export function ShoppingTripClient({
     [dueSoon],
   );
 
+  const dueSoonDetailByStapleId = useMemo(
+    () => new Map(dueSoon.map(({ staple, detail }) => [staple.id, detail])),
+    [dueSoon],
+  );
+
   const suggestedCatalog = useMemo(
-    () => catalog.filter((s) => !dueSoonStapleIds.has(s.id)),
+    () => [
+      ...catalog.filter((s) => dueSoonStapleIds.has(s.id)),
+      ...catalog.filter((s) => !dueSoonStapleIds.has(s.id)),
+    ],
     [catalog, dueSoonStapleIds],
   );
 
   function addFromStaple(staple: StapleItem) {
+    if (itemLabelSet.has(normalizeItemLabel(staple.name))) {
+      toast.info(`"${staple.name}" is already on your list.`);
+      return;
+    }
     const next: ShoppingListItem = {
       id: newShoppingListItemId(),
       stapleId: staple.id,
@@ -131,6 +160,9 @@ export function ShoppingTripClient({
     e.preventDefault();
     const name = draft.trim();
     if (!name) return;
+    if (itemLabelSet.has(normalizeItemLabel(name))) {
+      return;
+    }
     setTrip((t) => ({
       ...t,
       items: [
@@ -247,36 +279,6 @@ export function ShoppingTripClient({
 
       <div className="space-y-2">
         <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Due soon
-        </h2>
-        {dueSoon.length === 0 ? (
-          <p className="text-muted-foreground text-sm">—</p>
-        ) : (
-          <ul className="flex flex-col gap-2" role="list">
-            {dueSoon.map(({ staple, detail }) => (
-                <li key={staple.id}>
-                  <button
-                    type="button"
-                    title={detail}
-                    onClick={() => addFromStaple(staple)}
-                    aria-label={`Add ${staple.name}. ${detail}`}
-                    className={cn(
-                      "border-border bg-background hover:bg-muted/60 flex w-full max-w-md flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left text-sm transition-colors",
-                    )}
-                  >
-                    <span className="font-medium">{staple.name}</span>
-                    <span className="text-muted-foreground text-xs leading-snug">
-                      {detail}
-                    </span>
-                  </button>
-                </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           Suggested
         </h2>
         {suggestedCatalog.length === 0 ? (
@@ -284,27 +286,45 @@ export function ShoppingTripClient({
         ) : (
           <div className="flex flex-wrap gap-2">
             {suggestedCatalog.map((staple) => {
-              const onList = stapleIdsOnList.has(staple.id);
-              return (
+              const dueDetail = dueSoonDetailByStapleId.get(staple.id);
+              const isDueSoon = Boolean(dueDetail);
+
+              const chip = (
                 <button
                   key={staple.id}
                   type="button"
-                  disabled={onList}
                   onClick={() => addFromStaple(staple)}
                   aria-label={
-                    onList
-                      ? `${staple.name} is already on your list`
+                    isDueSoon
+                      ? `Add ${staple.name} to list. ${dueDetail}`
                       : `Add ${staple.name} to list`
                   }
                   className={cn(
-                    "rounded-full border px-3 py-1 text-sm transition-colors",
-                    onList
-                      ? "text-muted-foreground border-border/70 cursor-default opacity-80"
+                    "cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors",
+                    isDueSoon
+                      ? "border-primary/35 bg-primary/5 text-foreground hover:bg-primary/10"
                       : "border-border bg-background text-foreground hover:bg-muted/80",
                   )}
                 >
+                  {isDueSoon ? (
+                    <span
+                      className="mr-1 inline-block size-1.5 rounded-full bg-primary/80 align-middle"
+                      aria-hidden
+                    />
+                  ) : null}
                   {staple.name}
                 </button>
+              );
+
+              if (!isDueSoon || !dueDetail) {
+                return chip;
+              }
+
+              return (
+                <Tooltip key={staple.id}>
+                  <TooltipTrigger render={chip} />
+                  <TooltipContent>{dueDetail}</TooltipContent>
+                </Tooltip>
               );
             })}
           </div>
@@ -321,6 +341,8 @@ export function ShoppingTripClient({
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add item"
             aria-label="Add item"
+            aria-invalid={draftHasDuplicateLabel}
+            aria-describedby={draftHasDuplicateLabel ? "add-item-error" : undefined}
             autoComplete="off"
             className="flex-1"
           />
@@ -328,6 +350,11 @@ export function ShoppingTripClient({
             Add
           </Button>
         </form>
+        {draftHasDuplicateLabel ? (
+          <p id="add-item-error" className="text-destructive text-xs">
+            This item is already on your list.
+          </p>
+        ) : null}
         <TripProgress done={doneCount} total={items.length} />
         <ShoppingList
           items={items}
