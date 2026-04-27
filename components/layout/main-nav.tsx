@@ -119,7 +119,7 @@ export function MainNavDesktop({
       <div className="flex flex-col gap-2 p-2">
         <div className="text-foreground flex h-10 items-center gap-2 rounded-md p-2">
           <span
-            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-[#020202] p-1.5"
+            className="inline-flex shrink-0 items-center justify-center rounded-[5px] bg-[#020202] p-1.5"
             aria-hidden
           >
             <HouseHeart className="text-primary size-5 shrink-0" aria-hidden />
