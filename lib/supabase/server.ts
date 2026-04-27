@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { isSupabaseConfigured } from "@/lib/env";
 import type { Database } from "@/types/database";
@@ -35,7 +36,7 @@ export async function createClient() {
   );
 }
 
-export async function getSessionUser() {
+export const getSessionUser = cache(async function getSessionUser() {
   if (!isSupabaseConfigured()) {
     return null;
   }
@@ -51,4 +52,4 @@ export async function getSessionUser() {
   }
 
   return user;
-}
+});

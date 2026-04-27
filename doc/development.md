@@ -20,7 +20,8 @@ Edit **`.env.local`** with your Supabase project URL and anon key (see [authenti
 pnpm dev
 ```
 
-- Uses **`next dev --webpack --port 3010`** (see [`package.json`](../package.json)). **Webpack** is required because **`@ducanh2912/next-pwa`** injects a webpack config; Turbopack-only dev would error.
+- Uses **`next dev --turbopack --port 3010`** with the PWA service worker forced off for faster UI feedback (see [`package.json`](../package.json)).
+- Use **`pnpm dev:pwa`** only when testing the generated service worker, web push, or install/offline behavior locally.
 - Open **http://localhost:3010**
 
 ### Optional hostname: `karriqi.test`
@@ -35,6 +36,7 @@ Register the same origins in **Supabase → Authentication → URL configuration
 
 | Command             | Purpose                                                        |
 | ------------------- | -------------------------------------------------------------- |
+| `pnpm dev:pwa`      | Dev server with Webpack and PWA service worker enabled         |
 | `pnpm build`        | Production build (`next build --webpack`)                      |
 | `pnpm start`        | Run production server (default port 3000 unless `PORT` is set) |
 | `pnpm lint`         | ESLint                                                         |

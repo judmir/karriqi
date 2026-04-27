@@ -34,6 +34,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: rootDir,
   // Allow dev over a local DNS name (see README: /etc/hosts → karriqi.test).
   allowedDevOrigins: ["karriqi.test"],
+  // Hide the floating Next.js dev tools badge so it does not obscure the app UI.
+  devIndicators: false,
 };
 
 export default withPWA(nextConfig);

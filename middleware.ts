@@ -12,10 +12,15 @@ function safeNextPath(next: string | null): string {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const protectedPath = isProtectedPath(pathname);
+
+  if (!protectedPath && pathname !== ROUTES.signIn) {
+    return NextResponse.next();
+  }
 
   const { response, user } = await updateSession(request);
 
-  if (isProtectedPath(pathname) && !user) {
+  if (protectedPath && !user) {
     const url = request.nextUrl.clone();
     url.pathname = ROUTES.signIn;
     const nextTarget = `${pathname}${request.nextUrl.search}`;
