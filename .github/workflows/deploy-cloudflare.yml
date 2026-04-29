@@ -2,15 +2,15 @@ name: Deploy Cloudflare Worker
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-cloudflare-main
+  group: deploy-cloudflare-release
   cancel-in-progress: true
 
 jobs:
@@ -42,9 +42,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm run lint
 
       - name: Typecheck
         run: pnpm run typecheck

@@ -46,17 +46,47 @@ After Cloudflare marks `karriqi.de` active:
 
 ## GitHub Deploys
 
-`.github/workflows/deploy-cloudflare.yml` deploys the Worker whenever changes land
-on `main`. It runs linting, typechecking, then `pnpm run deploy:cloudflare`.
+`.github/workflows/deploy-cloudflare.yml` deploys the Worker whenever a semantic
+version release tag is pushed. It runs `pnpm install --frozen-lockfile`,
+`pnpm run typecheck`, then `pnpm run deploy:cloudflare`.
+
+Release tags use the `vMAJOR.MINOR.PATCH` format, for example `v1.2.3`.
+
+## Release Flow
+
+1. Work on an `agent/YYYY-MM-DD-<short-slug>` branch from `main`.
+2. Commit and push the branch.
+3. When the work is approved, merge the branch into `main`.
+4. Choose the next semantic version tag from the current `main` commit:
+   - `patch` for fixes and small safe changes.
+   - `minor` for new user-visible functionality.
+   - `major` for breaking changes.
+5. Push `main`, then push the tag. The tag push triggers the Cloudflare deploy.
+
+Example:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git merge --no-ff agent/YYYY-MM-DD-example
+git push origin main
+git tag -a v0.2.0 -m "Release v0.2.0"
+git push origin v0.2.0
+```
 
 Add these GitHub repository secrets before relying on automatic deploys:
 
 ```txt
-CLOUDFLARE_ACCOUNT_ID
 CLOUDFLARE_API_TOKEN
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_VAPID_PUBLIC_KEY
+```
+
+Add this GitHub repository variable:
+
+```txt
+CLOUDFLARE_ACCOUNT_ID
 ```
 
 The Cloudflare API token should be scoped to this account and include permission

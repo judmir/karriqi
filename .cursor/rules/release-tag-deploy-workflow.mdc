@@ -1,0 +1,13 @@
+---
+description: Release and deploy by merging to main, then pushing a semantic version tag
+alwaysApply: true
+---
+
+# Release Tag Deploy Workflow
+
+- Do feature work on `agent/YYYY-MM-DD-<short-slug>` branches from `main`.
+- Commit and push work to the agent branch while it is in progress.
+- Do not deploy from ordinary `main` pushes. Cloudflare deployment is triggered by semantic version tags matching `vMAJOR.MINOR.PATCH`.
+- When the user explicitly asks to merge/release the completed work, merge the branch into `main`, choose the next semantic version, create the tag from the updated `main`, then push `main` and the tag.
+- Pick `patch` for fixes/small changes, `minor` for new user-visible functionality, and `major` for breaking changes.
+- Never merge to `main` or create/push release tags unless the user explicitly asks for that release step.
