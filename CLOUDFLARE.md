@@ -10,9 +10,8 @@ pnpm run preview:cloudflare
 pnpm run deploy:cloudflare
 ```
 
-Until Cloudflare finishes activating `karriqi.de`, deploys go to the generated
-`*.workers.dev` URL because `workers_dev` is enabled and custom domain routes are
-commented in `wrangler.jsonc`.
+Production deploys are attached to `karriqi.com` and `www.karriqi.com`. The
+generated `*.workers.dev` URL remains enabled as a fallback/test URL.
 
 ## Required Variables
 
@@ -35,14 +34,21 @@ pnpm exec wrangler secret put CRON_SECRET
 
 ## Custom Domain
 
-After Cloudflare marks `karriqi.de` active:
+`wrangler.jsonc` attaches the Worker to:
 
-1. Uncomment the `routes` block in `wrangler.jsonc`.
-2. Run `pnpm run deploy:cloudflare`.
-3. In Supabase Auth, set the site URL to `https://karriqi.de`.
-4. Add redirect URLs:
-   - `https://karriqi.de/auth/callback`
-   - `https://www.karriqi.de/auth/callback` if `www` remains enabled.
+```txt
+karriqi.com
+www.karriqi.com
+```
+
+In Supabase Auth, set the site URL to `https://karriqi.com` and add redirect
+URLs:
+
+```txt
+https://karriqi.com/auth/callback
+https://www.karriqi.com/auth/callback
+http://localhost:3010/auth/callback
+```
 
 ## GitHub Deploys
 
@@ -90,9 +96,9 @@ CLOUDFLARE_ACCOUNT_ID
 ```
 
 The Cloudflare API token should be scoped to this account and include permission
-to deploy Workers. If you later enable custom domains through `wrangler.jsonc`,
-the token also needs zone read, Workers routes edit, and SSL/certificate edit
-permissions for `karriqi.de`.
+to deploy Workers. Because `wrangler.jsonc` configures custom domains, the token
+also needs zone read, Workers routes edit, and SSL/certificate edit permissions
+for `karriqi.com`.
 
 With GitHub CLI authenticated, you can set the three public build-time values
 from `.env.local`:

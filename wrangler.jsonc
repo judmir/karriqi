@@ -11,18 +11,15 @@
   },
   "observability": {
     "enabled": true
-  }
-
-  // Enable these custom domains after Cloudflare marks karriqi.de active.
-  // Keeping them disabled lets us deploy to *.workers.dev while nameservers propagate.
-  // ,"routes": [
-  //   {
-  //     "pattern": "karriqi.de",
-  //     "custom_domain": true
-  //   },
-  //   {
-  //     "pattern": "www.karriqi.de",
-  //     "custom_domain": true
-  //   }
-  // ]
+  },
+  "routes": [
+    {
+      "pattern": "karriqi.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.karriqi.com",
+      "custom_domain": true
+    }
+  ]
 }
