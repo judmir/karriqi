@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.open-next/
 /out/
 
 # production
@@ -45,6 +46,10 @@ yarn-error.log*
 # Supabase CLI local cache (per-machine)
 supabase/.temp/
 
+# Cloudflare Wrangler local state/cache
+.wrangler/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+cloudflare-env.d.ts
