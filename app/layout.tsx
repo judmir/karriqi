@@ -24,8 +24,20 @@ export const metadata: Metadata = {
   applicationName: "Karriqi",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
-    apple: "/icons/icon-192.png",
+    icon: [
+      { url: "/icons/karriqi-pwa-logo.svg", type: "image/svg+xml" },
+      {
+        url: "/icons/karriqi-pwa-logo-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/icons/karriqi-pwa-logo-512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: "/icons/karriqi-pwa-logo-180.png",
   },
   appleWebApp: {
     capable: true,
