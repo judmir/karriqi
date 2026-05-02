@@ -293,6 +293,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      operator_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          summary: string | null;
+          dedupe_key: string;
+          starts_at: string | null;
+          ends_at: string | null;
+          payload: Json;
+          source: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          summary?: string | null;
+          dedupe_key: string;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          payload: Json;
+          source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          kind?: string;
+          title?: string;
+          summary?: string | null;
+          dedupe_key?: string;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          payload?: Json;
+          source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
