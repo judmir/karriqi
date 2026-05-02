@@ -40,7 +40,7 @@ export function DevPushTest() {
         </p>
       </div>
       <Button type="button" onClick={() => void run()} disabled={busy}>
-        {busy ? "Sending…" : "Send test push"}
+        {busy ? "Sending..." : "Send test push"}
       </Button>
     </div>
   );

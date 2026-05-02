@@ -7,6 +7,8 @@ export const ROUTES = {
   calendar: "/calendar",
   settings: "/settings",
   dev: "/dev",
+  devPush: "/dev/push",
+  devArchitecture: "/dev/architecture",
   signIn: "/auth/sign-in",
   authCallback: "/auth/callback",
 } as const;

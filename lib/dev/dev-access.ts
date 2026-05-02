@@ -1,9 +1,7 @@
 /** Only this account may see Dev tools (gated by email + profile toggle). */
-export const DEV_MENU_EMAIL = "jusikarriqi@gmail.com";
+export const DEV_MENU_EMAIL = "judikarriqi@gmail.com";
 
-export function isDevMenuEmail(
-  email: string | null | undefined,
-): boolean {
+export function isDevMenuEmail(email: string | null | undefined): boolean {
   return (email ?? "").trim().toLowerCase() === DEV_MENU_EMAIL;
 }
 
@@ -13,10 +11,12 @@ export function isDevMenuEnabledInMetadata(
   return meta?.dev_menu_enabled === true;
 }
 
-export function canUseDevMenu(user: {
-  email?: string | null;
-  user_metadata?: Record<string, unknown> | null;
-} | null): boolean {
+export function canUseDevMenu(
+  user: {
+    email?: string | null;
+    user_metadata?: Record<string, unknown> | null;
+  } | null,
+): boolean {
   if (!user) return false;
   return (
     isDevMenuEmail(user.email) &&

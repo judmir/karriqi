@@ -2,7 +2,7 @@
 
 ## Product intent
 
-**Karriqi** is a **mobile-first family hub**: one shell (header, nav) with modules such as shopping, todos, and calendar. **Phase 1** implements only the **shell**, **auth wiring**, **PWA baseline**, and **placeholder routes** — no real feature data or business logic.
+**Karriqi** is a **mobile-first family hub**: one authenticated shell (header, sidebar, bottom nav) with modules for shopping, todos, calendar, settings, notifications, and maintainer-only Dev tooling.
 
 ## Stack (locked for phase 1)
 
@@ -15,6 +15,7 @@
 | Backend (auth)  | Supabase Auth via `@supabase/supabase-js` + `@supabase/ssr`              |
 | Theme           | `next-themes`, dark-first, `class` on `<html>`                           |
 | PWA             | `@ducanh2912/next-pwa` (webpack integration)                             |
+| Dev diagrams    | `@xyflow/react` for the animated in-app architecture map                 |
 
 ## High-level request flow
 
@@ -30,7 +31,7 @@ flowchart LR
   end
   subgraph app [App Router]
     Root[app/layout.tsx]
-    Main[app/main layout]
+    Main[app main layout]
     Pages[route pages]
   end
   SB[(Supabase Auth)]
@@ -44,10 +45,11 @@ flowchart LR
 | URL                                                          | Layout                | Purpose                                                         |
 | ------------------------------------------------------------ | --------------------- | --------------------------------------------------------------- |
 | `/`                                                          | Root only             | Marketing-style landing; sign-in CTA                            |
-| `/dashboard`, `/shopping`, `/todo`, `/calendar`, `/settings` | `(main)` + `AppShell` | Placeholder module screens (phase 2+ replace content)           |
+| `/dashboard`, `/shopping`, `/todo`, `/calendar`, `/settings` | `(main)` + `AppShell` | Main family app surfaces                                        |
+| `/dev`, `/dev/push`, `/dev/architecture`                     | `(main)` + `AppShell` | Maintainer-only Dev dashboard, push tests, and architecture map |
 | `/auth/sign-in`                                              | `app/auth/layout.tsx` | Email/password sign-in                                          |
 | `/auth/sign-up`                                              | Same                  | **Redirects to** `/auth/sign-in` (no self-service registration) |
-| `/auth/callback`                                             | Route handler         | OAuth / magic-link code exchange (scaffold for later)           |
+| `/auth/callback`                                             | Route handler         | OAuth / magic-link code exchange                                |
 
 Protected prefixes are defined in [`config/routes.ts`](../config/routes.ts) (`PROTECTED_ROUTE_PREFIXES`).
 
@@ -60,16 +62,17 @@ Protected prefixes are defined in [`config/routes.ts`](../config/routes.ts) (`PR
 | `components/layout/`          | `AppShell`, header, nav, page container, user menu                      |
 | `components/patterns/`        | Reusable page patterns (`PlaceholderPage`, `PageHeader`, etc.)          |
 | `components/ui/`              | shadcn primitives                                                       |
+| `components/dev/`             | Maintainer-only Dev UI, including push tools and architecture diagram   |
 | `components/providers/`       | Theme + Sonner toaster                                                  |
 | `components/auth/`            | Sign-in form, “configure Supabase” card                                 |
 | `config/routes.ts`            | Path constants + `isProtectedPath()`                                    |
 | `config/navigation.ts`        | Single source for nav items (mobile + desktop)                          |
 | `lib/supabase/`               | Browser client, server client, middleware session helper                |
 | `lib/env.ts`                  | Public env parsing / `isSupabaseConfigured()`                           |
-| `lib/notifications/`          | Types + no-op service (phase 2+)                                        |
+| `lib/notifications/`          | Notification dispatch, kinds, and channel types                         |
 | `lib/repositories/`           | Intended home for Supabase data access                                  |
-| `lib/push/`                   | Notes for future web push                                               |
-| `hooks/`                      | e.g. `use-notification-subscription` stub                               |
+| `lib/push/`                   | Web push helpers and VAPID delivery                                     |
+| `hooks/`                      | Client hooks such as notification subscription state                    |
 | `modules/`                    | Intended home for vertical slices (`shopping`, etc.) — empty in phase 1 |
 | `types/database.ts`           | Placeholder `Database` type until `supabase gen types`                  |
 | `public/manifest.webmanifest` | PWA manifest                                                            |
@@ -88,3 +91,12 @@ Protected prefixes are defined in [`config/routes.ts`](../config/routes.ts) (`PR
 2. Add **`modules/<feature>/`** for domain UI and types.
 3. Swap a **`app/(main)/<route>/page.tsx`** body to import a module entry component; keep `AppShell` and nav config stable.
 4. When tables exist, generate **`Database`** types and wire RLS in Supabase.
+5. When a feature, route, or notification/business flow changes, update the in-app Dev diagram data in [`components/dev/architecture/architecture-flow-data.ts`](../components/dev/architecture/architecture-flow-data.ts) in the same change.
+
+## Living Dev architecture map
+
+The `/dev/architecture` page renders an animated React Flow diagram from [`components/dev/architecture/architecture-flow-data.ts`](../components/dev/architecture/architecture-flow-data.ts). Treat that file as the product architecture source for the in-app diagram:
+
+- Add a node for every meaningful user-facing feature, maintainer tool, platform service, or business workflow.
+- Add animated edges for flows that are active or operationally important, such as auth, push delivery, and Dev tests.
+- Keep labels business-readable so the diagram explains the idea of the app, not only the implementation.
