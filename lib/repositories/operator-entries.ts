@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { WeekendPlannerIngestBody } from "@/modules/operator/weekend-planner-schema";
+import type { OperatorEntryIngestBody } from "@/modules/operator/operator-entry-ingest-schema";
 import {
   pickCurrentWeekendPlannerEntry,
   tryParseWeekendPlannerPayload,
@@ -47,7 +47,7 @@ export async function fetchCurrentWeekendPlannerForUser(
 
 export async function upsertOperatorEntry(
   admin: SupabaseClient<Database>,
-  body: WeekendPlannerIngestBody,
+  body: OperatorEntryIngestBody,
 ): Promise<{ id: string; updatedAt: string }> {
   const row: Database["public"]["Tables"]["operator_entries"]["Insert"] = {
     user_id: body.userId,

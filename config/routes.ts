@@ -1,6 +1,7 @@
 export const ROUTES = {
   home: "/",
   dashboard: "/dashboard",
+  apartments: "/apartments",
   shopping: "/shopping",
   shoppingAdmin: "/shopping/admin",
   todo: "/todo",
@@ -18,9 +19,14 @@ export function todoTaskPath(id: string) {
   return `/todo/${id}`;
 }
 
+export function apartmentsPath(id: string) {
+  return `/apartments/${id}`;
+}
+
 /** URL prefixes that require an authenticated session (middleware). */
 export const PROTECTED_ROUTE_PREFIXES: string[] = [
   ROUTES.dashboard,
+  ROUTES.apartments,
   ROUTES.shopping,
   ROUTES.todo,
   ROUTES.calendar,

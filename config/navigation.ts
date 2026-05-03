@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Building2,
   CalendarDays,
   Code2,
   LayoutDashboard,
@@ -23,6 +24,12 @@ export const mainNavItems: MainNavItem[] = [
     label: "Dashboard",
     shortLabel: "Home",
     icon: LayoutDashboard,
+  },
+  {
+    href: ROUTES.apartments,
+    label: "Apartments",
+    shortLabel: "Apts",
+    icon: Building2,
   },
   {
     href: ROUTES.shopping,

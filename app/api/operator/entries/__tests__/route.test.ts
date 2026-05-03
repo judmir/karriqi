@@ -1,9 +1,10 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
-import type { WeekendPlannerIngestBody } from "@/modules/operator/weekend-planner-schema";
+import type { OperatorEntryIngestBody } from "@/modules/operator/operator-entry-ingest-schema";
 
 import { upsertOperatorEntry } from "@/lib/repositories/operator-entries";
 import { buildWeekendPlannerIngest } from "@/test/fixtures/weekend-planner-ingest";
+import { buildApartmentFindingIngest } from "@/test/fixtures/apartment-finding-ingest";
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(() => ({})),
@@ -105,7 +106,7 @@ describe("POST /api/operator/entries", () => {
       id: "11111111-1111-1111-1111-111111111111",
     });
     expect(upsertOperatorEntry).toHaveBeenCalledTimes(1);
-    const firstArg = vi.mocked(upsertOperatorEntry).mock.calls[0]![1] as WeekendPlannerIngestBody;
+    const firstArg = vi.mocked(upsertOperatorEntry).mock.calls[0]![1] as OperatorEntryIngestBody;
     expect(firstArg.dedupeKey).toBe(body.dedupeKey);
   });
 
@@ -135,9 +136,29 @@ describe("POST /api/operator/entries", () => {
     expect(upsertOperatorEntry).toHaveBeenCalledTimes(2);
 
     expect(
-      (vi.mocked(upsertOperatorEntry).mock.calls[0]![1] as WeekendPlannerIngestBody).dedupeKey,
+      (vi.mocked(upsertOperatorEntry).mock.calls[0]![1] as OperatorEntryIngestBody).dedupeKey,
     ).toEqual(
-      (vi.mocked(upsertOperatorEntry).mock.calls[1]![1] as WeekendPlannerIngestBody).dedupeKey,
+      (vi.mocked(upsertOperatorEntry).mock.calls[1]![1] as OperatorEntryIngestBody).dedupeKey,
     );
+  });
+
+  it("accepts valid apartment finding ingest and calls upsert", async () => {
+    const body = buildApartmentFindingIngest();
+    const res = await POST(
+      new Request("http://karriqi.test/api/operator/entries", {
+        method: "POST",
+        headers: { ...authHeader(), "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      status: "upserted",
+      id: "11111111-1111-1111-1111-111111111111",
+    });
+    expect(upsertOperatorEntry).toHaveBeenCalledTimes(1);
+    const firstArg = vi.mocked(upsertOperatorEntry).mock.calls[0]![1] as OperatorEntryIngestBody;
+    expect(firstArg.kind).toBe("apartment_finding");
+    expect(firstArg.dedupeKey).toBe(body.dedupeKey);
   });
 });

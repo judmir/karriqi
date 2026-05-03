@@ -293,6 +293,32 @@ export type Database = {
         };
         Relationships: [];
       };
+      operator_entry_views: {
+        Row: {
+          user_id: string;
+          entry_id: string;
+          viewed_at: string;
+        };
+        Insert: {
+          user_id: string;
+          entry_id: string;
+          viewed_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          entry_id?: string;
+          viewed_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "operator_entry_views_entry_id_fkey";
+            columns: ["entry_id"];
+            isOneToOne: false;
+            referencedRelation: "operator_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       operator_entries: {
         Row: {
           id: string;

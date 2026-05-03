@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { readOperatorIngestToken } from "@/lib/env/operator-ingest";
 import { upsertOperatorEntry } from "@/lib/repositories/operator-entries";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { weekendPlannerIngestSchema } from "@/modules/operator/weekend-planner-schema";
+import { operatorEntryIngestSchema } from "@/modules/operator/operator-entry-ingest-schema";
 
 function unauthorized(): NextResponse {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const parsed = weekendPlannerIngestSchema.safeParse(json);
+  const parsed = operatorEntryIngestSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", details: parsed.error.flatten() },

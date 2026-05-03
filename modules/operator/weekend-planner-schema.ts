@@ -1,14 +1,6 @@
 import { z } from "zod";
 
-const isoInstant = z.string().refine(
-  (s) => Number.isFinite(Date.parse(s)),
-  "Invalid ISO 8601 timestamp",
-);
-
-const uuidLike = z.string().regex(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-  "Must be a UUID",
-);
+import { isoInstant, uuidLike } from "@/modules/operator/ingest-primitives";
 
 const weekendPlannerItemSchema = z.object({
   rank: z.number().int(),
@@ -57,7 +49,7 @@ export const weekendPlannerPayloadSchema = z
     }
   });
 
-/** POST /api/operator/entries JSON body — weekend planner ingest only */
+/** POST /api/operator/entries JSON body — branch `kind: "weekend_planner"` */
 export const weekendPlannerIngestSchema = z
   .object({
     userId: uuidLike,
