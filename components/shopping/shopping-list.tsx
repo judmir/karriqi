@@ -8,6 +8,7 @@ import type { ShoppingListItem } from "@/types/shopping";
 
 const REVEAL_PX = 72;
 const DELETE_THRESHOLD_PX = 44;
+const SWIPE_INTENT_PX = 8;
 /** Max horizontal movement (px) to count as a tap on the row (toggle checked). */
 const TAP_TOGGLE_PX = 10;
 
@@ -24,7 +25,12 @@ function ShoppingListRow({
 }) {
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const dragRef = useRef<{ startX: number; startOffset: number } | null>(null);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    startOffset: number;
+    swiping: boolean;
+  } | null>(null);
   const showPromote = !item.stapleId && onPromoteToSuggested;
 
   function clamp(n: number) {
@@ -33,14 +39,34 @@ function ShoppingListRow({
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if ((e.target as HTMLElement).closest("input, button")) return;
-    dragRef.current = { startX: e.clientX, startOffset: offset };
-    setDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffset: offset,
+      swiping: false,
+    };
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+
+    if (!dragRef.current.swiping) {
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      if (absY > SWIPE_INTENT_PX && absY > absX) {
+        dragRef.current = null;
+        setOffset(0);
+        return;
+      }
+      if (absX <= SWIPE_INTENT_PX || absX <= absY) return;
+
+      dragRef.current.swiping = true;
+      setDragging(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+
     setOffset(clamp(dragRef.current.startOffset + dx));
   }
 
@@ -52,12 +78,18 @@ function ShoppingListRow({
       /* already released */
     }
     const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
     const finalOffset = clamp(dragRef.current.startOffset + dx);
+    const wasSwiping = dragRef.current.swiping;
     dragRef.current = null;
     setDragging(false);
-    if (finalOffset <= -DELETE_THRESHOLD_PX) {
+    if (wasSwiping && finalOffset <= -DELETE_THRESHOLD_PX) {
       onRemove();
-    } else if (Math.abs(dx) < TAP_TOGGLE_PX) {
+    } else if (
+      !wasSwiping &&
+      Math.abs(dx) < TAP_TOGGLE_PX &&
+      Math.abs(dy) < TAP_TOGGLE_PX
+    ) {
       onToggle();
     }
     setOffset(0);

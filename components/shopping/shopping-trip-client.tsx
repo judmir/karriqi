@@ -30,6 +30,7 @@ type TripState = {
 
 const SUGGESTED_REVEAL_PX = 72;
 const SUGGESTED_DELETE_THRESHOLD_PX = 44;
+const SUGGESTED_SWIPE_INTENT_PX = 8;
 const SUGGESTED_TAP_PX = 10;
 
 function normalizeItemLabel(label: string) {
@@ -49,7 +50,12 @@ function SuggestedItemChip({
 }) {
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const dragRef = useRef<{ startX: number; startOffset: number } | null>(null);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    startOffset: number;
+    swiping: boolean;
+  } | null>(null);
   const suppressClickRef = useRef(false);
   const isDueSoon = Boolean(dueDetail);
   const showDeleteReveal = dragging || offset < -1;
@@ -59,14 +65,34 @@ function SuggestedItemChip({
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    dragRef.current = { startX: e.clientX, startOffset: offset };
-    setDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffset: offset,
+      swiping: false,
+    };
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+
+    if (!dragRef.current.swiping) {
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      if (absY > SUGGESTED_SWIPE_INTENT_PX && absY > absX) {
+        dragRef.current = null;
+        setOffset(0);
+        return;
+      }
+      if (absX <= SUGGESTED_SWIPE_INTENT_PX || absX <= absY) return;
+
+      dragRef.current.swiping = true;
+      setDragging(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+
     setOffset(clamp(dragRef.current.startOffset + dx));
   }
 
@@ -78,13 +104,19 @@ function SuggestedItemChip({
       /* already released */
     }
     const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
     const finalOffset = clamp(dragRef.current.startOffset + dx);
+    const wasSwiping = dragRef.current.swiping;
     dragRef.current = null;
     setDragging(false);
-    if (finalOffset <= -SUGGESTED_DELETE_THRESHOLD_PX) {
+    if (wasSwiping && finalOffset <= -SUGGESTED_DELETE_THRESHOLD_PX) {
       suppressClickRef.current = true;
       onDelete();
-    } else if (Math.abs(dx) < SUGGESTED_TAP_PX) {
+    } else if (
+      !wasSwiping &&
+      Math.abs(dx) < SUGGESTED_TAP_PX &&
+      Math.abs(dy) < SUGGESTED_TAP_PX
+    ) {
       suppressClickRef.current = true;
       onAdd();
     }
