@@ -30,6 +30,10 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  // Pin Turbopack root for pnpm layouts (avoids "Next.js package not found" HMR panics).
+  turbopack: {
+    root: rootDir,
+  },
   // Avoid picking a parent directory lockfile when multiple exist on the machine.
   outputFileTracingRoot: rootDir,
   // Allow dev over a local DNS name (see README: /etc/hosts → karriqi.test).
