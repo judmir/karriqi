@@ -3,6 +3,7 @@
 import { ListPlus, X } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { getProfileColor } from "@/lib/profile/colors";
 import { cn } from "@/lib/utils";
 import type { ShoppingListItem } from "@/types/shopping";
 
@@ -32,6 +33,7 @@ function ShoppingListRow({
     swiping: boolean;
   } | null>(null);
   const showPromote = !item.stapleId && onPromoteToSuggested;
+  const creatorColor = getProfileColor(item.createdByColor);
 
   function clamp(n: number) {
     return Math.min(0, Math.max(-REVEAL_PX, n));
@@ -105,10 +107,16 @@ function ShoppingListRow({
       </div>
       <div
         className={cn(
-          "bg-background relative z-10 flex w-full cursor-pointer touch-pan-y select-none items-start gap-0.5 py-2.5",
+          "bg-background relative z-10 flex w-full cursor-pointer touch-pan-y select-none items-start gap-0.5 py-2.5 pl-2",
           !dragging && "transition-transform duration-200 ease-out",
         )}
-        style={{ transform: `translateX(${offset}px)` }}
+        style={{
+          transform: `translateX(${offset}px)`,
+          boxShadow: creatorColor
+            ? `inset 3px 0 0 0 ${creatorColor.accent}`
+            : undefined,
+        }}
+        data-creator-color={item.createdByColor ?? undefined}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={finishPointer}

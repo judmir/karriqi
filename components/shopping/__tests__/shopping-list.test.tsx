@@ -53,4 +53,24 @@ describe("ShoppingList", () => {
 
     expect(onItemsChange).toHaveBeenCalledWith([]);
   });
+
+  it("tints the row with the creator's profile color when set", () => {
+    const tinted: ShoppingListItem[] = [
+      { ...items[0], createdByColor: "rose" },
+    ];
+
+    render(<ShoppingList items={tinted} onItemsChange={vi.fn()} />);
+
+    const target = getGestureTarget();
+    expect(target.getAttribute("data-creator-color")).toBe("rose");
+    expect(target.style.boxShadow).toContain("inset");
+  });
+
+  it("does not render a tint for items without a creator color", () => {
+    render(<ShoppingList items={items} onItemsChange={vi.fn()} />);
+
+    const target = getGestureTarget();
+    expect(target.getAttribute("data-creator-color")).toBeNull();
+    expect(target.style.boxShadow).toBe("");
+  });
 });

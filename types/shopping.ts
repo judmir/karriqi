@@ -21,4 +21,11 @@ export type ShoppingListItem = {
   quantity?: string;
   checked: boolean;
   addedAt: IsoDateString;
+  /**
+   * Profile color slug of whoever added this row (see PROFILE_COLORS in
+   * `lib/profile/colors.ts`). Set when the row is first persisted and used
+   * by the list UI to tint the row so household members can recognise who
+   * added each item. Optional because legacy rows / mock data have none.
+   */
+  createdByColor?: string;
 };

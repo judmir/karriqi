@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
 import { notifyShoppingListSaved } from "@/lib/notifications/notification-events";
+import { profileColorFromUserMeta } from "@/lib/profile/colors";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { createClient } from "@/lib/supabase/server";
 import type { ShoppingListItem } from "@/types/shopping";
@@ -131,7 +132,25 @@ export async function createStaple(input: {
 
 export type SaveListResult = { ok: true } | { ok: false; message: string };
 
-/** Replaces the user’s shopping list with the given rows (transactional delete + insert). */
+/**
+ * Persists the household shopping list as the union of `items` from the
+ * caller's view.
+ *
+ * The list is shared across household members (see migration
+ * `20260518200000_shared_shopping_list_and_profile_color.sql`). Because
+ * different rows can be owned by different users, we cannot rebuild the
+ * list with a blanket delete + insert any more — that would either wipe
+ * peer-owned rows or violate the INSERT RLS check (`user_id = auth.uid()`).
+ *
+ * Instead we diff against the household-scope view RLS already returns:
+ *   - Delete: rows present in DB but no longer in the submitted list.
+ *   - Insert: rows with new ids — created under the current user, with the
+ *             caller's profile color snapshotted into `created_by_color`.
+ *   - Update: rows already in DB — only mutable fields (name, quantity,
+ *             checked, position, staple_id). We never touch `user_id` or
+ *             `created_by_color`, so peer-owned rows keep their creator
+ *             identity even when the actor reorders or checks them.
+ */
 export async function saveShoppingListItems(
   items: ShoppingListItem[],
 ): Promise<SaveListResult> {
@@ -150,13 +169,30 @@ export async function saveShoppingListItems(
     }
   }
 
-  const { error: delError } = await supabase
+  const { data: existing, error: fetchError } = await supabase
     .from("shopping_list_items")
-    .delete()
-    .eq("user_id", user.id);
+    .select("id");
 
-  if (delError) {
-    return { ok: false, message: delError.message };
+  if (fetchError) {
+    return { ok: false, message: fetchError.message };
+  }
+
+  const submittedIds = new Set(items.map((i) => i.id));
+  const existingIds = new Set((existing ?? []).map((r) => r.id));
+
+  const toDelete = (existing ?? [])
+    .filter((r) => !submittedIds.has(r.id))
+    .map((r) => r.id);
+
+  if (toDelete.length > 0) {
+    const { error: delError } = await supabase
+      .from("shopping_list_items")
+      .delete()
+      .in("id", toDelete);
+
+    if (delError) {
+      return { ok: false, message: delError.message };
+    }
   }
 
   if (items.length === 0) {
@@ -165,23 +201,80 @@ export async function saveShoppingListItems(
     return { ok: true };
   }
 
-  const rows = items.map((item, position) => ({
-    id: item.id,
-    user_id: user.id,
-    staple_id:
-      item.stapleId && isUuid(item.stapleId) ? item.stapleId : null,
-    name: item.name.trim(),
-    quantity: item.quantity?.trim() || null,
-    checked: item.checked,
-    position,
-  }));
+  const actorColor =
+    profileColorFromUserMeta(user.user_metadata as Record<string, unknown>) ??
+    null;
 
-  const { error: insError } = await supabase
-    .from("shopping_list_items")
-    .insert(rows);
+  const newRows: Array<{
+    id: string;
+    user_id: string;
+    staple_id: string | null;
+    name: string;
+    quantity: string | null;
+    checked: boolean;
+    position: number;
+    created_by_color: string | null;
+  }> = [];
 
-  if (insError) {
-    return { ok: false, message: insError.message };
+  type UpdatePayload = {
+    id: string;
+    staple_id: string | null;
+    name: string;
+    quantity: string | null;
+    checked: boolean;
+    position: number;
+  };
+  const updates: UpdatePayload[] = [];
+
+  items.forEach((item, position) => {
+    const stapleId =
+      item.stapleId && isUuid(item.stapleId) ? item.stapleId : null;
+    const name = item.name.trim();
+    const quantity = item.quantity?.trim() || null;
+
+    if (existingIds.has(item.id)) {
+      updates.push({
+        id: item.id,
+        staple_id: stapleId,
+        name,
+        quantity,
+        checked: item.checked,
+        position,
+      });
+    } else {
+      newRows.push({
+        id: item.id,
+        user_id: user.id,
+        staple_id: stapleId,
+        name,
+        quantity,
+        checked: item.checked,
+        position,
+        created_by_color: actorColor,
+      });
+    }
+  });
+
+  if (newRows.length > 0) {
+    const { error: insError } = await supabase
+      .from("shopping_list_items")
+      .insert(newRows);
+
+    if (insError) {
+      return { ok: false, message: insError.message };
+    }
+  }
+
+  if (updates.length > 0) {
+    const results = await Promise.all(
+      updates.map(({ id, ...patch }) =>
+        supabase.from("shopping_list_items").update(patch).eq("id", id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      return { ok: false, message: failed.error.message };
+    }
   }
 
   void notifyShoppingListSaved(user.id);

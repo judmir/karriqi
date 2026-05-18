@@ -1,3 +1,4 @@
+import { ProfileColorPicker } from "@/components/settings/profile-color-picker";
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
 import { DevMenuSettings } from "@/components/settings/dev-menu-settings";
 import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
@@ -16,6 +17,7 @@ import {
   isDevMenuEnabledInMetadata,
 } from "@/lib/dev/dev-access";
 import { isSupabaseConfigured } from "@/lib/env";
+import { profileColorFromUserMeta } from "@/lib/profile/colors";
 import { getSessionUser } from "@/lib/supabase/server";
 import { displayNameFromUserMeta } from "@/lib/todo/assignable-members";
 
@@ -43,12 +45,12 @@ export default async function SettingsPage() {
     );
   }
 
-  const initialDisplayName =
-    displayNameFromUserMeta(
-      user.user_metadata as Record<string, unknown>,
-    ) ?? "";
-
   const meta = user.user_metadata as Record<string, unknown>;
+
+  const initialDisplayName = displayNameFromUserMeta(meta) ?? "";
+
+  const initialProfileColor = profileColorFromUserMeta(meta);
+
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
 
@@ -63,11 +65,15 @@ export default async function SettingsPage() {
               Display name and email used across the app.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-8">
             <ProfileSettingsForm
               key={initialDisplayName || user.id}
               email={user.email ?? ""}
               initialDisplayName={initialDisplayName}
+            />
+            <ProfileColorPicker
+              key={`color-${initialProfileColor ?? "none"}`}
+              initialColorId={initialProfileColor}
             />
           </CardContent>
         </Card>

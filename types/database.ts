@@ -81,6 +81,7 @@ export type Database = {
           checked: boolean;
           position: number;
           created_at: string;
+          created_by_color: string | null;
         };
         Insert: {
           id: string;
@@ -91,6 +92,7 @@ export type Database = {
           checked?: boolean;
           position?: number;
           created_at?: string;
+          created_by_color?: string | null;
         };
         Update: {
           id?: string;
@@ -101,6 +103,7 @@ export type Database = {
           checked?: boolean;
           position?: number;
           created_at?: string;
+          created_by_color?: string | null;
         };
         Relationships: [];
       };
