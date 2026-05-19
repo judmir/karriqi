@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { SignInForm } from "@/components/auth/sign-in-form";
+import { SignInSwitcher } from "@/components/auth/sign-in-switcher";
 import { SupabaseRequired } from "@/components/auth/supabase-required";
 import {
   Card,
@@ -21,13 +21,13 @@ export default function SignInPage() {
       <CardHeader className="space-y-1">
         <CardTitle className="text-xl">Sign in</CardTitle>
         <CardDescription>
-          Sign in with the email and password for your account (created in the
-          Supabase dashboard). There is no public registration.
+          Type your PIN, or fall back to your email and password. There is no
+          public registration.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<p className="text-muted-foreground text-sm">Loading…</p>}>
-          <SignInForm />
+          <SignInSwitcher />
         </Suspense>
       </CardContent>
     </Card>

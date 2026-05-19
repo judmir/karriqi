@@ -1,5 +1,6 @@
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
 import { DevMenuSettings } from "@/components/settings/dev-menu-settings";
+import { PinSettingsForm } from "@/components/settings/pin-settings-form";
 import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/patterns/page-header";
@@ -11,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getOwnPinStatus } from "@/lib/auth/pin-actions";
 import {
   isDevMenuEmail,
   isDevMenuEnabledInMetadata,
@@ -51,6 +53,7 @@ export default async function SettingsPage() {
   const meta = user.user_metadata as Record<string, unknown>;
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
+  const pinStatus = await getOwnPinStatus();
 
   return (
     <PageContainer>
@@ -68,6 +71,20 @@ export default async function SettingsPage() {
               key={initialDisplayName || user.id}
               email={user.email ?? ""}
               initialDisplayName={initialDisplayName}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>PIN sign-in</CardTitle>
+            <CardDescription>
+              Quick numeric PIN you can type instead of email + password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PinSettingsForm
+              initialHasPin={pinStatus.hasPin}
+              configured={pinStatus.configured}
             />
           </CardContent>
         </Card>

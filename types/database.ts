@@ -338,6 +338,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_pins: {
+        Row: {
+          user_id: string;
+          pin_lookup_hash: string;
+          pin_hash: string;
+          failed_count: number;
+          lockout_until: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          pin_lookup_hash: string;
+          pin_hash: string;
+          failed_count?: number;
+          lockout_until?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          pin_lookup_hash?: string;
+          pin_hash?: string;
+          failed_count?: number;
+          lockout_until?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pin_ip_attempts: {
+        Row: {
+          ip: string;
+          failed_count: number;
+          lockout_until: string | null;
+          last_attempt_at: string;
+        };
+        Insert: {
+          ip: string;
+          failed_count?: number;
+          lockout_until?: string | null;
+          last_attempt_at?: string;
+        };
+        Update: {
+          ip?: string;
+          failed_count?: number;
+          lockout_until?: string | null;
+          last_attempt_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
