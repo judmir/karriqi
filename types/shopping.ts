@@ -28,4 +28,10 @@ export type ShoppingListItem = {
    * added each item. Optional because legacy rows / mock data have none.
    */
   createdByColor?: string;
+  /**
+   * Server-assigned ordering within the household list. Used to keep
+   * realtime-merged rows in sync across clients; locally-only items (not
+   * yet persisted) inherit their array index at save time.
+   */
+  position?: number;
 };

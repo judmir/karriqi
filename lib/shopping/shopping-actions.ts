@@ -133,26 +133,32 @@ export async function createStaple(input: {
 export type SaveListResult = { ok: true } | { ok: false; message: string };
 
 /**
- * Persists the household shopping list as the union of `items` from the
- * caller's view.
+ * Persists the household shopping list. The list is shared across
+ * household members (see migration
+ * `20260518200000_shared_shopping_list_and_profile_color.sql`) and is also
+ * synced live via Supabase Realtime, so multiple clients can mutate it
+ * concurrently.
  *
- * The list is shared across household members (see migration
- * `20260518200000_shared_shopping_list_and_profile_color.sql`). Because
- * different rows can be owned by different users, we cannot rebuild the
- * list with a blanket delete + insert any more — that would either wipe
- * peer-owned rows or violate the INSERT RLS check (`user_id = auth.uid()`).
+ * Important: the caller passes `knownIds` — the set of ids the actor's UI
+ * believed were on the list at the moment of save. The server only
+ * deletes ids that are in `knownIds` but NOT in `items`. This is what
+ * makes concurrent edits safe: if a peer adds a row between the actor's
+ * read and write, that row is not in the actor's `knownIds`, so we never
+ * delete it. Without this, the previous "fetch existing → delete missing"
+ * approach would clobber a peer's just-added item.
  *
- * Instead we diff against the household-scope view RLS already returns:
- *   - Delete: rows present in DB but no longer in the submitted list.
- *   - Insert: rows with new ids — created under the current user, with the
- *             caller's profile color snapshotted into `created_by_color`.
- *   - Update: rows already in DB — only mutable fields (name, quantity,
- *             checked, position, staple_id). We never touch `user_id` or
- *             `created_by_color`, so peer-owned rows keep their creator
- *             identity even when the actor reorders or checks them.
+ *   - Delete: ids in `knownIds` but not in `items`.
+ *   - Insert: items whose id is not yet in the DB — created under the
+ *             current user, with the caller's profile color snapshotted
+ *             into `created_by_color`.
+ *   - Update: items already in the DB — only mutable fields (name,
+ *             quantity, checked, position, staple_id). We never touch
+ *             `user_id` or `created_by_color`, so peer-owned rows keep
+ *             their creator identity even when reordered or checked off.
  */
 export async function saveShoppingListItems(
   items: ShoppingListItem[],
+  knownIds: string[] = [],
 ): Promise<SaveListResult> {
   const supabase = await createClient();
   const {
@@ -169,20 +175,17 @@ export async function saveShoppingListItems(
     }
   }
 
-  const { data: existing, error: fetchError } = await supabase
-    .from("shopping_list_items")
-    .select("id");
-
-  if (fetchError) {
-    return { ok: false, message: fetchError.message };
+  for (const id of knownIds) {
+    if (!isUuid(id)) {
+      return { ok: false, message: "Invalid knownIds entry." };
+    }
   }
 
   const submittedIds = new Set(items.map((i) => i.id));
-  const existingIds = new Set((existing ?? []).map((r) => r.id));
 
-  const toDelete = (existing ?? [])
-    .filter((r) => !submittedIds.has(r.id))
-    .map((r) => r.id);
+  const toDelete = Array.from(new Set(knownIds)).filter(
+    (id) => !submittedIds.has(id),
+  );
 
   if (toDelete.length > 0) {
     const { error: delError } = await supabase
@@ -196,10 +199,27 @@ export async function saveShoppingListItems(
   }
 
   if (items.length === 0) {
-    void notifyShoppingListSaved(user.id);
+    if (toDelete.length > 0) {
+      void notifyShoppingListSaved(user.id);
+    }
     revalidatePath(ROUTES.shopping);
     return { ok: true };
   }
+
+  // Look up which submitted ids already exist so we can route between
+  // insert (new) and update (existing). We limit the IN(...) query to the
+  // submitted ids — this is bounded by the user's list length, unlike the
+  // previous unbounded "select * from shopping_list_items".
+  const { data: existingRows, error: fetchError } = await supabase
+    .from("shopping_list_items")
+    .select("id")
+    .in("id", Array.from(submittedIds));
+
+  if (fetchError) {
+    return { ok: false, message: fetchError.message };
+  }
+
+  const existingIds = new Set((existingRows ?? []).map((r) => r.id));
 
   const actorColor =
     profileColorFromUserMeta(user.user_metadata as Record<string, unknown>) ??
@@ -277,6 +297,10 @@ export async function saveShoppingListItems(
     }
   }
 
+  // Only notify when something actually changed beyond reordering. We
+  // err on the side of notifying for inserts / deletes; pure
+  // updates also notify because checking items off is the canonical
+  // "list activity" signal.
   void notifyShoppingListSaved(user.id);
 
   revalidatePath(ROUTES.shopping);

@@ -12,5 +12,6 @@ export function listRowToItem(row: ListRow): ShoppingListItem {
     checked: row.checked,
     addedAt: row.created_at,
     createdByColor: row.created_by_color ?? undefined,
+    position: row.position,
   };
 }

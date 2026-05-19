@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { isUuid } from "@/lib/shopping/is-uuid";
+import { listRowToItem } from "@/lib/shopping/list-item-mapper";
 import { newShoppingListItemId } from "@/lib/shopping/new-list-item-id";
 import {
   createStaple,
@@ -20,8 +21,23 @@ import {
   saveShoppingListItems,
 } from "@/lib/shopping/shopping-actions";
 import { rankDueSoonStaples } from "@/lib/shopping/suggestions";
+import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import type { Database } from "@/types/database";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
+
+type ShoppingListRow = Database["public"]["Tables"]["shopping_list_items"]["Row"];
+
+function sortByPosition(items: ShoppingListItem[]): ShoppingListItem[] {
+  return [...items].sort((a, b) => {
+    const ap = a.position ?? 0;
+    const bp = b.position ?? 0;
+    if (ap !== bp) return ap - bp;
+    // Stable tiebreak: insertion order in the array is preserved by Array.sort
+    // for equal keys in modern engines, but addedAt gives an explicit fallback.
+    return a.addedAt.localeCompare(b.addedAt);
+  });
+}
 
 type TripState = {
   items: ShoppingListItem[];
@@ -236,7 +252,24 @@ export function ShoppingTripClient({
     catalog: [...staples],
   });
   const [draft, setDraft] = useState("");
+  /**
+   * Suppresses the next run of the debounced save effect. Set on initial
+   * mount (so we don't re-save the data the server just sent us) and after
+   * any state update that originated server-side (a realtime event), since
+   * those don't represent local intent that needs persisting.
+   */
   const skipListPersistRef = useRef(true);
+  /**
+   * Ids the server is known to have right now, from this client's POV.
+   * Updated by realtime events and after every successful save. Used to
+   * tell the server "delete only ids I knew about that I'm no longer
+   * sending" — without it, a peer's just-added row (which the next save's
+   * server-side existing-query would see but our submitted list wouldn't)
+   * would be wrongly wiped.
+   */
+  const serverKnownIdsRef = useRef<Set<string>>(
+    new Set(initialItems.map((item) => item.id)),
+  );
 
   const { items, catalog } = trip;
   const itemLabelSet = useMemo(
@@ -247,14 +280,91 @@ export function ShoppingTripClient({
   const draftHasDuplicateLabel =
     normalizedDraft.length > 0 && itemLabelSet.has(normalizedDraft);
 
+  // Live sync via Supabase Realtime so household members see each
+  // other's adds / updates / removals without a reload. Filtered by RLS,
+  // so we only get events for rows in our household scope.
+  useEffect(() => {
+    if (!listPersistence) return;
+
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel(
+        `shopping_list_items:${Math.random().toString(36).slice(2, 10)}`,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shopping_list_items" },
+        (payload) => {
+          if (
+            payload.eventType === "INSERT" ||
+            payload.eventType === "UPDATE"
+          ) {
+            const row = payload.new as ShoppingListRow;
+            const item = listRowToItem(row);
+            setTrip((t) => {
+              const idx = t.items.findIndex((i) => i.id === item.id);
+              const next =
+                idx >= 0
+                  ? t.items.map((i) => (i.id === item.id ? item : i))
+                  : [...t.items, item];
+              return { ...t, items: sortByPosition(next) };
+            });
+            serverKnownIdsRef.current.add(item.id);
+            skipListPersistRef.current = true;
+          } else if (payload.eventType === "DELETE") {
+            const oldRow = payload.old as Partial<ShoppingListRow>;
+            const removedId = oldRow.id;
+            if (!removedId) return;
+            setTrip((t) => ({
+              ...t,
+              items: t.items.filter((i) => i.id !== removedId),
+            }));
+            serverKnownIdsRef.current.delete(removedId);
+            skipListPersistRef.current = true;
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [listPersistence]);
+
   useEffect(() => {
     if (!listPersistence) return;
     if (skipListPersistRef.current) {
       skipListPersistRef.current = false;
       return;
     }
+    // Capture the snapshot the server should converge to and the set of
+    // ids the client believed were on the server at this moment. Both are
+    // closed over by the timer so concurrent realtime updates that race
+    // with this save don't corrupt the diff.
+    const snapshot = items;
+    const snapshotIds = snapshot.map((i) => i.id);
+    const knownAtSaveStart = new Set(serverKnownIdsRef.current);
+
     const timer = setTimeout(() => {
-      void saveShoppingListItems(items);
+      void saveShoppingListItems(
+        snapshot,
+        Array.from(knownAtSaveStart),
+      ).then((r) => {
+        if (!r.ok) {
+          toast.error(`Couldn't sync the list: ${r.message}`);
+          return;
+        }
+        // Rebuild server-known ids: keep anything realtime added since
+        // save start (i.e. not in knownAtSaveStart) and add the freshly
+        // upserted snapshot ids. Deleted ids in (knownAtSaveStart \
+        // snapshotIds) naturally fall out.
+        const next = new Set<string>();
+        for (const id of serverKnownIdsRef.current) {
+          if (!knownAtSaveStart.has(id)) next.add(id);
+        }
+        for (const id of snapshotIds) next.add(id);
+        serverKnownIdsRef.current = next;
+      });
     }, 200);
     return () => clearTimeout(timer);
   }, [items, listPersistence]);
