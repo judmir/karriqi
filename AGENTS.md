@@ -7,3 +7,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Git (agents)
 
 **Mandatory:** follow `.cursor/rules/agent-git-branch-workflow.mdc` — work on `agent/YYYY-MM-DD-…` branches, commit and push logical chunks to `origin`, **never** merge to `main` unless the user explicitly asks.
+
+**Worktrees:** after creating or entering a new worktree, follow `.cursor/rules/worktree-dev-server.mdc` — install deps if needed, start `next dev` on a free port, and give the user `http://localhost:<port>` to test in the browser.

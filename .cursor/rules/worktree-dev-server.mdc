@@ -1,0 +1,46 @@
+---
+description: After a new git worktree, auto-install deps and start local dev with a URL for the user
+alwaysApply: true
+---
+
+# Worktree local dev server
+
+Whenever you **create or switch the agent into a new git worktree** (Glass worktree flow, `git worktree add`, or `move_agent_to_root` to a fresh worktree path), start a **local web dev server in that worktree** before substantive feature work. The user should get a link to open in the browser without doing setup manually.
+
+Do this **after** `move_agent_to_root` and `SetActiveBranch` succeed (when applicable). Do **not** skip because the prime checkout already has a server running — each worktree needs its **own** server (usually on a **different port**).
+
+## Setup (in the worktree root)
+
+1. **Environment** — If `.env.local` is missing, copy it from another checkout that has one:
+   - Prefer any path from `git worktree list` that already contains `.env.local`, or
+   - Fall back to `/Users/judikarriqi/Documents/__dev/karriqi/.env.local` if it exists.
+   - If none exists, tell the user to add `.env.local` from `.env.example` before protected routes will work.
+2. **Dependencies** — If `node_modules` is missing, run `pnpm install` in the worktree (wait for completion).
+3. **Port** — Default dev port is **3010** (`package.json`). Pick the first free port in **3010–3019** (e.g. `lsof -i :3010`; if busy, use 3011, then 3012, …).
+4. **Start server** — Run in the **background** from the worktree root:
+
+   ```bash
+   ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>
+   ```
+
+   Wait until output shows **Ready** (or `Local: http://localhost:<PORT>`).
+
+## Tell the user (required)
+
+In your first reply after worktree setup, include clearly:
+
+- **Local URL:** `http://localhost:<PORT>` (worktree build)
+- **LAN URL** if shown by Next.js (optional, for phone testing)
+- If the **prime** checkout still runs on another port (often 3010), say which port is which so they do not open the wrong app.
+
+Example: “Worktree preview: http://localhost:3011 — your main checkout on 3010 does not include this branch.”
+
+## Do not
+
+- Assume the user will run `pnpm dev` themselves for worktree preview unless they explicitly ask to take over.
+- Reuse the prime checkout’s port if it is already in use (always choose another free port).
+- Edit files outside the active worktree path unless the user asks.
+
+## Cleanup (when abandoning a worktree)
+
+If the user drops the worktree or says they do not want to continue: stop that worktree’s dev process (the background terminal on its port), then `git worktree remove` / delete branch per `agent-git-branch-workflow.mdc` if they want no trace.
