@@ -2,16 +2,12 @@
 
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/patterns/page-header";
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { newShoppingListItemId } from "@/lib/shopping/new-list-item-id";
 import {
@@ -28,165 +24,27 @@ type TripState = {
   catalog: StapleItem[];
 };
 
-const SUGGESTED_REVEAL_PX = 72;
-const SUGGESTED_DELETE_THRESHOLD_PX = 44;
-const SUGGESTED_SWIPE_INTENT_PX = 8;
-const SUGGESTED_TAP_PX = 10;
-
 function normalizeItemLabel(label: string) {
   return label.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function SuggestedItemChip({
   staple,
-  dueDetail,
   onAdd,
-  onDelete,
 }: {
   staple: StapleItem;
-  dueDetail?: string;
   onAdd: () => void;
-  onDelete: () => void;
 }) {
-  const [offset, setOffset] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const dragRef = useRef<{
-    startX: number;
-    startY: number;
-    startOffset: number;
-    swiping: boolean;
-  } | null>(null);
-  const suppressClickRef = useRef(false);
-  const isDueSoon = Boolean(dueDetail);
-  const showDeleteReveal = dragging || offset < -1;
-
-  function clamp(n: number) {
-    return Math.min(0, Math.max(-SUGGESTED_REVEAL_PX, n));
-  }
-
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startOffset: offset,
-      swiping: false,
-    };
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragRef.current) return;
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-
-    if (!dragRef.current.swiping) {
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
-      if (absY > SUGGESTED_SWIPE_INTENT_PX && absY > absX) {
-        dragRef.current = null;
-        setOffset(0);
-        return;
-      }
-      if (absX <= SUGGESTED_SWIPE_INTENT_PX || absX <= absY) return;
-
-      dragRef.current.swiping = true;
-      setDragging(true);
-      e.currentTarget.setPointerCapture(e.pointerId);
-    }
-
-    setOffset(clamp(dragRef.current.startOffset + dx));
-  }
-
-  function finishPointer(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragRef.current) return;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      /* already released */
-    }
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-    const finalOffset = clamp(dragRef.current.startOffset + dx);
-    const wasSwiping = dragRef.current.swiping;
-    dragRef.current = null;
-    setDragging(false);
-    if (wasSwiping && finalOffset <= -SUGGESTED_DELETE_THRESHOLD_PX) {
-      suppressClickRef.current = true;
-      onDelete();
-    } else if (
-      !wasSwiping &&
-      Math.abs(dx) < SUGGESTED_TAP_PX &&
-      Math.abs(dy) < SUGGESTED_TAP_PX
-    ) {
-      suppressClickRef.current = true;
-      onAdd();
-    }
-    setOffset(0);
-  }
-
-  const chip = (
+  return (
     <button
       type="button"
-      onClick={() => {
-        if (suppressClickRef.current) {
-          suppressClickRef.current = false;
-          return;
-        }
-        onAdd();
-      }}
-      aria-label={
-        isDueSoon
-          ? `Add ${staple.name} to list. ${dueDetail}`
-          : `Add ${staple.name} to list`
-      }
-      className={cn(
-        "cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors",
-        isDueSoon
-          ? "border-primary/35 bg-background text-foreground hover:bg-primary/10"
-          : "border-border bg-background text-foreground hover:bg-muted/80",
-      )}
+      onClick={onAdd}
+      aria-label={`Add ${staple.name} to list`}
+      className="text-foreground hover:bg-muted/80 inline-flex cursor-pointer items-center gap-1 rounded-full bg-transparent px-3 py-1 text-sm transition-colors select-none"
     >
-      {isDueSoon ? (
-        <span
-          className="mr-1 inline-block size-1.5 rounded-full bg-primary/80 align-middle"
-          aria-hidden
-        />
-      ) : null}
-      {staple.name}
+      <span>{staple.name}</span>
+      <Plus className="text-muted-foreground size-3" aria-hidden />
     </button>
-  );
-
-  return (
-    <div className="relative overflow-hidden rounded-full">
-      <div
-        className={cn(
-          "bg-destructive/15 text-destructive absolute inset-y-0 right-0 flex w-[4.5rem] items-center justify-center text-xs font-medium transition-opacity duration-150",
-          showDeleteReveal ? "opacity-100" : "opacity-0",
-        )}
-        aria-hidden
-      >
-        Delete
-      </div>
-      <div
-        className={cn(
-          "relative z-10 w-fit touch-pan-y",
-          !dragging && "transition-transform duration-200 ease-out",
-        )}
-        style={{ transform: `translateX(${offset}px)` }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={finishPointer}
-        onPointerCancel={finishPointer}
-      >
-        {isDueSoon && dueDetail ? (
-          <Tooltip>
-            <TooltipTrigger render={chip} />
-            <TooltipContent>{dueDetail}</TooltipContent>
-          </Tooltip>
-        ) : (
-          chip
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -236,6 +94,7 @@ export function ShoppingTripClient({
     catalog: [...staples],
   });
   const [draft, setDraft] = useState("");
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const skipListPersistRef = useRef(true);
 
   const { items, catalog } = trip;
@@ -286,11 +145,6 @@ export function ShoppingTripClient({
     [dueSoon],
   );
 
-  const dueSoonDetailByStapleId = useMemo(
-    () => new Map(dueSoon.map(({ staple, detail }) => [staple.id, detail])),
-    [dueSoon],
-  );
-
   const suggestedCatalog = useMemo(
     () => [
       ...catalog.filter(
@@ -318,13 +172,6 @@ export function ShoppingTripClient({
     setTrip((t) => ({ ...t, items: [...t.items, next] }));
   }
 
-  function removeSuggestedStaple(stapleId: string) {
-    setTrip((t) => ({
-      ...t,
-      catalog: t.catalog.filter((s) => s.id !== stapleId),
-    }));
-  }
-
   function addFreeText(e: FormEvent) {
     e.preventDefault();
     const name = draft.trim();
@@ -348,6 +195,11 @@ export function ShoppingTripClient({
   }
 
   function handleItemsChange(next: ShoppingListItem[]) {
+    const prevAllChecked =
+      items.length > 0 && items.every((item) => item.checked);
+    const nextAllChecked =
+      next.length > 0 && next.every((item) => item.checked);
+
     if (purchasePersistence) {
       const prevById = new Map(items.map((i) => [i.id, i]));
       for (const item of next) {
@@ -377,7 +229,12 @@ export function ShoppingTripClient({
         }
       }
     }
+
     setTrip((t) => ({ ...t, items: next }));
+
+    if (nextAllChecked && !prevAllChecked) {
+      setClearConfirmOpen(true);
+    }
   }
 
   function setAllChecked(checked: boolean) {
@@ -385,7 +242,13 @@ export function ShoppingTripClient({
   }
 
   function removeAllItems() {
-    handleItemsChange([]);
+    setTrip((t) => ({ ...t, items: [] }));
+    setClearConfirmOpen(false);
+  }
+
+  function confirmClearList() {
+    setTrip((t) => ({ ...t, items: [] }));
+    setClearConfirmOpen(false);
   }
 
   async function promoteFreeTextToSuggested(itemId: string) {
@@ -462,18 +325,13 @@ export function ShoppingTripClient({
           <p className="text-muted-foreground text-sm">—</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {suggestedCatalog.map((staple) => {
-              const dueDetail = dueSoonDetailByStapleId.get(staple.id);
-              return (
-                <SuggestedItemChip
-                  key={staple.id}
-                  staple={staple}
-                  dueDetail={dueDetail}
-                  onAdd={() => addFromStaple(staple)}
-                  onDelete={() => removeSuggestedStaple(staple.id)}
-                />
-              );
-            })}
+            {suggestedCatalog.map((staple) => (
+              <SuggestedItemChip
+                key={staple.id}
+                staple={staple}
+                onAdd={() => addFromStaple(staple)}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -503,6 +361,35 @@ export function ShoppingTripClient({
           </p>
         ) : null}
         <TripProgress done={doneCount} total={items.length} />
+        {clearConfirmOpen ? (
+          <div
+            role="alertdialog"
+            aria-labelledby="clear-confirm-title"
+            className="border-primary/30 bg-primary/5 flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p id="clear-confirm-title" className="text-sm">
+              Nice — everything is checked. Clear the list?
+            </p>
+            <div className="flex gap-2 sm:shrink-0">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setClearConfirmOpen(false)}
+              >
+                Keep
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={confirmClearList}
+              >
+                Clear list
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {items.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             <Button
