@@ -54,7 +54,6 @@ type ItemRow = {
   updated_at: string;
   todo_comments: CommentRow[] | null;
   todo_subtasks: SubtaskRow[] | null;
-  todo_attachments: AttachmentRow[] | null;
 };
 
 function mapComment(row: CommentRow): TodoComment {
@@ -100,7 +99,7 @@ function isTodoStatus(s: string): s is TodoStatus {
 
 function mapItem(
   row: ItemRow,
-  signedUrlsByAttachmentId: Map<string, string>,
+  attachmentsByItem: Map<string, TodoAttachment[]>,
 ): TodoItem {
   const status = isTodoStatus(row.status) ? row.status : "backlog";
   const comments = (row.todo_comments ?? [])
@@ -112,12 +111,7 @@ function mapItem(
   const subtasks = (row.todo_subtasks ?? [])
     .map(mapSubtask)
     .sort((a, b) => a.position - b.position);
-  const attachments = (row.todo_attachments ?? [])
-    .map((a) => mapAttachment(a, signedUrlsByAttachmentId.get(a.id) ?? null))
-    .sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
+  const attachments = attachmentsByItem.get(row.id) ?? [];
 
   return {
     id: row.id,
@@ -139,6 +133,10 @@ function mapItem(
   };
 }
 
+// Embedded relations are queried in the same round-trip via Supabase's
+// implicit FK joins. `todo_attachments` is fetched separately so the page
+// keeps working even if that migration has not been pushed to the linked
+// project yet (we just treat any error as "no attachments").
 const TODO_ITEM_SELECT = `
   *,
   todo_comments (
@@ -154,48 +152,54 @@ const TODO_ITEM_SELECT = `
     label,
     done,
     position
-  ),
-  todo_attachments (
-    id,
-    todo_item_id,
-    user_id,
-    file_name,
-    mime_type,
-    size_bytes,
-    storage_path,
-    created_at
   )
 `;
 
-async function signAttachmentUrls(
+async function fetchAttachmentsForItems(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  rows: ItemRow[],
-): Promise<Map<string, string>> {
-  const result = new Map<string, string>();
-  const all: { id: string; path: string }[] = [];
-  for (const row of rows) {
-    for (const att of row.todo_attachments ?? []) {
-      all.push({ id: att.id, path: att.storage_path });
-    }
-  }
-  if (all.length === 0) {
+  itemIds: string[],
+): Promise<Map<string, TodoAttachment[]>> {
+  const result = new Map<string, TodoAttachment[]>();
+  if (itemIds.length === 0) {
     return result;
   }
 
-  // createSignedUrls accepts an array of paths and returns parallel results.
-  const { data } = await supabase.storage
-    .from(TODO_ATTACHMENT_BUCKET)
-    .createSignedUrls(
-      all.map((a) => a.path),
-      ATTACHMENT_SIGNED_URL_SECONDS,
-    );
+  const { data, error } = await supabase
+    .from("todo_attachments")
+    .select(
+      "id, todo_item_id, user_id, file_name, mime_type, size_bytes, storage_path, created_at",
+    )
+    .in("todo_item_id", itemIds)
+    .order("created_at", { ascending: true });
 
-  (data ?? []).forEach((entry, idx) => {
-    const meta = all[idx];
-    if (meta && entry.signedUrl) {
-      result.set(meta.id, entry.signedUrl);
-    }
-  });
+  // Tolerate the table not yet existing on the remote (migration not pushed)
+  // or any other read error: just return an empty map so the page still
+  // renders the rest of the todo state.
+  if (error || !data) {
+    return result;
+  }
+
+  const rows = data as unknown as AttachmentRow[];
+  const paths = rows.map((r) => r.storage_path);
+
+  const signedById = new Map<string, string>();
+  if (paths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from(TODO_ATTACHMENT_BUCKET)
+      .createSignedUrls(paths, ATTACHMENT_SIGNED_URL_SECONDS);
+    (signed ?? []).forEach((entry, idx) => {
+      const row = rows[idx];
+      if (row && entry.signedUrl) {
+        signedById.set(row.id, entry.signedUrl);
+      }
+    });
+  }
+
+  for (const row of rows) {
+    const list = result.get(row.todo_item_id) ?? [];
+    list.push(mapAttachment(row, signedById.get(row.id) ?? null));
+    result.set(row.todo_item_id, list);
+  }
 
   return result;
 }
@@ -212,8 +216,11 @@ export async function fetchTodosForUser(): Promise<TodoItem[]> {
   }
 
   const rows = (data ?? []) as unknown as ItemRow[];
-  const signed = await signAttachmentUrls(supabase, rows);
-  return rows.map((row) => mapItem(row, signed));
+  const attachmentsByItem = await fetchAttachmentsForItems(
+    supabase,
+    rows.map((r) => r.id),
+  );
+  return rows.map((row) => mapItem(row, attachmentsByItem));
 }
 
 export async function fetchTodoByIdForUser(id: string): Promise<TodoItem | null> {
@@ -233,6 +240,6 @@ export async function fetchTodoByIdForUser(id: string): Promise<TodoItem | null>
   }
 
   const row = data as unknown as ItemRow;
-  const signed = await signAttachmentUrls(supabase, [row]);
-  return mapItem(row, signed);
+  const attachmentsByItem = await fetchAttachmentsForItems(supabase, [row.id]);
+  return mapItem(row, attachmentsByItem);
 }
