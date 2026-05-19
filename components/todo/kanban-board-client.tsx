@@ -507,7 +507,11 @@ function KanbanColumn({
           <h2 className="text-foreground font-heading text-sm font-semibold">
             {todoStatusLabel(status)}
           </h2>
-          <span className="text-muted-foreground text-xs tabular-nums">
+          <span
+            className={cn(
+              "text-muted-foreground bg-muted inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums",
+            )}
+          >
             {items.length}
           </span>
         </div>

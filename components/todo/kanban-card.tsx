@@ -5,9 +5,9 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Calendar,
   Check,
-  GripVertical,
   MessageSquare,
   MoreHorizontal,
+  Paperclip,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -56,10 +56,60 @@ function formatDueBadge(iso: string | null): string | null {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function clampProgress(n: number | null | undefined): number | null {
-  if (n === null || n === undefined) return null;
-  if (!Number.isFinite(n)) return null;
+function clampProgress(n: number | null | undefined): number {
+  if (n === null || n === undefined || !Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function progressTone(value: number): string {
+  if (value >= 100) return "text-emerald-400";
+  if (value > 0) return "text-sky-400";
+  return "text-muted-foreground/60";
+}
+
+function CircularProgress({
+  value,
+  size = 18,
+  stroke = 2.5,
+}: {
+  value: number;
+  size?: number;
+  stroke?: number;
+}) {
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - value / 100);
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="-rotate-90"
+      aria-hidden
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth={stroke}
+        className="text-muted-foreground/25"
+        fill="none"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth={stroke}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        className={cn("transition-all", progressTone(value))}
+        fill="none"
+      />
+    </svg>
+  );
 }
 
 export function KanbanCard({
@@ -115,6 +165,8 @@ export function KanbanCard({
   const subtaskTotal = item.subtasks.length;
   const subtaskDone = item.subtasks.filter((s) => s.done).length;
   const progress = clampProgress(item.progressPercent);
+  const hasProgress =
+    item.progressPercent !== null && item.progressPercent !== undefined;
 
   return (
     <article
@@ -122,55 +174,43 @@ export function KanbanCard({
       style={isOverlay ? undefined : style}
       data-dragging={isDragging || undefined}
       className={cn(
-        "group/card border-border bg-card text-card-foreground relative flex flex-col gap-3 rounded-2xl border p-3",
+        "group/card border-border bg-card text-card-foreground relative flex flex-col gap-3 rounded-2xl border p-4",
         "shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset]",
         "transition-[box-shadow,border-color,transform]",
         "hover:border-border/80 hover:shadow-md",
+        persistence && !isOverlay && "cursor-grab active:cursor-grabbing",
         isDragging && !isOverlay && "opacity-40",
         isOverlay && "ring-ring/40 cursor-grabbing shadow-xl ring-2",
       )}
+      {...(isOverlay ? {} : attributes)}
+      {...(isOverlay ? {} : listeners)}
     >
-      {/* Header: drag handle + title (title click opens) */}
-      <div className="flex items-start gap-1.5">
+      {/* Header: title (click opens edit) + actions menu */}
+      <div className="flex items-start gap-2">
         <button
           type="button"
-          className={cn(
-            "text-muted-foreground hover:text-foreground -ml-1 mt-0.5 inline-flex size-6 cursor-grab items-center justify-center rounded-md outline-none",
-            "focus-visible:ring-ring focus-visible:ring-2",
-            isDragging && "cursor-grabbing",
-            !persistence && "cursor-not-allowed opacity-50",
-          )}
-          aria-label="Drag task"
-          disabled={!persistence}
-          {...(isOverlay ? {} : attributes)}
-          {...(isOverlay ? {} : listeners)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen();
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="hover:text-primary -my-1 min-w-0 flex-1 cursor-pointer rounded-md py-1 text-left transition-colors"
         >
-          <GripVertical className="size-4" aria-hidden />
-        </button>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="hover:text-primary -ml-1 min-w-0 flex-1 cursor-pointer text-left"
-        >
-          <h3 className="text-foreground font-heading text-sm leading-snug font-semibold tracking-tight">
+          <h3 className="text-foreground font-heading text-[15px] leading-snug font-semibold tracking-tight">
             {item.title}
           </h3>
-          {item.category ? (
-            <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-              {item.category}
-            </p>
-          ) : null}
         </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger
             className={cn(
               buttonVariants({ variant: "ghost", size: "icon-sm" }),
-              "text-muted-foreground hover:text-foreground -mr-1 -mt-1 h-7 w-7",
+              "text-muted-foreground hover:text-foreground -mr-1.5 -mt-1.5 h-7 w-7 shrink-0",
             )}
             disabled={!persistence}
             aria-label="Card actions"
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="size-4" aria-hidden />
           </DropdownMenuTrigger>
@@ -207,47 +247,18 @@ export function KanbanCard({
       </div>
 
       {item.description ? (
-        <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
+        <p className="text-muted-foreground line-clamp-2 text-[13px] leading-snug">
           {item.description}
         </p>
       ) : null}
 
-      {progress !== null ? (
-        <div className="space-y-1">
-          <div className="text-muted-foreground flex items-center justify-between text-[11px] tabular-nums">
-            <span>Progress</span>
-            <span>{progress}%</span>
-          </div>
-          <div
-            className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
-            role="progressbar"
-            aria-valuenow={progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Progress ${progress}%`}
-          >
-            <div
-              className={cn(
-                "h-1.5 rounded-full transition-[width] duration-300",
-                progress >= 100
-                  ? "bg-emerald-400"
-                  : progress > 0
-                    ? "bg-sky-400"
-                    : "bg-muted-foreground/40",
-              )}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {/* Footer: assignee + due + counts */}
-      <div className="flex items-center justify-between gap-2">
+      {/* Middle row: assignee avatar + due pill (left) + circular progress (right) */}
+      <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                "ring-background shrink-0 rounded-full ring-2 ring-offset-0 outline-none",
+                "ring-card shrink-0 rounded-full ring-2 ring-offset-0 outline-none",
                 "focus-visible:ring-ring focus-visible:ring-2",
                 "data-[state=open]:ring-ring",
                 (!persistence || assignableUsers.length === 0) &&
@@ -269,11 +280,12 @@ export function KanbanCard({
                   : "Assign task"
               }
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <Avatar
                 size="sm"
                 className={cn(
-                  "pointer-events-none ring-background ring-2 ring-offset-0",
+                  "pointer-events-none ring-card ring-2 ring-offset-0",
                   !assigneeUserId && "opacity-80",
                 )}
               >
@@ -332,6 +344,7 @@ export function KanbanCard({
                 "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
                 "bg-lime-400 text-lime-950 shadow-sm",
               )}
+              title={item.dueAt ? new Date(item.dueAt).toLocaleString() : undefined}
             >
               <Calendar className="size-3 shrink-0 opacity-90" aria-hidden />
               {dueShort}
@@ -339,37 +352,85 @@ export function KanbanCard({
           ) : null}
         </div>
 
-        <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-[11px] font-medium tabular-nums">
-          {subtaskTotal > 0 ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpen();
-              }}
-              className="hover:text-foreground inline-flex items-center gap-1"
-              aria-label={`Checklist ${subtaskDone} of ${subtaskTotal} done`}
+        <span
+          className={cn(
+            "border-border/70 inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+            hasProgress ? progressTone(progress) : "text-muted-foreground/70",
+          )}
+          aria-label={hasProgress ? `Progress ${progress}%` : "No progress set"}
+          title={hasProgress ? `Progress ${progress}%` : "No progress set"}
+        >
+          <CircularProgress value={progress} />
+          <span>{progress}%</span>
+        </span>
+      </div>
+
+      <div className="border-border/60 -mx-4 border-t" aria-hidden />
+
+      {/* Footer: category chip + always-visible attachment / comment counters */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          {item.category ? (
+            <span
+              className={cn(
+                "border-border/70 text-foreground inline-flex max-w-full items-center gap-1 truncate rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
+              )}
+              title={item.category}
             >
-              <Check className="size-3.5" aria-hidden />
-              <span>
-                {subtaskDone}/{subtaskTotal}
-              </span>
-            </button>
-          ) : null}
-          {commentCount > 0 ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpen();
-              }}
-              className="hover:text-foreground inline-flex items-center gap-1"
-              aria-label={`${commentCount} comments`}
-            >
-              <MessageSquare className="size-3.5" aria-hidden />
-              <span>{commentCount}</span>
-            </button>
-          ) : null}
+              <span className="truncate">{item.category}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground/70 text-[11px]">
+              No tag
+            </span>
+          )}
+        </div>
+
+        <div className="text-muted-foreground flex shrink-0 items-center gap-3 text-[11px] font-medium tabular-nums">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+            aria-label={
+              subtaskTotal > 0
+                ? `Checklist ${subtaskDone} of ${subtaskTotal} done`
+                : "No checklist items"
+            }
+            title={
+              subtaskTotal > 0
+                ? `Checklist ${subtaskDone}/${subtaskTotal}`
+                : "No checklist items"
+            }
+          >
+            <Paperclip className="size-3.5" aria-hidden />
+            <span>
+              {subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : 0}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+            aria-label={
+              commentCount === 1
+                ? "1 comment"
+                : `${commentCount} comments`
+            }
+            title={
+              commentCount === 1 ? "1 comment" : `${commentCount} comments`
+            }
+          >
+            <MessageSquare className="size-3.5" aria-hidden />
+            <span>{commentCount}</span>
+          </button>
         </div>
       </div>
     </article>
