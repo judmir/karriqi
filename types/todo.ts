@@ -25,6 +25,20 @@ export type TodoSubtask = {
   position: number;
 };
 
+export type TodoAttachment = {
+  id: string;
+  todoItemId: string;
+  userId: string;
+  fileName: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  /** Path inside the `todo-attachments` storage bucket. */
+  storagePath: string;
+  /** Short-lived signed URL for direct download/preview. */
+  signedUrl: string | null;
+  createdAt: IsoDateString;
+};
+
 /** Someone the list owner may assign a task to (from `household_members` + self). */
 export type TodoAssignableMember = {
   userId: string;
@@ -50,4 +64,5 @@ export type TodoItem = {
   updatedAt: IsoDateString;
   comments: TodoComment[];
   subtasks: TodoSubtask[];
+  attachments: TodoAttachment[];
 };

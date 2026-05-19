@@ -14,12 +14,48 @@ import { TODO_STATUSES } from "@/types/todo";
 
 type TodoItemUpdate = Database["public"]["Tables"]["todo_items"]["Update"];
 
+const TODO_ATTACHMENT_BUCKET = "todo-attachments";
+// Keep in sync with experimental.serverActions.bodySizeLimit in next.config.ts
+// and MAX_ATTACHMENT_BYTES in components/todo/todo-task-view.tsx.
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
+
 function ok<T extends { ok: true }>(x: T): T {
   revalidatePath(ROUTES.todo);
   return x;
 }
 
 type Err = { ok: false; message: string };
+
+function sanitizeAttachmentName(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "file";
+
+  // Supabase Storage refuses object keys that contain non-ASCII characters
+  // (umlauts, accents, emoji, etc.) and most punctuation. Normalize to ASCII
+  // and replace anything outside [A-Za-z0-9._-] with an underscore, while
+  // preserving the file extension. Keep total length bounded.
+  const stripped = trimmed
+    .replace(/[\\/]+/g, "_")
+    .replace(/[\u0000-\u001f]/g, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const dot = stripped.lastIndexOf(".");
+  const hasExt = dot > 0 && dot < stripped.length - 1;
+  const baseRaw = hasExt ? stripped.slice(0, dot) : stripped;
+  const extRaw = hasExt ? stripped.slice(dot + 1) : "";
+
+  const cleanPart = (s: string) =>
+    s
+      .replace(/[^A-Za-z0-9._-]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^[._-]+|[._-]+$/g, "");
+
+  const base = cleanPart(baseRaw).slice(0, 100) || "file";
+  const ext = cleanPart(extRaw).slice(0, 16);
+
+  return ext ? `${base}.${ext}` : base;
+}
 
 async function clearStaleTaskReminder(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -462,6 +498,137 @@ export async function deleteTodoSubtask(input: {
   }
 
   await clearStaleTaskReminder(supabase, subRow.todo_item_id, user.id);
+
+  return ok({ ok: true });
+}
+
+export type AddAttachmentResult =
+  | { ok: true; id: string }
+  | Err;
+
+export async function addTodoAttachment(
+  formData: FormData,
+): Promise<AddAttachmentResult> {
+  const todoItemId = String(formData.get("todoItemId") ?? "");
+  if (!isUuid(todoItemId)) {
+    return { ok: false, message: "Invalid item id." };
+  }
+
+  const fileEntry = formData.get("file");
+  if (!(fileEntry instanceof File) || fileEntry.size === 0) {
+    return { ok: false, message: "Pick a file to attach." };
+  }
+
+  if (fileEntry.size > MAX_ATTACHMENT_BYTES) {
+    return { ok: false, message: "Attachments are limited to 10 MB." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const { data: parent } = await supabase
+    .from("todo_items")
+    .select("id")
+    .eq("id", todoItemId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!parent) {
+    return { ok: false, message: "Item not found." };
+  }
+
+  const safeName = sanitizeAttachmentName(fileEntry.name);
+  // Random per-file id; we also use it as the row PK so the storage path
+  // stays unique and points back to the attachment row.
+  const attachmentId = crypto.randomUUID();
+  const storagePath = `${user.id}/${todoItemId}/${attachmentId}-${safeName}`;
+  const mimeType = fileEntry.type || "application/octet-stream";
+
+  const { error: uploadError } = await supabase.storage
+    .from(TODO_ATTACHMENT_BUCKET)
+    .upload(storagePath, fileEntry, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    return { ok: false, message: uploadError.message };
+  }
+
+  const { error: insertError } = await supabase.from("todo_attachments").insert({
+    id: attachmentId,
+    todo_item_id: todoItemId,
+    user_id: user.id,
+    file_name: safeName,
+    mime_type: mimeType,
+    size_bytes: fileEntry.size,
+    storage_path: storagePath,
+  });
+
+  if (insertError) {
+    // Best-effort cleanup of the uploaded blob so we do not leak orphans.
+    await supabase.storage
+      .from(TODO_ATTACHMENT_BUCKET)
+      .remove([storagePath]);
+    return { ok: false, message: insertError.message };
+  }
+
+  await clearStaleTaskReminder(supabase, todoItemId, user.id);
+
+  return ok({ ok: true, id: attachmentId });
+}
+
+export type DeleteAttachmentResult = { ok: true } | Err;
+
+export async function deleteTodoAttachment(input: {
+  id: string;
+}): Promise<DeleteAttachmentResult> {
+  if (!isUuid(input.id)) {
+    return { ok: false, message: "Invalid attachment id." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const { data: row, error: readErr } = await supabase
+    .from("todo_attachments")
+    .select("id, todo_item_id, storage_path")
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (readErr || !row) {
+    return { ok: false, message: readErr?.message ?? "Attachment not found." };
+  }
+
+  const { error: removeErr } = await supabase.storage
+    .from(TODO_ATTACHMENT_BUCKET)
+    .remove([row.storage_path]);
+  if (removeErr) {
+    return { ok: false, message: removeErr.message };
+  }
+
+  const { error: delErr } = await supabase
+    .from("todo_attachments")
+    .delete()
+    .eq("id", input.id);
+
+  if (delErr) {
+    return { ok: false, message: delErr.message };
+  }
+
+  await clearStaleTaskReminder(supabase, row.todo_item_id, user.id);
 
   return ok({ ok: true });
 }

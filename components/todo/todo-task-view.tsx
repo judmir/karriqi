@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Paperclip, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,10 @@ import { Label } from "@/components/ui/label";
 import { CommentBody } from "@/components/todo/comment-body";
 import { ROUTES, todoTaskPath } from "@/config/routes";
 import {
+  addTodoAttachment,
   addTodoComment,
   addTodoSubtask,
+  deleteTodoAttachment,
   deleteTodoItem,
   deleteTodoSubtask,
   setTodoSubtaskDone,
@@ -54,6 +56,17 @@ const textareaClassName = cn(
   "min-h-40 w-full resize-y rounded-lg border px-3 py-2.5 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-3",
 );
 
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+function formatBytes(bytes: number | null): string {
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes)) {
+    return "";
+  }
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function TodoTaskView({
   initialItem,
   persistence,
@@ -79,6 +92,10 @@ export function TodoTaskView({
   const [saving, setSaving] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const [subtaskDraft, setSubtaskDraft] = useState("");
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
+  const dragDepthRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function saveDetails() {
     if (!persistence) {
@@ -197,6 +214,85 @@ export function TodoTaskView({
       return;
     }
     setAssignedUserId(next);
+    router.refresh();
+  }
+
+  async function uploadFiles(files: File[] | FileList | null) {
+    if (!files) return;
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    if (!persistence) {
+      toast.error(NO_SYNC_TOAST);
+      return;
+    }
+
+    const oversize = list.find((f) => f.size > MAX_ATTACHMENT_BYTES);
+    if (oversize) {
+      toast.error(`"${oversize.name}" is over 10 MB.`);
+      return;
+    }
+
+    setUploadingAttachment(true);
+    try {
+      for (const file of list) {
+        const fd = new FormData();
+        fd.set("todoItemId", initialItem.id);
+        fd.set("file", file);
+        const r = await addTodoAttachment(fd);
+        if (!r.ok) {
+          toast.error(`${file.name}: ${r.message}`);
+        }
+      }
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      router.refresh();
+    }
+  }
+
+  function onDropZoneDragEnter(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    dragDepthRef.current += 1;
+    setDropActive(true);
+  }
+
+  function onDropZoneDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setDropActive(false);
+    }
+  }
+
+  function onDropZoneDragOver(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function onDropZoneDrop(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    setDropActive(false);
+    void uploadFiles(e.dataTransfer.files);
+  }
+
+  async function onRemoveAttachment(id: string, name: string) {
+    if (!persistence) {
+      toast.error(NO_SYNC_TOAST);
+      return;
+    }
+    if (!window.confirm(`Remove ${name}?`)) {
+      return;
+    }
+    const r = await deleteTodoAttachment({ id });
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -432,6 +528,111 @@ export function TodoTaskView({
                 onClick={() => void onAddSubtask()}
               >
                 Add
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Attachments</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {initialItem.attachments.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                No files yet. Add receipts, screenshots, PDFs—anything up to 10 MB
+                each.
+              </p>
+            ) : (
+              <ul className="divide-border divide-y rounded-lg border">
+                {initialItem.attachments.map((a) => {
+                  const sizeLabel = formatBytes(a.sizeBytes);
+                  const meta = [sizeLabel, a.mimeType].filter(Boolean).join(" · ");
+                  return (
+                    <li
+                      key={a.id}
+                      className="flex items-center gap-3 px-3 py-2 text-sm"
+                    >
+                      <Paperclip
+                        className="text-muted-foreground size-4 shrink-0"
+                        aria-hidden
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground truncate font-medium">
+                          {a.fileName}
+                        </p>
+                        {meta ? (
+                          <p className="text-muted-foreground truncate text-xs">
+                            {meta}
+                          </p>
+                        ) : null}
+                      </div>
+                      {a.signedUrl ? (
+                        <a
+                          href={a.signedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={a.fileName}
+                          className="text-muted-foreground hover:text-foreground inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors"
+                          aria-label={`Download ${a.fileName}`}
+                          title="Download"
+                        >
+                          <Download className="size-4" aria-hidden />
+                        </a>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="shrink-0"
+                        aria-label={`Remove ${a.fileName}`}
+                        onClick={() => void onRemoveAttachment(a.id, a.fileName)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <div
+              role="presentation"
+              onDragEnter={onDropZoneDragEnter}
+              onDragLeave={onDropZoneDragLeave}
+              onDragOver={onDropZoneDragOver}
+              onDrop={onDropZoneDrop}
+              className={cn(
+                "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center transition-colors",
+                dropActive
+                  ? "border-ring bg-muted/60"
+                  : "border-border bg-muted/20",
+              )}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="sr-only"
+                onChange={(e) => void uploadFiles(e.target.files)}
+                aria-label="Attach files"
+              />
+              <Upload
+                className="text-muted-foreground size-5"
+                aria-hidden
+              />
+              <p className="text-muted-foreground text-xs">
+                {dropActive
+                  ? "Release to upload"
+                  : "Drag files here or click to browse"}
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={!persistence || uploadingAttachment}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadingAttachment ? "Uploading…" : "Choose files"}
               </Button>
             </div>
           </CardContent>
