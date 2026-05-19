@@ -92,6 +92,8 @@ export function TodoTaskView({
   const [commentDraft, setCommentDraft] = useState("");
   const [subtaskDraft, setSubtaskDraft] = useState("");
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
+  const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function saveDetails() {
@@ -214,14 +216,15 @@ export function TodoTaskView({
     router.refresh();
   }
 
-  async function onAttachmentFilesPicked(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  async function uploadFiles(files: File[] | FileList | null) {
+    if (!files) return;
+    const list = Array.from(files);
+    if (list.length === 0) return;
     if (!persistence) {
       toast.error(NO_SYNC_TOAST);
       return;
     }
 
-    const list = Array.from(files);
     const oversize = list.find((f) => f.size > MAX_ATTACHMENT_BYTES);
     if (oversize) {
       toast.error(`"${oversize.name}" is over 10 MB.`);
@@ -246,6 +249,34 @@ export function TodoTaskView({
       }
       router.refresh();
     }
+  }
+
+  function onDropZoneDragEnter(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    dragDepthRef.current += 1;
+    setDropActive(true);
+  }
+
+  function onDropZoneDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setDropActive(false);
+    }
+  }
+
+  function onDropZoneDragOver(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function onDropZoneDrop(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    setDropActive(false);
+    void uploadFiles(e.dataTransfer.files);
   }
 
   async function onRemoveAttachment(id: string, name: string) {
@@ -559,23 +590,44 @@ export function TodoTaskView({
                 })}
               </ul>
             )}
-            <div>
+            <div
+              role="presentation"
+              onDragEnter={onDropZoneDragEnter}
+              onDragLeave={onDropZoneDragLeave}
+              onDragOver={onDropZoneDragOver}
+              onDrop={onDropZoneDrop}
+              className={cn(
+                "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center transition-colors",
+                dropActive
+                  ? "border-ring bg-muted/60"
+                  : "border-border bg-muted/20",
+              )}
+            >
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
                 className="sr-only"
-                onChange={(e) => void onAttachmentFilesPicked(e.target.files)}
+                onChange={(e) => void uploadFiles(e.target.files)}
                 aria-label="Attach files"
               />
+              <Upload
+                className="text-muted-foreground size-5"
+                aria-hidden
+              />
+              <p className="text-muted-foreground text-xs">
+                {dropActive
+                  ? "Release to upload"
+                  : "Drag files here or click to browse"}
+              </p>
               <Button
                 type="button"
                 variant="secondary"
+                size="sm"
                 disabled={!persistence || uploadingAttachment}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className="size-4" aria-hidden />
-                {uploadingAttachment ? "Uploading…" : "Add files"}
+                {uploadingAttachment ? "Uploading…" : "Choose files"}
               </Button>
             </div>
           </CardContent>

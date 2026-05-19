@@ -28,9 +28,32 @@ type Err = { ok: false; message: string };
 function sanitizeAttachmentName(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "file";
-  // Strip any path separators, drop control chars, cap length.
-  const flat = trimmed.replace(/[\\/]+/g, "_").replace(/[\u0000-\u001f]/g, "");
-  return flat.slice(0, 120) || "file";
+
+  // Supabase Storage refuses object keys that contain non-ASCII characters
+  // (umlauts, accents, emoji, etc.) and most punctuation. Normalize to ASCII
+  // and replace anything outside [A-Za-z0-9._-] with an underscore, while
+  // preserving the file extension. Keep total length bounded.
+  const stripped = trimmed
+    .replace(/[\\/]+/g, "_")
+    .replace(/[\u0000-\u001f]/g, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const dot = stripped.lastIndexOf(".");
+  const hasExt = dot > 0 && dot < stripped.length - 1;
+  const baseRaw = hasExt ? stripped.slice(0, dot) : stripped;
+  const extRaw = hasExt ? stripped.slice(dot + 1) : "";
+
+  const cleanPart = (s: string) =>
+    s
+      .replace(/[^A-Za-z0-9._-]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^[._-]+|[._-]+$/g, "");
+
+  const base = cleanPart(baseRaw).slice(0, 100) || "file";
+  const ext = cleanPart(extRaw).slice(0, 16);
+
+  return ext ? `${base}.${ext}` : base;
 }
 
 async function clearStaleTaskReminder(
