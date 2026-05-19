@@ -23,6 +23,7 @@
 
 # misc
 .DS_Store
+.worktree-dev-port
 *.pem
 
 # debug

@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AttachmentHoverPreview } from "@/components/todo/attachment-hover-preview";
 import { CommentBody } from "@/components/todo/comment-body";
+import { getAttachmentPreviewKind } from "@/lib/todo/attachment-preview";
 import { ROUTES, todoTaskPath } from "@/config/routes";
 import {
   addTodoAttachment,
@@ -548,11 +550,11 @@ export function TodoTaskView({
                 {initialItem.attachments.map((a) => {
                   const sizeLabel = formatBytes(a.sizeBytes);
                   const meta = [sizeLabel, a.mimeType].filter(Boolean).join(" · ");
-                  return (
-                    <li
-                      key={a.id}
-                      className="flex items-center gap-3 px-3 py-2 text-sm"
-                    >
+                  const hasPreview =
+                    Boolean(a.signedUrl) &&
+                    getAttachmentPreviewKind(a.mimeType, a.fileName) !== null;
+                  const fileLabel = (
+                    <>
                       <Paperclip
                         className="text-muted-foreground size-4 shrink-0"
                         aria-hidden
@@ -567,6 +569,25 @@ export function TodoTaskView({
                           </p>
                         ) : null}
                       </div>
+                    </>
+                  );
+                  return (
+                    <li
+                      key={a.id}
+                      className="flex items-center gap-3 px-3 py-2 text-sm"
+                    >
+                      {hasPreview ? (
+                        <AttachmentHoverPreview
+                          signedUrl={a.signedUrl}
+                          fileName={a.fileName}
+                          mimeType={a.mimeType}
+                          className="flex min-w-0 flex-1 items-center gap-3"
+                        >
+                          {fileLabel}
+                        </AttachmentHoverPreview>
+                      ) : (
+                        fileLabel
+                      )}
                       {a.signedUrl ? (
                         <a
                           href={a.signedUrl}
