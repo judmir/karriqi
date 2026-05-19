@@ -14,7 +14,9 @@ import { TODO_STATUSES } from "@/types/todo";
 type TodoItemUpdate = Database["public"]["Tables"]["todo_items"]["Update"];
 
 const TODO_ATTACHMENT_BUCKET = "todo-attachments";
-const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15 MB
+// Keep in sync with experimental.serverActions.bodySizeLimit in next.config.ts
+// and MAX_ATTACHMENT_BYTES in components/todo/todo-task-view.tsx.
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
 
 function ok<T extends { ok: true }>(x: T): T {
   revalidatePath(ROUTES.todo);
@@ -489,7 +491,7 @@ export async function addTodoAttachment(
   }
 
   if (fileEntry.size > MAX_ATTACHMENT_BYTES) {
-    return { ok: false, message: "Attachments are limited to 15 MB." };
+    return { ok: false, message: "Attachments are limited to 10 MB." };
   }
 
   const supabase = await createClient();

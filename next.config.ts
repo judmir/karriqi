@@ -36,6 +36,14 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["karriqi.test"],
   // Hide the floating Next.js dev tools badge so it does not obscure the app UI.
   devIndicators: false,
+  experimental: {
+    // Server Actions default to a 1 MB body cap; raise so todo attachments
+    // (receipts, screenshots, PDFs) can be uploaded. Keep in sync with
+    // MAX_ATTACHMENT_BYTES in lib/todo/todo-actions.ts.
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
 };
 
 export default withPWA(nextConfig);

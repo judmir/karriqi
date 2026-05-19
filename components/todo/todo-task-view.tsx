@@ -55,7 +55,7 @@ const textareaClassName = cn(
   "min-h-40 w-full resize-y rounded-lg border px-3 py-2.5 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-3",
 );
 
-const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 function formatBytes(bytes: number | null): string {
   if (bytes === null || bytes === undefined || !Number.isFinite(bytes)) {
@@ -224,7 +224,7 @@ export function TodoTaskView({
     const list = Array.from(files);
     const oversize = list.find((f) => f.size > MAX_ATTACHMENT_BYTES);
     if (oversize) {
-      toast.error(`"${oversize.name}" is over 15 MB.`);
+      toast.error(`"${oversize.name}" is over 10 MB.`);
       return;
     }
 
@@ -504,7 +504,7 @@ export function TodoTaskView({
           <CardContent className="space-y-3">
             {initialItem.attachments.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                No files yet. Add receipts, screenshots, PDFs—anything up to 15 MB
+                No files yet. Add receipts, screenshots, PDFs—anything up to 10 MB
                 each.
               </p>
             ) : (
