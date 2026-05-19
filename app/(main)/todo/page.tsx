@@ -1,5 +1,5 @@
 import { PageContainer } from "@/components/layout/page-container";
-import { TodoBoardClient } from "@/components/todo/todo-board-client";
+import { KanbanBoardClient } from "@/components/todo/kanban-board-client";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
 import { fetchTodosForUser } from "@/lib/todo/fetch-todos";
@@ -32,7 +32,7 @@ export default async function TodoPage() {
 
   return (
     <PageContainer width="wide">
-      <TodoBoardClient
+      <KanbanBoardClient
         initialTodos={todos}
         persistence={persistence}
         assignableUsers={assignableUsers}
