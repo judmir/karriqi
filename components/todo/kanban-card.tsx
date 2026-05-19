@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Calendar,
   Check,
+  ListChecks,
   MessageSquare,
   MoreHorizontal,
   Paperclip,
@@ -162,6 +163,7 @@ export function KanbanCard({
       : "?";
   const dueShort = formatDueBadge(item.dueAt);
   const commentCount = item.comments.length;
+  const attachmentCount = item.attachments.length;
   const subtaskTotal = item.subtasks.length;
   const subtaskDone = item.subtasks.filter((s) => s.done).length;
   const progress = clampProgress(item.progressPercent);
@@ -402,10 +404,26 @@ export function KanbanCard({
                 : "No checklist items"
             }
           >
-            <Paperclip className="size-3.5" aria-hidden />
+            <ListChecks className="size-3.5" aria-hidden />
             <span>
               {subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : 0}
             </span>
+          </span>
+          <span
+            className="inline-flex items-center gap-1"
+            aria-label={
+              attachmentCount === 1
+                ? "1 attachment"
+                : `${attachmentCount} attachments`
+            }
+            title={
+              attachmentCount === 1
+                ? "1 attachment"
+                : `${attachmentCount} attachments`
+            }
+          >
+            <Paperclip className="size-3.5" aria-hidden />
+            <span>{attachmentCount}</span>
           </span>
           <span
             className="inline-flex items-center gap-1"

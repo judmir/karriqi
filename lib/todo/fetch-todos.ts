@@ -1,6 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import type { TodoComment, TodoItem, TodoStatus, TodoSubtask } from "@/types/todo";
+import type {
+  TodoAttachment,
+  TodoComment,
+  TodoItem,
+  TodoStatus,
+  TodoSubtask,
+} from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
+
+const ATTACHMENT_SIGNED_URL_SECONDS = 60 * 60;
+const TODO_ATTACHMENT_BUCKET = "todo-attachments";
 
 type CommentRow = {
   id: string;
@@ -16,6 +25,17 @@ type SubtaskRow = {
   label: string;
   done: boolean;
   position: number;
+};
+
+type AttachmentRow = {
+  id: string;
+  todo_item_id: string;
+  user_id: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  storage_path: string;
+  created_at: string;
 };
 
 type ItemRow = {
@@ -34,6 +54,7 @@ type ItemRow = {
   updated_at: string;
   todo_comments: CommentRow[] | null;
   todo_subtasks: SubtaskRow[] | null;
+  todo_attachments: AttachmentRow[] | null;
 };
 
 function mapComment(row: CommentRow): TodoComment {
@@ -56,11 +77,31 @@ function mapSubtask(row: SubtaskRow): TodoSubtask {
   };
 }
 
+function mapAttachment(
+  row: AttachmentRow,
+  signedUrl: string | null,
+): TodoAttachment {
+  return {
+    id: row.id,
+    todoItemId: row.todo_item_id,
+    userId: row.user_id,
+    fileName: row.file_name,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    storagePath: row.storage_path,
+    signedUrl,
+    createdAt: row.created_at,
+  };
+}
+
 function isTodoStatus(s: string): s is TodoStatus {
   return (TODO_STATUSES as readonly string[]).includes(s);
 }
 
-function mapItem(row: ItemRow): TodoItem {
+function mapItem(
+  row: ItemRow,
+  signedUrlsByAttachmentId: Map<string, string>,
+): TodoItem {
   const status = isTodoStatus(row.status) ? row.status : "backlog";
   const comments = (row.todo_comments ?? [])
     .map(mapComment)
@@ -71,6 +112,12 @@ function mapItem(row: ItemRow): TodoItem {
   const subtasks = (row.todo_subtasks ?? [])
     .map(mapSubtask)
     .sort((a, b) => a.position - b.position);
+  const attachments = (row.todo_attachments ?? [])
+    .map((a) => mapAttachment(a, signedUrlsByAttachmentId.get(a.id) ?? null))
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
 
   return {
     id: row.id,
@@ -88,6 +135,7 @@ function mapItem(row: ItemRow): TodoItem {
     updatedAt: row.updated_at,
     comments,
     subtasks,
+    attachments,
   };
 }
 
@@ -106,8 +154,51 @@ const TODO_ITEM_SELECT = `
     label,
     done,
     position
+  ),
+  todo_attachments (
+    id,
+    todo_item_id,
+    user_id,
+    file_name,
+    mime_type,
+    size_bytes,
+    storage_path,
+    created_at
   )
 `;
+
+async function signAttachmentUrls(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: ItemRow[],
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const all: { id: string; path: string }[] = [];
+  for (const row of rows) {
+    for (const att of row.todo_attachments ?? []) {
+      all.push({ id: att.id, path: att.storage_path });
+    }
+  }
+  if (all.length === 0) {
+    return result;
+  }
+
+  // createSignedUrls accepts an array of paths and returns parallel results.
+  const { data } = await supabase.storage
+    .from(TODO_ATTACHMENT_BUCKET)
+    .createSignedUrls(
+      all.map((a) => a.path),
+      ATTACHMENT_SIGNED_URL_SECONDS,
+    );
+
+  (data ?? []).forEach((entry, idx) => {
+    const meta = all[idx];
+    if (meta && entry.signedUrl) {
+      result.set(meta.id, entry.signedUrl);
+    }
+  });
+
+  return result;
+}
 
 export async function fetchTodosForUser(): Promise<TodoItem[]> {
   const supabase = await createClient();
@@ -120,7 +211,9 @@ export async function fetchTodosForUser(): Promise<TodoItem[]> {
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row) => mapItem(row as ItemRow));
+  const rows = (data ?? []) as unknown as ItemRow[];
+  const signed = await signAttachmentUrls(supabase, rows);
+  return rows.map((row) => mapItem(row, signed));
 }
 
 export async function fetchTodoByIdForUser(id: string): Promise<TodoItem | null> {
@@ -139,5 +232,7 @@ export async function fetchTodoByIdForUser(id: string): Promise<TodoItem | null>
     return null;
   }
 
-  return mapItem(data as ItemRow);
+  const row = data as unknown as ItemRow;
+  const signed = await signAttachmentUrls(supabase, [row]);
+  return mapItem(row, signed);
 }
