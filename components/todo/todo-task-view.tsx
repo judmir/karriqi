@@ -258,7 +258,13 @@ export function TodoTaskView({
             id="task-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="font-heading text-foreground h-auto min-h-11 border-transparent px-0 text-2xl font-semibold tracking-tight shadow-none md:text-3xl"
+            className={cn(
+              "font-heading text-foreground text-2xl font-semibold leading-tight tracking-tight md:text-3xl",
+              "h-auto rounded-lg border-transparent bg-transparent px-2 py-1.5 -mx-2",
+              "shadow-none dark:bg-transparent",
+              "hover:bg-muted/40 dark:hover:bg-muted/30",
+              "focus-visible:bg-background focus-visible:border-input dark:focus-visible:bg-input/30",
+            )}
             placeholder="Task title"
           />
           <p className="text-muted-foreground text-xs">
