@@ -8,6 +8,7 @@ import type { ShoppingListItem } from "@/types/shopping";
 
 const REVEAL_PX = 72;
 const DELETE_THRESHOLD_PX = 44;
+const PROMOTE_THRESHOLD_PX = 44;
 const SWIPE_INTENT_PX = 8;
 /** Max horizontal movement (px) to count as a tap on the row (toggle checked). */
 const TAP_TOGGLE_PX = 10;
@@ -31,14 +32,18 @@ function ShoppingListRow({
     startOffset: number;
     swiping: boolean;
   } | null>(null);
-  const showPromote = !item.stapleId && onPromoteToSuggested;
+  const showPromote = Boolean(!item.stapleId && onPromoteToSuggested);
 
   function clamp(n: number) {
-    return Math.min(0, Math.max(-REVEAL_PX, n));
+    if (n > 0) {
+      if (!showPromote) return 0;
+      return Math.min(REVEAL_PX, n);
+    }
+    return Math.max(-REVEAL_PX, n);
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if ((e.target as HTMLElement).closest("input, button")) return;
+    if ((e.target as HTMLElement).closest("button")) return;
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -86,6 +91,12 @@ function ShoppingListRow({
     if (wasSwiping && finalOffset <= -DELETE_THRESHOLD_PX) {
       onRemove();
     } else if (
+      wasSwiping &&
+      showPromote &&
+      finalOffset >= PROMOTE_THRESHOLD_PX
+    ) {
+      onPromoteToSuggested?.();
+    } else if (
       !wasSwiping &&
       Math.abs(dx) < TAP_TOGGLE_PX &&
       Math.abs(dy) < TAP_TOGGLE_PX
@@ -95,8 +106,19 @@ function ShoppingListRow({
     setOffset(0);
   }
 
+  const fromSuggested = Boolean(item.stapleId);
+
   return (
     <li className="relative overflow-hidden rounded-lg">
+      {showPromote ? (
+        <div
+          className="bg-primary/15 text-primary absolute inset-y-0 left-0 flex w-[4.5rem] items-center justify-center gap-1 text-xs font-medium"
+          aria-hidden
+        >
+          <ListPlus className="size-3.5" aria-hidden />
+          Suggest
+        </div>
+      ) : null}
       <div
         className="bg-destructive/15 text-destructive absolute inset-y-0 right-0 flex w-[4.5rem] items-center justify-center text-xs font-medium"
         aria-hidden
@@ -105,52 +127,49 @@ function ShoppingListRow({
       </div>
       <div
         className={cn(
-          "bg-background relative z-10 flex w-full cursor-pointer touch-pan-y select-none items-start gap-0.5 py-2.5",
+          "bg-background relative z-10 flex w-full items-start gap-3 py-2.5",
           !dragging && "transition-transform duration-200 ease-out",
         )}
         style={{ transform: `translateX(${offset}px)` }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={finishPointer}
-        onPointerCancel={finishPointer}
       >
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <input
-            type="checkbox"
-            checked={item.checked}
-            onChange={onToggle}
-            onClick={(e) => e.stopPropagation()}
-            className="border-input text-primary focus-visible:ring-ring mt-0.5 size-4 shrink-0 cursor-pointer rounded border bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-            aria-label={`Got ${item.name}`}
-          />
+        <input
+          type="checkbox"
+          checked={item.checked}
+          onChange={onToggle}
+          className="border-input text-primary focus-visible:ring-ring mt-0.5 size-4 shrink-0 cursor-pointer rounded border bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          aria-label={`Got ${item.name}`}
+        />
+        <div
+          data-swipe-row=""
+          className="flex min-w-0 flex-1 cursor-pointer touch-pan-y select-none items-start gap-0.5"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={finishPointer}
+          onPointerCancel={finishPointer}
+        >
           <span
             className={cn(
-              "min-w-0 flex-1 text-sm leading-snug",
+              "flex min-w-0 flex-1 items-center gap-2 text-sm leading-snug",
               item.checked && "text-muted-foreground line-through",
             )}
           >
+            {fromSuggested ? (
+              <span
+                className="bg-primary/70 inline-block size-1.5 shrink-0 rounded-full"
+                aria-hidden
+              />
+            ) : null}
             {item.name}
           </span>
-        </div>
-        {showPromote ? (
           <button
             type="button"
-            onClick={() => onPromoteToSuggested?.()}
+            onClick={onRemove}
             className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 rounded-md p-1 transition-colors"
-            aria-label={`Save ${item.name} as a suggested item`}
-            title="Add to suggested"
+            aria-label={`Remove ${item.name}`}
           >
-            <ListPlus className="size-4" aria-hidden />
+            <X className="size-4" aria-hidden />
           </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 rounded-md p-1 transition-colors"
-          aria-label={`Remove ${item.name}`}
-        >
-          <X className="size-4" aria-hidden />
-        </button>
+        </div>
       </div>
     </li>
   );
