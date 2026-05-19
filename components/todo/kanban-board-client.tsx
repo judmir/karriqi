@@ -43,6 +43,7 @@ import {
   reorderTodoBoard,
   updateTodoItem,
 } from "@/lib/todo/todo-actions";
+import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
 import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
@@ -133,6 +134,7 @@ export function KanbanBoardClient({
 
   // Reset local state when server pushes new initial data (after revalidate).
   const lastInitialRef = useRef(initialTodos);
+  const dragStartLayoutRef = useRef<string | null>(null);
   useEffect(() => {
     if (lastInitialRef.current !== initialTodos) {
       lastInitialRef.current = initialTodos;
@@ -179,6 +181,7 @@ export function KanbanBoardClient({
 
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
+    dragStartLayoutRef.current = JSON.stringify(columnIdsRecord(columns));
   }
 
   function handleDragOver(e: DragOverEvent) {
@@ -208,7 +211,11 @@ export function KanbanBoardClient({
       if (idx === -1) return prev;
       const [moved] = sourceList.splice(idx, 1);
       if (!moved) return prev;
-      const updated: TodoItem = { ...moved, status: targetCol };
+      const updated: TodoItem = {
+        ...moved,
+        status: targetCol,
+        progressPercent: progressPercentForStatus(targetCol),
+      };
       // Find insert position in target column: if over is a card in same col, before it
       const targetList = next[targetCol];
       let insertAt = targetList.length;
@@ -254,7 +261,11 @@ export function KanbanBoardClient({
 
       const [moved] = next[fromCol].splice(fromIdx, 1);
       if (!moved) return prev;
-      const updated: TodoItem = { ...moved, status: targetCol };
+      const updated: TodoItem = {
+        ...moved,
+        status: targetCol,
+        progressPercent: progressPercentForStatus(targetCol),
+      };
 
       const targetList = next[targetCol];
       let insertAt = targetList.length;
@@ -266,11 +277,10 @@ export function KanbanBoardClient({
       }
       targetList.splice(insertAt, 0, updated);
 
-      // No-op? Compare to prev to avoid persisting if nothing changed.
-      const sameLayout =
-        JSON.stringify(columnIdsRecord(prev)) ===
-        JSON.stringify(columnIdsRecord(next));
-      if (!sameLayout) {
+      const startLayout = dragStartLayoutRef.current;
+      dragStartLayoutRef.current = null;
+      const nextLayout = JSON.stringify(columnIdsRecord(next));
+      if (startLayout !== null && startLayout !== nextLayout) {
         void persistBoard(next);
       }
       return next;
@@ -279,6 +289,7 @@ export function KanbanBoardClient({
 
   function handleDragCancel() {
     setActiveId(null);
+    dragStartLayoutRef.current = null;
     setColumns(buildColumnMap(initialTodos));
   }
 
@@ -339,7 +350,14 @@ export function KanbanBoardClient({
         in_progress: prev.in_progress.filter((i) => i.id !== item.id),
         done: prev.done.filter((i) => i.id !== item.id),
       };
-      next[status] = [...next[status], { ...item, status }];
+      next[status] = [
+        ...next[status],
+        {
+          ...item,
+          status,
+          progressPercent: progressPercentForStatus(status),
+        },
+      ];
       void persistBoard(next);
       return next;
     });

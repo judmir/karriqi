@@ -6,6 +6,7 @@ import { ROUTES } from "@/config/routes";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { notifyTodoCommentMentions } from "@/lib/notifications/notification-events";
 import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
+import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { TodoStatus } from "@/types/todo";
@@ -103,6 +104,7 @@ export async function createTodoItem(input: {
       position,
       list_order: listOrder,
       category,
+      progress_percent: progressPercentForStatus(status),
     })
     .select("id")
     .single();
@@ -174,7 +176,20 @@ export async function updateTodoItem(input: {
     patch.due_at = input.dueAt;
   }
 
-  if (input.progressPercent !== undefined) {
+  const statusChanging =
+    input.status !== undefined && input.status !== existing.status;
+
+  if (statusChanging) {
+    patch.status = input.status;
+    patch.position = await nextPositionForStatus(
+      supabase,
+      user.id,
+      input.status!,
+    );
+    patch.progress_percent = progressPercentForStatus(input.status!);
+  }
+
+  if (input.progressPercent !== undefined && !statusChanging) {
     if (input.progressPercent !== null) {
       const p = input.progressPercent;
       if (p < 0 || p > 100 || !Number.isInteger(p)) {
@@ -182,15 +197,6 @@ export async function updateTodoItem(input: {
       }
     }
     patch.progress_percent = input.progressPercent;
-  }
-
-  if (input.status !== undefined && input.status !== existing.status) {
-    patch.status = input.status;
-    patch.position = await nextPositionForStatus(
-      supabase,
-      user.id,
-      input.status,
-    );
   }
 
   if (input.assignedUserId !== undefined) {
@@ -523,6 +529,7 @@ export async function reorderTodoBoard(input: {
           status,
           position: i,
           list_order: globalOrder,
+          progress_percent: progressPercentForStatus(status),
           last_stale_notification_at: null,
         })
         .eq("id", id)

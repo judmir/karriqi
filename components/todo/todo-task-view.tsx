@@ -26,6 +26,7 @@ import {
   updateTodoItem,
 } from "@/lib/todo/todo-actions";
 import { todoStatusLabel } from "@/lib/todo/status-label";
+import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { cn } from "@/lib/utils";
 import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
@@ -290,7 +291,11 @@ export function TodoTaskView({
                 "dark:bg-input/30",
               )}
               value={status}
-              onChange={(e) => setStatus(e.target.value as TodoStatus)}
+              onChange={(e) => {
+                const nextStatus = e.target.value as TodoStatus;
+                setStatus(nextStatus);
+                setProgressText(String(progressPercentForStatus(nextStatus)));
+              }}
             >
               {TODO_STATUSES.map((s) => (
                 <option key={s} value={s}>
