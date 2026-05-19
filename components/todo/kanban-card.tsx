@@ -173,33 +173,32 @@ export function KanbanCard({
       ref={isOverlay ? undefined : setNodeRef}
       style={isOverlay ? undefined : style}
       data-dragging={isDragging || undefined}
+      aria-label={`Open task ${item.title}`}
+      onClick={(e) => {
+        if (isOverlay) return;
+        // Inner interactive controls call stopPropagation; this only fires
+        // when the user actually clicked the card body and not a child
+        // button or menu trigger.
+        if (e.defaultPrevented) return;
+        onOpen();
+      }}
       className={cn(
-        "group/card border-border bg-card text-card-foreground relative flex flex-col gap-3 rounded-2xl border p-4",
+        "group/card border-border bg-card text-card-foreground relative flex flex-col gap-3 rounded-2xl border p-4 text-left",
         "shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset]",
         "transition-[box-shadow,border-color,transform]",
         "hover:border-border/80 hover:shadow-md",
-        persistence && !isOverlay && "cursor-grab active:cursor-grabbing",
+        persistence && !isOverlay && "cursor-pointer active:cursor-grabbing",
         isDragging && !isOverlay && "opacity-40",
         isOverlay && "ring-ring/40 cursor-grabbing shadow-xl ring-2",
       )}
       {...(isOverlay ? {} : attributes)}
       {...(isOverlay ? {} : listeners)}
     >
-      {/* Header: title (click opens edit) + actions menu */}
+      {/* Header: title + actions menu (whole card is the click target) */}
       <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="hover:text-primary -my-1 min-w-0 flex-1 cursor-pointer rounded-md py-1 text-left transition-colors"
-        >
-          <h3 className="text-foreground font-heading text-[15px] leading-snug font-semibold tracking-tight">
-            {item.title}
-          </h3>
-        </button>
+        <h3 className="text-foreground font-heading min-w-0 flex-1 text-[15px] leading-snug font-semibold tracking-tight">
+          {item.title}
+        </h3>
 
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -386,15 +385,12 @@ export function KanbanCard({
           )}
         </div>
 
-        <div className="text-muted-foreground flex shrink-0 items-center gap-3 text-[11px] font-medium tabular-nums">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+        <div
+          className="text-muted-foreground flex shrink-0 items-center gap-3 text-[11px] font-medium tabular-nums"
+          aria-hidden={false}
+        >
+          <span
+            className="inline-flex items-center gap-1"
             aria-label={
               subtaskTotal > 0
                 ? `Checklist ${subtaskDone} of ${subtaskTotal} done`
@@ -410,19 +406,11 @@ export function KanbanCard({
             <span>
               {subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : 0}
             </span>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+          </span>
+          <span
+            className="inline-flex items-center gap-1"
             aria-label={
-              commentCount === 1
-                ? "1 comment"
-                : `${commentCount} comments`
+              commentCount === 1 ? "1 comment" : `${commentCount} comments`
             }
             title={
               commentCount === 1 ? "1 comment" : `${commentCount} comments`
@@ -430,7 +418,7 @@ export function KanbanCard({
           >
             <MessageSquare className="size-3.5" aria-hidden />
             <span>{commentCount}</span>
-          </button>
+          </span>
         </div>
       </div>
     </article>
