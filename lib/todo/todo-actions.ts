@@ -9,6 +9,7 @@ import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { TodoStatus } from "@/types/todo";
+import { TODO_STATUSES } from "@/types/todo";
 
 type TodoItemUpdate = Database["public"]["Tables"]["todo_items"]["Update"];
 
@@ -455,6 +456,83 @@ export async function deleteTodoSubtask(input: {
   }
 
   await clearStaleTaskReminder(supabase, subRow.todo_item_id, user.id);
+
+  return ok({ ok: true });
+}
+
+export type ReorderBoardResult = { ok: true } | Err;
+
+/**
+ * Persist the kanban board layout in one shot: each column's ordered IDs
+ * become that column's status + position, and the flat top-to-bottom (column
+ * by column, left to right) order becomes `list_order` for the legacy single
+ * list view. Validates that the payload matches the caller's task set and
+ * that each id maps to a uuid the caller owns.
+ */
+export async function reorderTodoBoard(input: {
+  columns: Record<TodoStatus, string[]>;
+}): Promise<ReorderBoardResult> {
+  const orderedIdsByColumn = input.columns;
+  const flatIds: string[] = [];
+  for (const status of TODO_STATUSES) {
+    const ids = orderedIdsByColumn[status] ?? [];
+    for (const id of ids) {
+      if (!isUuid(id)) {
+        return { ok: false, message: "Invalid item id in board order." };
+      }
+      flatIds.push(id);
+    }
+  }
+
+  if (new Set(flatIds).size !== flatIds.length) {
+    return { ok: false, message: "Duplicate task in board order." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const { data: rows } = await supabase
+    .from("todo_items")
+    .select("id")
+    .eq("user_id", user.id);
+
+  const allowed = new Set((rows ?? []).map((r) => r.id));
+  if (flatIds.length !== allowed.size) {
+    return { ok: false, message: "Board order must include every task." };
+  }
+  for (const id of flatIds) {
+    if (!allowed.has(id)) {
+      return { ok: false, message: "Unknown task in board order." };
+    }
+  }
+
+  let globalOrder = 0;
+  for (const status of TODO_STATUSES) {
+    const ids = orderedIdsByColumn[status] ?? [];
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i]!;
+      const { error } = await supabase
+        .from("todo_items")
+        .update({
+          status,
+          position: i,
+          list_order: globalOrder,
+          last_stale_notification_at: null,
+        })
+        .eq("id", id)
+        .eq("user_id", user.id);
+      if (error) {
+        return { ok: false, message: error.message };
+      }
+      globalOrder++;
+    }
+  }
 
   return ok({ ok: true });
 }
