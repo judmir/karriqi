@@ -53,7 +53,7 @@ Validated lightly in [`lib/env.ts`](lib/env.ts). Without them, protected routes 
 
 ## Architecture (short)
 
-- **`app/(main)/`** — Authenticated shell (`AppShell`: header, desktop sidebar, mobile bottom nav). Routes: `/dashboard`, `/shopping`, `/todo`, `/calendar`, `/settings`.
+- **`app/(main)/`** — Authenticated shell (`AppShell`: header, desktop sidebar, mobile bottom nav). Routes: `/dashboard`, `/shopping`, `/kanban`, `/calendar`, `/settings`.
 - **`app/auth/`** — Sign-in only; **`/auth/sign-up`** redirects to sign-in. OAuth/magic-link **`/auth/callback`** handler.
 - **`middleware.ts`** — Refreshes Supabase session; guards paths listed in [`config/routes.ts`](config/routes.ts).
 - **`config/navigation.ts`** — Single nav config for mobile + desktop.

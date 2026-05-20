@@ -3,7 +3,7 @@ export const ROUTES = {
   dashboard: "/dashboard",
   shopping: "/shopping",
   shoppingAdmin: "/shopping/admin",
-  todo: "/todo",
+  todo: "/kanban",
   calendar: "/calendar",
   settings: "/settings",
   dev: "/dev",
@@ -15,7 +15,7 @@ export const ROUTES = {
 
 /** Single task view/edit (e.g. Jira-style page). */
 export function todoTaskPath(id: string) {
-  return `/todo/${id}`;
+  return `/kanban/${id}`;
 }
 
 /** URL prefixes that require an authenticated session (middleware). */

@@ -45,7 +45,7 @@ flowchart LR
 | URL                                                          | Layout                | Purpose                                                         |
 | ------------------------------------------------------------ | --------------------- | --------------------------------------------------------------- |
 | `/`                                                          | Root only             | Marketing-style landing; sign-in CTA                            |
-| `/dashboard`, `/shopping`, `/todo`, `/calendar`, `/settings` | `(main)` + `AppShell` | Main family app surfaces                                        |
+| `/dashboard`, `/shopping`, `/kanban`, `/calendar`, `/settings` | `(main)` + `AppShell` | Main family app surfaces                                      |
 | `/dev`, `/dev/push`, `/dev/architecture`                     | `(main)` + `AppShell` | Maintainer-only Dev dashboard, push tests, and architecture map |
 | `/auth/sign-in`                                              | `app/auth/layout.tsx` | Email/password sign-in                                          |
 | `/auth/sign-up`                                              | Same                  | **Redirects to** `/auth/sign-in` (no self-service registration) |
