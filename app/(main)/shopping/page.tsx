@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
 import { fetchShoppingListForUser } from "@/lib/shopping/fetch-shopping-list";
 import { fetchStaplesWithDefaults } from "@/lib/shopping/fetch-staples-with-defaults";
+import { resolveHouseholdOwnerUserId } from "@/lib/shopping/household-owner";
 import { mockStaples } from "@/lib/shopping/mock-staples";
 import { medianGapDaysByStaple } from "@/lib/shopping/suggestions";
 import { getSessionUser } from "@/lib/supabase/server";
@@ -15,10 +16,13 @@ export default async function ShoppingPage() {
   let purchasePersistence = false;
   let listPersistence = false;
   let medianIntervalByStapleId: Record<string, number> = {};
+  let householdOwnerId: string | null = null;
 
   if (isSupabaseConfigured()) {
     const user = await getSessionUser();
     if (user) {
+      householdOwnerId = await resolveHouseholdOwnerUserId(user.id);
+
       const [staplesResult, listResult, eventsResult] =
         await Promise.allSettled([
           fetchStaplesWithDefaults(),
@@ -50,6 +54,7 @@ export default async function ShoppingPage() {
         purchasePersistence={purchasePersistence}
         listPersistence={listPersistence}
         medianIntervalByStapleId={medianIntervalByStapleId}
+        householdOwnerId={householdOwnerId}
       />
     </PageContainer>
   );

@@ -424,7 +424,16 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      household_owner_for: {
+        Args: { uid: string };
+        Returns: string;
+      };
+      migrate_shopping_to_household_owner: {
+        Args: { p_member_id: string; p_owner_id: string };
+        Returns: void;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
