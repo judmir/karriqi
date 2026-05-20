@@ -13,18 +13,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { ROUTES } from "@/config/routes";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-export function UserMenu({ email }: { email: string }) {
+export function UserMenu({
+  userId,
+  email,
+  displayName,
+  avatarPreset,
+}: {
+  userId: string | null;
+  email: string;
+  displayName: string | null;
+  avatarPreset: string | null;
+}) {
   const router = useRouter();
-  const safe = email.trim();
-  const initials =
-    safe.length >= 2
-      ? safe.slice(0, 2).toUpperCase()
-      : safe.toUpperCase() || "?";
 
   async function signOut() {
     try {
@@ -50,9 +55,15 @@ export function UserMenu({ email }: { email: string }) {
         )}
         aria-label="Account menu"
       >
-        <Avatar className="size-8">
-          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          size="default"
+          seed={userId ?? email}
+          displayName={displayName}
+          email={email}
+          avatarPreset={avatarPreset}
+          ariaLabel={displayName ?? email}
+          fallbackClassName="text-xs"
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuGroup>

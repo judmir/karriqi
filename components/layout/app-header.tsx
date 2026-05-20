@@ -9,11 +9,17 @@ import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
 export function AppHeader({
+  userId,
   userEmail,
+  userDisplayName,
+  userAvatarPreset,
   sidebarOpen,
   onToggleSidebar,
 }: {
+  userId: string | null;
   userEmail: string;
+  userDisplayName: string | null;
+  userAvatarPreset: string | null;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 }) {
@@ -48,7 +54,12 @@ export function AppHeader({
         >
           <KarriqiLogoMark className="size-7" />
         </Link>
-        <UserMenu email={userEmail} />
+        <UserMenu
+          userId={userId}
+          email={userEmail}
+          displayName={userDisplayName}
+          avatarPreset={userAvatarPreset}
+        />
       </div>
     </header>
   );
