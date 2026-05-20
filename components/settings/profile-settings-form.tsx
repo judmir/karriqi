@@ -42,39 +42,36 @@ export function ProfileSettingsForm({
     initialAvatarPreset,
   );
   const [pending, startTransition] = useTransition();
-  const [avatarPending, startAvatarTransition] = useTransition();
+
+  const nameChanged = displayName.trim() !== initialDisplayName.trim();
+  const avatarChanged = avatarPreset !== initialAvatarPreset;
+  const dirty = nameChanged || avatarChanged;
+
+  function selectPreset(next: AvatarPresetId | null) {
+    if (pending) return;
+    setAvatarPreset(next);
+  }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!dirty || pending) return;
     startTransition(() => {
       void (async () => {
-        const r = await updateProfileDisplayName(displayName);
-        if (!r.ok) {
-          toast.error(r.message);
-          return;
+        if (nameChanged) {
+          const r = await updateProfileDisplayName(displayName);
+          if (!r.ok) {
+            toast.error(r.message);
+            return;
+          }
         }
-        toast.success("Display name saved.");
-        router.refresh();
-      })();
-    });
-  }
-
-  function selectPreset(next: AvatarPresetId | null) {
-    if (avatarPending) return;
-    if (next === avatarPreset) return;
-    const previous = avatarPreset;
-    setAvatarPreset(next);
-    startAvatarTransition(() => {
-      void (async () => {
-        const r = await updateProfileAvatarPreset(next);
-        if (!r.ok) {
-          setAvatarPreset(previous);
-          toast.error(r.message);
-          return;
+        if (avatarChanged) {
+          const r = await updateProfileAvatarPreset(avatarPreset);
+          if (!r.ok) {
+            toast.error(r.message);
+            return;
+          }
         }
-        toast.success(
-          next === null ? "Back to default colour." : "Background saved.",
-        );
+        toast.success("Profile saved.");
         router.refresh();
       })();
     });
@@ -88,8 +85,8 @@ export function ProfileSettingsForm({
             Profile picture
           </p>
           <p className="text-muted-foreground text-xs">
-            Your initials on a background colour. Pick one — saves
-            automatically.
+            Your initials on a background colour. Pick one, then hit Save
+            profile.
           </p>
         </div>
 
@@ -101,7 +98,7 @@ export function ProfileSettingsForm({
                 key={s.id ?? "default"}
                 type="button"
                 onClick={() => selectPreset(s.id)}
-                disabled={avatarPending}
+                disabled={pending}
                 aria-pressed={selected}
                 aria-label={`Use ${s.label} background`}
                 title={s.label}
@@ -111,7 +108,7 @@ export function ProfileSettingsForm({
                   selected
                     ? "ring-primary ring-2 ring-offset-2"
                     : "hover:opacity-90",
-                  avatarPending && "cursor-progress opacity-70",
+                  pending && "cursor-progress opacity-70",
                 )}
               >
                 <UserAvatar
@@ -155,7 +152,7 @@ export function ProfileSettingsForm({
             ).
           </p>
         </div>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={!dirty || pending}>
           {pending ? "Saving…" : "Save profile"}
         </Button>
       </form>
