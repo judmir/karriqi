@@ -422,6 +422,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      calendar_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          description: string | null;
+          start_at: string;
+          end_at: string;
+          all_day: boolean;
+          color: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          description?: string | null;
+          start_at: string;
+          end_at: string;
+          all_day?: boolean;
+          color?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          description?: string | null;
+          start_at?: string;
+          end_at?: string;
+          all_day?: boolean;
+          color?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
