@@ -8,12 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { AVATAR_PRESETS, type AvatarPresetId } from "@/lib/avatar/presets";
+import {
+  AVATAR_PRESETS,
+  type AvatarPresetGroup,
+  type AvatarPresetId,
+} from "@/lib/avatar/presets";
 import {
   updateProfileAvatarPreset,
   updateProfileDisplayName,
 } from "@/lib/auth/profile-actions";
 import { cn } from "@/lib/utils";
+
+const GROUPS: { title: string; group: AvatarPresetGroup; hint: string }[] = [
+  { title: "Warm tones", group: "warm", hint: "3 femaleish backgrounds" },
+  { title: "Cool tones", group: "cool", hint: "3 maleish backgrounds" },
+];
 
 export function ProfileSettingsForm({
   userId,
@@ -63,17 +72,12 @@ export function ProfileSettingsForm({
           return;
         }
         toast.success(
-          next === null ? "Back to initials avatar." : "Avatar saved.",
+          next === null ? "Back to default colour." : "Background saved.",
         );
         router.refresh();
       })();
     });
   }
-
-  const groups: { title: string; group: "female" | "male" }[] = [
-    { title: "Female characters", group: "female" },
-    { title: "Male characters", group: "male" },
-  ];
 
   return (
     <div className="space-y-8">
@@ -92,17 +96,20 @@ export function ProfileSettingsForm({
               Profile picture
             </p>
             <p className="text-muted-foreground text-xs">
-              Pick a character — saves automatically. Each has its own
-              background so you and your wife are easy to tell apart.
+              Your initials on a background colour. Pick one — saves
+              automatically — so you and your wife are easy to tell apart.
             </p>
           </div>
         </div>
 
-        {groups.map(({ title, group }) => (
+        {GROUPS.map(({ title, group, hint }) => (
           <div key={group} className="space-y-2">
-            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-              {title}
-            </p>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                {title}
+              </p>
+              <p className="text-muted-foreground/70 text-[11px]">{hint}</p>
+            </div>
             <div className="flex flex-wrap gap-3">
               {AVATAR_PRESETS.filter((p) => p.group === group).map((p) => {
                 const selected = avatarPreset === p.id;
@@ -113,7 +120,7 @@ export function ProfileSettingsForm({
                     onClick={() => selectPreset(p.id)}
                     disabled={avatarPending}
                     aria-pressed={selected}
-                    aria-label={`Use ${p.label} avatar`}
+                    aria-label={`Use ${p.label} background`}
                     title={p.label}
                     className={cn(
                       "ring-offset-background relative rounded-full outline-none transition",
@@ -140,15 +147,20 @@ export function ProfileSettingsForm({
         ))}
 
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Initials only
-          </p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              Default
+            </p>
+            <p className="text-muted-foreground/70 text-[11px]">
+              Auto colour from your account id
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => selectPreset(null)}
             disabled={avatarPending}
             aria-pressed={avatarPreset === null}
-            aria-label="Use initials avatar"
+            aria-label="Use default colour"
             className={cn(
               "ring-offset-background relative rounded-full outline-none transition",
               "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
@@ -164,12 +176,9 @@ export function ProfileSettingsForm({
               displayName={displayName}
               email={email}
               avatarPreset={null}
-              ariaLabel="Initials"
+              ariaLabel="Default"
             />
           </button>
-          <p className="text-muted-foreground text-xs">
-            A coloured circle with your initials. Colour is fixed per account.
-          </p>
         </div>
       </section>
 
