@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/patterns/page-header";
 import { ShoppingList } from "@/components/shopping/shopping-list";
+import { SwipeRevealRow } from "@/components/shopping/swipe-reveal-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isUuid } from "@/lib/shopping/is-uuid";
@@ -34,20 +35,36 @@ function normalizeItemLabel(label: string) {
 function SuggestedItemChip({
   staple,
   onAdd,
+  onDismiss,
 }: {
   staple: StapleItem;
   onAdd: () => void;
+  onDismiss: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onAdd}
-      aria-label={`Add ${staple.name} to list`}
-      className="text-foreground hover:bg-muted/80 inline-flex cursor-pointer items-center gap-1 rounded-full bg-transparent px-3 py-1 text-sm transition-colors select-none"
+    <SwipeRevealRow
+      className="max-w-full rounded-full"
+      contentClassName="rounded-full"
+      deleteLabel="Remove"
+      onSwipeDelete={onDismiss}
+      onTap={onAdd}
     >
-      <span>{staple.name}</span>
-      <Plus className="text-muted-foreground size-3" aria-hidden />
-    </button>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`Add ${staple.name} to list`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onAdd();
+          }
+        }}
+        className="text-foreground hover:bg-muted/80 inline-flex w-full cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-sm transition-colors"
+      >
+        <span>{staple.name}</span>
+        <Plus className="text-muted-foreground size-3 shrink-0" aria-hidden />
+      </div>
+    </SwipeRevealRow>
   );
 }
 
@@ -101,6 +118,9 @@ export function ShoppingTripClient({
   });
   const [draft, setDraft] = useState("");
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [dismissedSuggestedIds, setDismissedSuggestedIds] = useState(
+    () => new Set<string>(),
+  );
   // Items whose `position` we already assigned on insert; used to guess the next position.
   const positionsRef = useRef<Map<string, number>>(
     new Map(initialItems.map((i, idx) => [i.id, idx])),
@@ -153,14 +173,29 @@ export function ShoppingTripClient({
   const suggestedCatalog = useMemo(
     () => [
       ...catalog.filter(
-        (s) => dueSoonStapleIds.has(s.id) && !stapleIdsOnList.has(s.id),
+        (s) =>
+          dueSoonStapleIds.has(s.id) &&
+          !stapleIdsOnList.has(s.id) &&
+          !dismissedSuggestedIds.has(s.id),
       ),
       ...catalog.filter(
-        (s) => !dueSoonStapleIds.has(s.id) && !stapleIdsOnList.has(s.id),
+        (s) =>
+          !dueSoonStapleIds.has(s.id) &&
+          !stapleIdsOnList.has(s.id) &&
+          !dismissedSuggestedIds.has(s.id),
       ),
     ],
-    [catalog, dueSoonStapleIds, stapleIdsOnList],
+    [catalog, dueSoonStapleIds, stapleIdsOnList, dismissedSuggestedIds],
   );
+
+  function dismissSuggested(stapleId: string) {
+    setDismissedSuggestedIds((prev) => {
+      if (prev.has(stapleId)) return prev;
+      const next = new Set(prev);
+      next.add(stapleId);
+      return next;
+    });
+  }
 
   function nextPosition() {
     let max = -1;
@@ -408,12 +443,13 @@ export function ShoppingTripClient({
         {suggestedCatalog.length === 0 ? (
           <p className="text-muted-foreground text-sm">—</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-2">
             {suggestedCatalog.map((staple) => (
               <SuggestedItemChip
                 key={staple.id}
                 staple={staple}
                 onAdd={() => addFromStaple(staple)}
+                onDismiss={() => dismissSuggested(staple.id)}
               />
             ))}
           </div>
