@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getOwnPinStatus } from "@/lib/auth/pin-actions";
+import { avatarPresetFromUserMeta } from "@/lib/avatar/presets";
 import {
   isDevMenuEmail,
   isDevMenuEnabledInMetadata,
@@ -45,12 +46,10 @@ export default async function SettingsPage() {
     );
   }
 
-  const initialDisplayName =
-    displayNameFromUserMeta(
-      user.user_metadata as Record<string, unknown>,
-    ) ?? "";
-
   const meta = user.user_metadata as Record<string, unknown>;
+  const initialDisplayName = displayNameFromUserMeta(meta) ?? "";
+  const initialAvatarPreset = avatarPresetFromUserMeta(meta);
+
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
   const pinStatus = await getOwnPinStatus();
@@ -68,9 +67,11 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent>
             <ProfileSettingsForm
-              key={initialDisplayName || user.id}
+              key={`${initialDisplayName || user.id}-${initialAvatarPreset ?? "initials"}`}
+              userId={user.id}
               email={user.email ?? ""}
               initialDisplayName={initialDisplayName}
+              initialAvatarPreset={initialAvatarPreset}
             />
           </CardContent>
         </Card>

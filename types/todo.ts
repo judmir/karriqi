@@ -43,6 +43,8 @@ export type TodoAttachment = {
 export type TodoAssignableMember = {
   userId: string;
   displayName: string;
+  /** Profile preset id from `auth.users.user_metadata.avatar_preset` (or null). */
+  avatarPreset: string | null;
 };
 
 export type TodoItem = {

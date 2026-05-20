@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Male avatar ocean">
+  <defs>
+    <linearGradient id="bg-m1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#CFE4FF"/>
+      <stop offset="1" stop-color="#3B7AD6"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#bg-m1)"/>
+  <path d="M6 64 Q32 46 58 64 Z" fill="#FFFFFF" fill-opacity="0.92"/>
+  <path d="M19 27 Q21 18 32 18 Q43 18 45 27 Q44 23 32 23 Q20 23 19 27 Z" fill="#4B2A18"/>
+  <ellipse cx="32" cy="33" rx="11" ry="12" fill="#F4C8A6"/>
+  <path d="M20 28 Q26 22 32 22 Q38 22 44 28 L44 30 Q38 25 32 25 Q26 25 20 30 Z" fill="#4B2A18"/>
+  <circle cx="28" cy="32" r="1.4" fill="#1F1F1F"/>
+  <circle cx="36" cy="32" r="1.4" fill="#1F1F1F"/>
+  <path d="M28 38 Q32 41 36 38" stroke="#1F1F1F" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+</svg>
