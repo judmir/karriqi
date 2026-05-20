@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -19,7 +19,7 @@ import {
   upsertShoppingListItem,
 } from "@/lib/shopping/shopping-actions";
 import { rankDueSoonStaples } from "@/lib/shopping/suggestions";
-import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useShoppingListRealtime } from "@/hooks/use-shopping-list-realtime";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 
 type TripState = {
@@ -27,30 +27,8 @@ type TripState = {
   catalog: StapleItem[];
 };
 
-type ShoppingListRow = {
-  id: string;
-  user_id: string;
-  staple_id: string | null;
-  name: string;
-  quantity: string | null;
-  checked: boolean;
-  position: number;
-  created_at: string;
-};
-
 function normalizeItemLabel(label: string) {
   return label.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function rowToItem(row: ShoppingListRow): ShoppingListItem {
-  return {
-    id: row.id,
-    stapleId: row.staple_id ?? undefined,
-    name: row.name,
-    quantity: row.quantity ?? undefined,
-    checked: row.checked,
-    addedAt: row.created_at,
-  };
 }
 
 function SuggestedItemChip({
@@ -137,65 +115,13 @@ export function ShoppingTripClient({
   const draftHasDuplicateLabel =
     normalizedDraft.length > 0 && itemLabelSet.has(normalizedDraft);
 
-  /**
-   * Supabase Realtime subscription — keeps the list in sync with the household
-   * partner's edits live (no page reload). Idempotent merges by id ensure that
-   * our own echoes are no-ops.
-   */
-  useEffect(() => {
-    if (!listPersistence || !householdOwnerId) return;
-
-    const supabase = createBrowserSupabaseClient();
-    const channel = supabase
-      .channel(`shopping_list_items:household=${householdOwnerId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "shopping_list_items",
-          filter: `user_id=eq.${householdOwnerId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-            const row = payload.new as ShoppingListRow;
-            const incoming = rowToItem(row);
-            positionsRef.current.set(row.id, row.position);
-            setTrip((t) => {
-              const existingIdx = t.items.findIndex((i) => i.id === incoming.id);
-              if (existingIdx >= 0) {
-                const existing = t.items[existingIdx];
-                if (
-                  existing.name === incoming.name &&
-                  existing.checked === incoming.checked &&
-                  (existing.quantity ?? null) === (incoming.quantity ?? null) &&
-                  (existing.stapleId ?? null) === (incoming.stapleId ?? null)
-                ) {
-                  return t;
-                }
-                const next = t.items.slice();
-                next[existingIdx] = { ...existing, ...incoming };
-                return { ...t, items: next };
-              }
-              return { ...t, items: [...t.items, incoming] };
-            });
-          } else if (payload.eventType === "DELETE") {
-            const row = payload.old as { id?: string };
-            if (!row?.id) return;
-            positionsRef.current.delete(row.id);
-            setTrip((t) => {
-              if (!t.items.some((i) => i.id === row.id)) return t;
-              return { ...t, items: t.items.filter((i) => i.id !== row.id) };
-            });
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [householdOwnerId, listPersistence]);
+  useShoppingListRealtime({
+    enabled: listPersistence,
+    householdOwnerId,
+    positionsRef,
+    patchItems: (updater) =>
+      setTrip((t) => ({ ...t, items: updater(t.items) })),
+  });
 
   const doneCount = useMemo(
     () => items.filter((i) => i.checked).length,
