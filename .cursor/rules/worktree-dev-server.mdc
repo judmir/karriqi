@@ -79,6 +79,17 @@ Example: **Worktree preview:** http://localhost:3012 — main checkout stays on 
 
 ---
 
-## Cleanup (when abandoning a worktree)
+## Cleanup
 
-Stop that worktree’s dev process (its port), then `git worktree remove` / delete branch per `agent-git-branch-workflow.mdc` if they want no trace.
+Stop the worktree dev server in either of these cases:
+
+1. **After a successful release** (tag pushed to origin) — mandatory; see `release-tag-deploy-workflow.mdc` step 7.
+2. **When abandoning a worktree** — then `git worktree remove` / delete branch per `agent-git-branch-workflow.mdc` if they want no trace.
+
+Shutdown command (reads the port from `.worktree-dev-port` written by `scripts/worktree-dev.sh`):
+
+```bash
+PORT=$(cat .worktree-dev-port 2>/dev/null); [ -n "$PORT" ] && lsof -i :"$PORT" -t 2>/dev/null | xargs -r kill
+```
+
+Verify with `lsof -i :"$PORT"` — empty output means stopped.
