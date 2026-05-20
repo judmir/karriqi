@@ -1,5 +1,6 @@
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
 import { DevMenuSettings } from "@/components/settings/dev-menu-settings";
+import { HouseholdSettingsForm } from "@/components/settings/household-settings-form";
 import { PinSettingsForm } from "@/components/settings/pin-settings-form";
 import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
 import { PageContainer } from "@/components/layout/page-container";
@@ -13,11 +14,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getOwnPinStatus } from "@/lib/auth/pin-actions";
+import { avatarPresetFromUserMeta } from "@/lib/avatar/presets";
 import {
   isDevMenuEmail,
   isDevMenuEnabledInMetadata,
 } from "@/lib/dev/dev-access";
 import { isSupabaseConfigured } from "@/lib/env";
+import { fetchHouseholdOverview } from "@/lib/household/household-actions";
 import { getSessionUser } from "@/lib/supabase/server";
 import { displayNameFromUserMeta } from "@/lib/todo/assignable-members";
 
@@ -45,15 +48,14 @@ export default async function SettingsPage() {
     );
   }
 
-  const initialDisplayName =
-    displayNameFromUserMeta(
-      user.user_metadata as Record<string, unknown>,
-    ) ?? "";
-
   const meta = user.user_metadata as Record<string, unknown>;
+  const initialDisplayName = displayNameFromUserMeta(meta) ?? "";
+  const initialAvatarPreset = avatarPresetFromUserMeta(meta);
+
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
   const pinStatus = await getOwnPinStatus();
+  const householdOverview = await fetchHouseholdOverview();
 
   return (
     <PageContainer>
@@ -68,9 +70,28 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent>
             <ProfileSettingsForm
-              key={initialDisplayName || user.id}
+              key={`${initialDisplayName || user.id}-${initialAvatarPreset ?? "initials"}`}
+              userId={user.id}
               email={user.email ?? ""}
               initialDisplayName={initialDisplayName}
+              initialAvatarPreset={initialAvatarPreset}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Household</CardTitle>
+            <CardDescription>
+              Pair with a partner to share the shopping list, staples, and
+              purchase history in real time.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <HouseholdSettingsForm
+              partners={householdOverview?.partners ?? []}
+              serviceRoleAvailable={
+                householdOverview?.serviceRoleAvailable ?? false
+              }
             />
           </CardContent>
         </Card>

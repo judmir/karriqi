@@ -9,11 +9,15 @@ import { useNotificationSubscription } from "@/hooks/use-notification-subscripti
 export function AppShell({
   userId,
   userEmail,
+  userDisplayName,
+  userAvatarPreset,
   includeDevNav,
   children,
 }: {
   userId: string | null;
   userEmail: string;
+  userDisplayName?: string | null;
+  userAvatarPreset?: string | null;
   includeDevNav?: boolean;
   children: React.ReactNode;
 }) {
@@ -30,7 +34,10 @@ export function AppShell({
       <MainNavDesktop includeDevNav={includeDevNav} open={sidebarOpen} />
       <div className="bg-background flex min-h-0 min-h-[100dvh] flex-1 flex-col md:min-h-0 md:overflow-hidden md:rounded-t-2xl">
         <AppHeader
+          userId={userId}
           userEmail={userEmail}
+          userDisplayName={userDisplayName ?? null}
+          userAvatarPreset={userAvatarPreset ?? null}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={toggleSidebar}
         />

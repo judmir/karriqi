@@ -11,12 +11,15 @@ import { Input } from "@/components/ui/input";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { newShoppingListItemId } from "@/lib/shopping/new-list-item-id";
 import {
+  clearShoppingList,
   createStaple,
+  deleteShoppingListItem,
   recordPurchase,
-  saveShoppingListItems,
+  setAllShoppingListItemsChecked,
+  upsertShoppingListItem,
 } from "@/lib/shopping/shopping-actions";
 import { rankDueSoonStaples } from "@/lib/shopping/suggestions";
-import { cn } from "@/lib/utils";
+import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 
 type TripState = {
@@ -24,8 +27,30 @@ type TripState = {
   catalog: StapleItem[];
 };
 
+type ShoppingListRow = {
+  id: string;
+  user_id: string;
+  staple_id: string | null;
+  name: string;
+  quantity: string | null;
+  checked: boolean;
+  position: number;
+  created_at: string;
+};
+
 function normalizeItemLabel(label: string) {
   return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function rowToItem(row: ShoppingListRow): ShoppingListItem {
+  return {
+    id: row.id,
+    stapleId: row.staple_id ?? undefined,
+    name: row.name,
+    quantity: row.quantity ?? undefined,
+    checked: row.checked,
+    addedAt: row.created_at,
+  };
 }
 
 function SuggestedItemChip({
@@ -80,6 +105,7 @@ export function ShoppingTripClient({
   purchasePersistence = false,
   listPersistence = false,
   medianIntervalByStapleId = {},
+  householdOwnerId = null,
 }: {
   initialItems: ShoppingListItem[];
   staples: StapleItem[];
@@ -88,6 +114,8 @@ export function ShoppingTripClient({
   listPersistence?: boolean;
   /** Learned days-between-buys per staple id (from DB); empty when offline / mock. */
   medianIntervalByStapleId?: Record<string, number>;
+  /** Canonical household owner uuid (used to scope Supabase Realtime subscription). */
+  householdOwnerId?: string | null;
 }) {
   const [trip, setTrip] = useState<TripState>({
     items: initialItems,
@@ -95,7 +123,10 @@ export function ShoppingTripClient({
   });
   const [draft, setDraft] = useState("");
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  const skipListPersistRef = useRef(true);
+  // Items whose `position` we already assigned on insert; used to guess the next position.
+  const positionsRef = useRef<Map<string, number>>(
+    new Map(initialItems.map((i, idx) => [i.id, idx])),
+  );
 
   const { items, catalog } = trip;
   const itemLabelSet = useMemo(
@@ -106,17 +137,65 @@ export function ShoppingTripClient({
   const draftHasDuplicateLabel =
     normalizedDraft.length > 0 && itemLabelSet.has(normalizedDraft);
 
+  /**
+   * Supabase Realtime subscription — keeps the list in sync with the household
+   * partner's edits live (no page reload). Idempotent merges by id ensure that
+   * our own echoes are no-ops.
+   */
   useEffect(() => {
-    if (!listPersistence) return;
-    if (skipListPersistRef.current) {
-      skipListPersistRef.current = false;
-      return;
-    }
-    const timer = setTimeout(() => {
-      void saveShoppingListItems(items);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [items, listPersistence]);
+    if (!listPersistence || !householdOwnerId) return;
+
+    const supabase = createBrowserSupabaseClient();
+    const channel = supabase
+      .channel(`shopping_list_items:household=${householdOwnerId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shopping_list_items",
+          filter: `user_id=eq.${householdOwnerId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const row = payload.new as ShoppingListRow;
+            const incoming = rowToItem(row);
+            positionsRef.current.set(row.id, row.position);
+            setTrip((t) => {
+              const existingIdx = t.items.findIndex((i) => i.id === incoming.id);
+              if (existingIdx >= 0) {
+                const existing = t.items[existingIdx];
+                if (
+                  existing.name === incoming.name &&
+                  existing.checked === incoming.checked &&
+                  (existing.quantity ?? null) === (incoming.quantity ?? null) &&
+                  (existing.stapleId ?? null) === (incoming.stapleId ?? null)
+                ) {
+                  return t;
+                }
+                const next = t.items.slice();
+                next[existingIdx] = { ...existing, ...incoming };
+                return { ...t, items: next };
+              }
+              return { ...t, items: [...t.items, incoming] };
+            });
+          } else if (payload.eventType === "DELETE") {
+            const row = payload.old as { id?: string };
+            if (!row?.id) return;
+            positionsRef.current.delete(row.id);
+            setTrip((t) => {
+              if (!t.items.some((i) => i.id === row.id)) return t;
+              return { ...t, items: t.items.filter((i) => i.id !== row.id) };
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [householdOwnerId, listPersistence]);
 
   const doneCount = useMemo(
     () => items.filter((i) => i.checked).length,
@@ -157,6 +236,31 @@ export function ShoppingTripClient({
     [catalog, dueSoonStapleIds, stapleIdsOnList],
   );
 
+  function nextPosition() {
+    let max = -1;
+    positionsRef.current.forEach((p) => {
+      if (p > max) max = p;
+    });
+    return max + 1;
+  }
+
+  function persistItem(item: ShoppingListItem, position: number) {
+    if (!listPersistence) return;
+    positionsRef.current.set(item.id, position);
+    void upsertShoppingListItem({
+      id: item.id,
+      stapleId: item.stapleId ?? null,
+      name: item.name,
+      quantity: item.quantity ?? null,
+      checked: item.checked,
+      position,
+    }).then((r) => {
+      if (!r.ok) {
+        toast.error(`Couldn't save "${item.name}": ${r.message}`);
+      }
+    });
+  }
+
   function addFromStaple(staple: StapleItem) {
     if (itemLabelSet.has(normalizeItemLabel(staple.name))) {
       toast.info(`"${staple.name}" is already on your list.`);
@@ -169,7 +273,9 @@ export function ShoppingTripClient({
       checked: false,
       addedAt: new Date().toISOString(),
     };
+    const position = nextPosition();
     setTrip((t) => ({ ...t, items: [...t.items, next] }));
+    persistItem(next, position);
   }
 
   function addFreeText(e: FormEvent) {
@@ -179,19 +285,16 @@ export function ShoppingTripClient({
     if (itemLabelSet.has(normalizeItemLabel(name))) {
       return;
     }
-    setTrip((t) => ({
-      ...t,
-      items: [
-        ...t.items,
-        {
-          id: newShoppingListItemId(),
-          name,
-          checked: false,
-          addedAt: new Date().toISOString(),
-        },
-      ],
-    }));
+    const next: ShoppingListItem = {
+      id: newShoppingListItemId(),
+      name,
+      checked: false,
+      addedAt: new Date().toISOString(),
+    };
+    const position = nextPosition();
+    setTrip((t) => ({ ...t, items: [...t.items, next] }));
     setDraft("");
+    persistItem(next, position);
   }
 
   function handleItemsChange(next: ShoppingListItem[]) {
@@ -200,8 +303,29 @@ export function ShoppingTripClient({
     const nextAllChecked =
       next.length > 0 && next.every((item) => item.checked);
 
+    const prevById = new Map(items.map((i) => [i.id, i]));
+    const nextById = new Map(next.map((i) => [i.id, i]));
+
+    const removed: ShoppingListItem[] = [];
+    for (const prev of items) {
+      if (!nextById.has(prev.id)) removed.push(prev);
+    }
+
+    const changed: ShoppingListItem[] = [];
+    for (const n of next) {
+      const prev = prevById.get(n.id);
+      if (!prev) continue;
+      if (
+        prev.name !== n.name ||
+        prev.checked !== n.checked ||
+        (prev.quantity ?? null) !== (n.quantity ?? null) ||
+        (prev.stapleId ?? null) !== (n.stapleId ?? null)
+      ) {
+        changed.push(n);
+      }
+    }
+
     if (purchasePersistence) {
-      const prevById = new Map(items.map((i) => [i.id, i]));
       for (const item of next) {
         const prev = prevById.get(item.id);
         if (prev && !prev.checked && item.checked) {
@@ -211,11 +335,7 @@ export function ShoppingTripClient({
             stapleId,
             itemName: item.name,
           }).then((r) => {
-            if (
-              r.ok &&
-              r.stapleIdForCatalog &&
-              r.purchasedAt
-            ) {
+            if (r.ok && r.stapleIdForCatalog && r.purchasedAt) {
               setTrip((cur) => ({
                 ...cur,
                 catalog: cur.catalog.map((s) =>
@@ -232,23 +352,56 @@ export function ShoppingTripClient({
 
     setTrip((t) => ({ ...t, items: next }));
 
+    if (listPersistence) {
+      for (const item of changed) {
+        const position = positionsRef.current.get(item.id) ?? nextPosition();
+        persistItem(item, position);
+      }
+      for (const item of removed) {
+        positionsRef.current.delete(item.id);
+        void deleteShoppingListItem(item.id).then((r) => {
+          if (!r.ok) {
+            toast.error(`Couldn't remove "${item.name}": ${r.message}`);
+          }
+        });
+      }
+    }
+
     if (nextAllChecked && !prevAllChecked) {
       setClearConfirmOpen(true);
     }
   }
 
   function setAllChecked(checked: boolean) {
-    handleItemsChange(items.map((item) => ({ ...item, checked })));
+    if (items.every((item) => item.checked === checked)) return;
+    setTrip((t) => ({
+      ...t,
+      items: t.items.map((item) => ({ ...item, checked })),
+    }));
+    if (listPersistence) {
+      void setAllShoppingListItemsChecked(checked).then((r) => {
+        if (!r.ok) {
+          toast.error(`Couldn't update list: ${r.message}`);
+        }
+      });
+    }
   }
 
   function removeAllItems() {
     setTrip((t) => ({ ...t, items: [] }));
+    positionsRef.current.clear();
     setClearConfirmOpen(false);
+    if (listPersistence) {
+      void clearShoppingList().then((r) => {
+        if (!r.ok) {
+          toast.error(`Couldn't clear list: ${r.message}`);
+        }
+      });
+    }
   }
 
   function confirmClearList() {
-    setTrip((t) => ({ ...t, items: [] }));
-    setClearConfirmOpen(false);
+    removeAllItems();
   }
 
   async function promoteFreeTextToSuggested(itemId: string) {
@@ -283,6 +436,11 @@ export function ShoppingTripClient({
         );
         return { catalog: catalogNext, items: itemsNext };
       });
+      if (listPersistence) {
+        const updated = { ...item, stapleId };
+        const position = positionsRef.current.get(itemId) ?? nextPosition();
+        persistItem(updated, position);
+      }
       return;
     }
 

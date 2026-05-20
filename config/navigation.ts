@@ -3,8 +3,8 @@ import {
   CalendarDays,
   Code2,
   LayoutDashboard,
-  ListTodo,
   ShoppingCart,
+  SquareKanban,
 } from "lucide-react";
 
 import { ROUTES } from "@/config/routes";
@@ -32,9 +32,9 @@ export const mainNavItems: MainNavItem[] = [
   },
   {
     href: ROUTES.todo,
-    label: "To-do",
-    shortLabel: "Tasks",
-    icon: ListTodo,
+    label: "Kanban",
+    shortLabel: "Kanban",
+    icon: SquareKanban,
   },
   {
     href: ROUTES.calendar,

@@ -1,21 +1,26 @@
 ---
-description: BLOCKING in .cursor/worktrees — run pnpm worktree:dev before any feature work; give preview URL in first reply
+description: BLOCKING in .cursor/worktrees — pnpm worktree:dev is your FIRST tool call, before any Read/Grep/Edit. Preview URL in first reply.
 alwaysApply: true
 ---
 
 # Worktree local dev server
 
-## ⛔ BLOCKING gate (read first)
+## ⛔ BLOCKING gate — DO THIS BEFORE ANY OTHER TOOL CALL
 
-**If the workspace path contains `/.cursor/worktrees/`**, you MUST complete this **before** any substantive work (`Read` / `Write` / `Grep` / `pnpm test` / feature edits):
+**If the workspace path contains `/.cursor/worktrees/`**, your **very first tool call in the conversation** must be `pnpm worktree:dev`. Not after a Read. Not after a Grep. Not after "let me explore the codebase first". FIRST.
 
-1. Run **`pnpm worktree:dev`** in the **background** from the worktree root (or run `bash scripts/worktree-dev.sh` — same thing).
+Concretely, before any of: `Read`, `Write`, `Grep`, `Glob`, `pnpm test`, file edits, or even reconnaissance shell commands — you MUST:
+
+1. Run **`pnpm worktree:dev`** in the **background** from the worktree root (or `bash scripts/worktree-dev.sh` — same thing). Set `block_until_ms: 0` and poll with `AwaitShell` using a regex like `Ready|Local:\s+http://localhost`.
 2. Wait until output shows **Ready** or `Local: http://localhost:<PORT>`.
 3. In your **first reply** to the user, include a line starting with **`Worktree preview:`** and the URL (plus LAN if shown). Note which port is main vs this worktree if 3010 is taken elsewhere.
 
 **Do not skip** because the prime checkout already has a server — each worktree needs its **own** port.
 
-If you already did feature work without this (including a prior turn in the same chat): **stop**, run setup **now**, apologize once, and give the URL.
+If you already did feature work without this (including a prior turn in the same chat): **stop**, run setup **now**, apologize once, and give the URL. Then continue the user's actual task.
+
+### Self-check before your first tool call
+Ask yourself: "Is my workspace path under `/.cursor/worktrees/`?" If yes and your first planned tool is NOT `pnpm worktree:dev`, change your plan.
 
 **Detection:** `user_info` workspace path, or `pwd` / `git worktree list` showing a path under `.cursor/worktrees/`.
 
@@ -74,6 +79,17 @@ Example: **Worktree preview:** http://localhost:3012 — main checkout stays on 
 
 ---
 
-## Cleanup (when abandoning a worktree)
+## Cleanup
 
-Stop that worktree’s dev process (its port), then `git worktree remove` / delete branch per `agent-git-branch-workflow.mdc` if they want no trace.
+Stop the worktree dev server in either of these cases:
+
+1. **After a successful release** (tag pushed to origin) — mandatory; see `release-tag-deploy-workflow.mdc` step 7.
+2. **When abandoning a worktree** — then `git worktree remove` / delete branch per `agent-git-branch-workflow.mdc` if they want no trace.
+
+Shutdown command (reads the port from `.worktree-dev-port` written by `scripts/worktree-dev.sh`):
+
+```bash
+PORT=$(cat .worktree-dev-port 2>/dev/null); [ -n "$PORT" ] && lsof -i :"$PORT" -t 2>/dev/null | xargs -r kill
+```
+
+Verify with `lsof -i :"$PORT"` — empty output means stopped.

@@ -22,32 +22,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
 import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
-function initialsFromDisplayName(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    const a = parts[0]?.[0] ?? "";
-    const b = parts[1]?.[0] ?? "";
-    const s = (a + b).toUpperCase();
-    return s || "?";
-  }
-  const p = parts[0] ?? name.trim();
-  if (p.length >= 2) return p.slice(0, 2).toUpperCase();
-  return p.toUpperCase() || "?";
-}
-
-function displayNameForAssignee(
+function assigneeFor(
   assigneeUserId: string | null,
   members: TodoAssignableMember[],
-): string | null {
+): TodoAssignableMember | null {
   if (!assigneeUserId) return null;
-  return (
-    members.find((m) => m.userId === assigneeUserId)?.displayName ?? null
-  );
+  return members.find((m) => m.userId === assigneeUserId) ?? null;
 }
 
 function formatDueBadge(iso: string | null): string | null {
@@ -154,13 +140,9 @@ export function KanbanCard({
   };
 
   const assigneeUserId = item.assignedUserId;
+  const assignee = assigneeFor(assigneeUserId, assignableUsers);
   const assigneeLabel =
-    displayNameForAssignee(assigneeUserId, assignableUsers) ??
-    (assigneeUserId ? "Unknown" : null);
-  const initials =
-    assigneeUserId && assigneeLabel
-      ? initialsFromDisplayName(assigneeLabel)
-      : "?";
+    assignee?.displayName ?? (assigneeUserId ? "Unknown" : null);
   const dueShort = formatDueBadge(item.dueAt);
   const commentCount = item.comments.length;
   const attachmentCount = item.attachments.length;
@@ -283,22 +265,26 @@ export function KanbanCard({
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <Avatar
-                size="sm"
-                className={cn(
-                  "pointer-events-none ring-card ring-2 ring-offset-0",
-                  !assigneeUserId && "opacity-80",
-                )}
-              >
-                <AvatarFallback
-                  className={cn(
-                    "text-[10px] font-medium",
-                    !assigneeUserId && "text-muted-foreground",
-                  )}
+              {assigneeUserId ? (
+                <UserAvatar
+                  size="sm"
+                  seed={assigneeUserId}
+                  displayName={assigneeLabel}
+                  avatarPreset={assignee?.avatarPreset ?? null}
+                  ariaLabel={assigneeLabel ?? "Assigned"}
+                  className="pointer-events-none ring-card ring-2 ring-offset-0"
+                  fallbackClassName="text-[10px]"
+                />
+              ) : (
+                <Avatar
+                  size="sm"
+                  className="pointer-events-none ring-card ring-2 ring-offset-0 opacity-80"
                 >
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+                  <AvatarFallback className="text-muted-foreground text-[10px] font-medium">
+                    ?
+                  </AvatarFallback>
+                </Avatar>
+              )}
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"

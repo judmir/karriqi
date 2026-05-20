@@ -4,7 +4,7 @@
 
 - Next.js App Router app with TypeScript, Tailwind 4, shadcn/ui, ESLint, Prettier.
 - **App shell:** mobile bottom navigation, desktop sidebar, header, user menu, safe-area-friendly layout.
-- **Routes:** placeholder content for `/`, `/dashboard`, `/shopping`, `/todo`, `/calendar`, `/settings`; auth routes + callback handler.
+- **Routes:** placeholder content for `/`, `/dashboard`, `/shopping`, `/kanban`, `/calendar`, `/settings`; auth routes + callback handler.
 - **Supabase Auth:** SSR clients, middleware session refresh, protected routes, sign-in only (no self-service sign-up).
 - **PWA:** manifest, icons, production service worker via `@ducanh2912/next-pwa`.
 - **Notifications:** types + no-op service + hook stub + README pointers.

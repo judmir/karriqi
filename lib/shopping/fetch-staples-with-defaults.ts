@@ -1,10 +1,12 @@
 import { DEFAULT_ALBANIAN_STAPLES } from "@/lib/shopping/default-albanian-staples";
 import { fetchStaplesForUser } from "@/lib/shopping/fetch-staples";
+import { resolveHouseholdOwnerUserId } from "@/lib/shopping/household-owner";
 import { createClient } from "@/lib/supabase/server";
 import type { StapleItem } from "@/types/shopping";
 
 /**
- * Loads staples; if the user has none, inserts the default Albanian catalog once.
+ * Loads staples; if the household has none, inserts the default Albanian
+ * catalog once (under the canonical household owner so both partners share it).
  */
 export async function fetchStaplesWithDefaults(): Promise<StapleItem[]> {
   let staples = await fetchStaplesForUser();
@@ -21,8 +23,10 @@ export async function fetchStaplesWithDefaults(): Promise<StapleItem[]> {
     return staples;
   }
 
+  const ownerId = await resolveHouseholdOwnerUserId(user.id);
+
   const rows = DEFAULT_ALBANIAN_STAPLES.map((s) => ({
-    user_id: user.id,
+    user_id: ownerId,
     name: s.name,
     typical_interval_days: s.typicalIntervalDays,
   }));

@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 
+import { avatarPresetFromUserMeta } from "@/lib/avatar/presets";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TodoAssignableMember } from "@/types/todo";
@@ -35,7 +36,11 @@ async function fetchAssignableMembersFromAuthAdmin(): Promise<
         displayNameFromUserMeta(meta) ||
         (u.email ? defaultDisplayNameFromEmail(u.email) : u.id.slice(0, 8));
 
-      members.push({ userId: u.id, displayName });
+      members.push({
+        userId: u.id,
+        displayName,
+        avatarPreset: avatarPresetFromUserMeta(meta),
+      });
     }
 
     if (data.users.length < AUTH_PAGE_SIZE) break;
@@ -80,15 +85,29 @@ export async function fetchAssignableMembers(
     byId.set(r.member_user_id, {
       userId: r.member_user_id,
       displayName: name || "Member",
+      // Without service role we cannot read other users' metadata; the
+      // initials fallback will show until an admin lists them.
+      avatarPreset: null,
     });
   }
 
+  const meta = user.user_metadata as Record<string, unknown>;
   const selfName =
-    displayNameFromUserMeta(user.user_metadata as Record<string, unknown>) ||
+    displayNameFromUserMeta(meta) ||
     (user.email ? defaultDisplayNameFromEmail(user.email) : "Me");
+  const selfPreset = avatarPresetFromUserMeta(meta);
 
   if (!byId.has(user.id)) {
-    byId.set(user.id, { userId: user.id, displayName: selfName });
+    byId.set(user.id, {
+      userId: user.id,
+      displayName: selfName,
+      avatarPreset: selfPreset,
+    });
+  } else {
+    const existing = byId.get(user.id);
+    if (existing) {
+      byId.set(user.id, { ...existing, avatarPreset: selfPreset });
+    }
   }
 
   return [...byId.values()].sort((a, b) =>

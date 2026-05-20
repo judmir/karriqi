@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
 import { notifyShoppingListSaved } from "@/lib/notifications/notification-events";
+import { resolveHouseholdOwnerUserId } from "@/lib/shopping/household-owner";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { createClient } from "@/lib/supabase/server";
-import type { ShoppingListItem } from "@/types/shopping";
 
 export type PurchaseResult =
   | { ok: true; purchasedAt: string; stapleIdForCatalog: string | null }
@@ -33,10 +33,11 @@ export async function recordPurchase(input: {
     return { ok: false, message: "Not signed in." };
   }
 
+  const ownerId = await resolveHouseholdOwnerUserId(user.id);
   const purchasedAt = new Date().toISOString();
 
   const { error: insertError } = await supabase.from("purchase_events").insert({
-    user_id: user.id,
+    user_id: ownerId,
     staple_id: stapleId,
     item_name: name,
     purchased_at: purchasedAt,
@@ -47,11 +48,11 @@ export async function recordPurchase(input: {
   }
 
   if (stapleId) {
+    // RLS now allows household members to update the shared staple row.
     const { error: updateError } = await supabase
       .from("staples")
       .update({ last_purchased_at: purchasedAt })
-      .eq("id", stapleId)
-      .eq("user_id", user.id);
+      .eq("id", stapleId);
 
     if (updateError) {
       return { ok: false, message: updateError.message };
@@ -92,10 +93,12 @@ export async function createStaple(input: {
     return { ok: false, message: "Not signed in." };
   }
 
+  const ownerId = await resolveHouseholdOwnerUserId(user.id);
+
   const { data: rows, error: listError } = await supabase
     .from("staples")
     .select("id, name")
-    .eq("user_id", user.id);
+    .eq("user_id", ownerId);
 
   if (listError) {
     return { ok: false, message: listError.message };
@@ -110,7 +113,7 @@ export async function createStaple(input: {
   const { data: created, error: insertError } = await supabase
     .from("staples")
     .insert({
-      user_id: user.id,
+      user_id: ownerId,
       name,
       category: input.category?.trim() || null,
       unit: input.unit?.trim() || null,
@@ -129,63 +132,153 @@ export async function createStaple(input: {
   return { ok: true, id: created.id };
 }
 
-export type SaveListResult = { ok: true } | { ok: false; message: string };
+export type ShoppingListOpResult =
+  | { ok: true }
+  | { ok: false; message: string };
 
-/** Replaces the user’s shopping list with the given rows (transactional delete + insert). */
-export async function saveShoppingListItems(
-  items: ShoppingListItem[],
-): Promise<SaveListResult> {
+export type UpsertShoppingListItemInput = {
+  id: string;
+  stapleId?: string | null;
+  name: string;
+  quantity?: string | null;
+  checked?: boolean;
+  position?: number;
+  /** When true, send a push notification to household peers (use for new items). */
+  notify?: boolean;
+};
+
+/**
+ * Insert or update a single shopping list row by id. Row-level so concurrent
+ * edits between household members don't clobber each other's snapshot.
+ *
+ * Always writes user_id = household_owner_for(currentUser) so both partners see
+ * the same row under shared-household RLS.
+ */
+export async function upsertShoppingListItem(
+  input: UpsertShoppingListItemInput,
+): Promise<ShoppingListOpResult> {
+  if (!isUuid(input.id)) {
+    return { ok: false, message: "Invalid list item id." };
+  }
+  const name = input.name.trim();
+  if (!name) {
+    return { ok: false, message: "Item name is required." };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) {
     return { ok: false, message: "Not signed in." };
   }
 
-  for (const item of items) {
-    if (!isUuid(item.id)) {
-      return { ok: false, message: "Invalid list item id." };
-    }
+  const ownerId = await resolveHouseholdOwnerUserId(user.id);
+  const stapleId =
+    input.stapleId && isUuid(input.stapleId) ? input.stapleId : null;
+
+  const { error } = await supabase.from("shopping_list_items").upsert(
+    {
+      id: input.id,
+      user_id: ownerId,
+      staple_id: stapleId,
+      name,
+      quantity: input.quantity?.trim() || null,
+      checked: input.checked ?? false,
+      position: input.position ?? 0,
+    },
+    { onConflict: "id" },
+  );
+
+  if (error) {
+    return { ok: false, message: error.message };
   }
 
-  const { error: delError } = await supabase
+  if (input.notify) {
+    void notifyShoppingListSaved(user.id);
+  }
+  revalidatePath(ROUTES.shopping);
+  return { ok: true };
+}
+
+/** Remove a single list item by id. RLS limits scope to the household. */
+export async function deleteShoppingListItem(
+  id: string,
+): Promise<ShoppingListOpResult> {
+  if (!isUuid(id)) {
+    return { ok: false, message: "Invalid list item id." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const { error } = await supabase
     .from("shopping_list_items")
     .delete()
-    .eq("user_id", user.id);
+    .eq("id", id);
 
-  if (delError) {
-    return { ok: false, message: delError.message };
+  if (error) {
+    return { ok: false, message: error.message };
   }
 
-  if (items.length === 0) {
-    void notifyShoppingListSaved(user.id);
-    revalidatePath(ROUTES.shopping);
-    return { ok: true };
+  revalidatePath(ROUTES.shopping);
+  return { ok: true };
+}
+
+/** Set `checked` on every row in the household list (Check all / Uncheck all). */
+export async function setAllShoppingListItemsChecked(
+  checked: boolean,
+): Promise<ShoppingListOpResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
   }
 
-  const rows = items.map((item, position) => ({
-    id: item.id,
-    user_id: user.id,
-    staple_id:
-      item.stapleId && isUuid(item.stapleId) ? item.stapleId : null,
-    name: item.name.trim(),
-    quantity: item.quantity?.trim() || null,
-    checked: item.checked,
-    position,
-  }));
+  const ownerId = await resolveHouseholdOwnerUserId(user.id);
 
-  const { error: insError } = await supabase
+  const { error } = await supabase
     .from("shopping_list_items")
-    .insert(rows);
+    .update({ checked })
+    .eq("user_id", ownerId);
 
-  if (insError) {
-    return { ok: false, message: insError.message };
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath(ROUTES.shopping);
+  return { ok: true };
+}
+
+/** Delete every list row in the household ("Remove all" / "Clear list"). */
+export async function clearShoppingList(): Promise<ShoppingListOpResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const ownerId = await resolveHouseholdOwnerUserId(user.id);
+
+  const { error } = await supabase
+    .from("shopping_list_items")
+    .delete()
+    .eq("user_id", ownerId);
+
+  if (error) {
+    return { ok: false, message: error.message };
   }
 
   void notifyShoppingListSaved(user.id);
-
   revalidatePath(ROUTES.shopping);
   return { ok: true };
 }
