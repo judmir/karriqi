@@ -51,6 +51,7 @@ import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { compareTodoItemsByPriorityAndPosition } from "@/lib/todo/priority";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
+import { useTodoStore } from "@/stores/todo-store";
 import type { TodoAssignableMember, TodoBoardItem, TodoPriority, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
@@ -98,6 +99,10 @@ function totalCount(map: ColumnMap): number {
   return map.backlog.length + map.in_progress.length + map.done.length;
 }
 
+function flattenColumns(map: ColumnMap): TodoBoardItem[] {
+  return [...map.backlog, ...map.in_progress, ...map.done];
+}
+
 function columnAccentClass(status: TodoStatus): string {
   switch (status) {
     case "backlog":
@@ -133,15 +138,21 @@ export function KanbanBoardClient({
     initialTodos.length === 0 ? "backlog" : null,
   );
 
-  // Reset local state when server pushes new initial data (after revalidate).
-  const lastInitialRef = useRef(initialTodos);
+  // Hydrate once when the Pinia-style store delivers cached/fetched board data.
+  const didHydrateFromStore = useRef(false);
   const dragStartLayoutRef = useRef<string | null>(null);
   useEffect(() => {
-    if (lastInitialRef.current !== initialTodos) {
-      lastInitialRef.current = initialTodos;
-      setColumns(buildColumnMap(initialTodos));
-    }
+    if (didHydrateFromStore.current) return;
+    if (initialTodos.length === 0) return;
+    didHydrateFromStore.current = true;
+    setColumns(buildColumnMap(initialTodos));
   }, [initialTodos]);
+
+  useEffect(() => {
+    return () => {
+      useTodoStore.getState().setBoardItems(flattenColumns(columns));
+    };
+  }, [columns]);
 
   const itemById = useMemo(() => {
     const m = new Map<string, TodoBoardItem>();
@@ -167,17 +178,16 @@ export function KanbanBoardClient({
     }),
   );
 
-  const persistBoard = useCallback(
-    async (next: ColumnMap) => {
-      const r = await reorderTodoBoard({ columns: columnIdsRecord(next) });
-      if (!r.ok) {
-        toast.error(r.message);
-        setColumns(buildColumnMap(initialTodos));
-        return;
-      }
-    },
-    [initialTodos],
-  );
+  const persistBoard = useCallback(async (next: ColumnMap) => {
+    const snapshot = flattenColumns(columns);
+    const r = await reorderTodoBoard({ columns: columnIdsRecord(next) });
+    if (!r.ok) {
+      toast.error(r.message);
+      setColumns(buildColumnMap(snapshot));
+      return;
+    }
+    useTodoStore.getState().setBoardItems(flattenColumns(next));
+  }, [columns]);
 
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
@@ -252,7 +262,7 @@ export function KanbanBoardClient({
       !isTodoBoardChecklistComplete(activeItem)
     ) {
       toast.error(CHECKLIST_INCOMPLETE_MESSAGE);
-      setColumns(buildColumnMap(initialTodos));
+      setColumns(buildColumnMap(useTodoStore.getState().boardItems));
       return;
     }
 
@@ -306,7 +316,7 @@ export function KanbanBoardClient({
   function handleDragCancel() {
     setActiveId(null);
     dragStartLayoutRef.current = null;
-    setColumns(buildColumnMap(initialTodos));
+    setColumns(buildColumnMap(useTodoStore.getState().boardItems));
   }
 
   async function onAddCard(status: TodoStatus, e: FormEvent) {
@@ -346,10 +356,12 @@ export function KanbanBoardClient({
         subtaskDoneCount: 0,
         attachmentCount: 0,
       };
-      return {
+      const next = {
         ...prev,
         [status]: [...prev[status], created],
       };
+      useTodoStore.getState().setBoardItems(flattenColumns(next));
+      return next;
     });
   }
 

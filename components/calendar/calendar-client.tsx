@@ -14,6 +14,7 @@ import {
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
 import { PageHeader } from "@/components/patterns/page-header";
 import { navigateDate } from "@/lib/calendar/calendar-utils";
+import { useCalendarStore } from "@/stores/calendar-store";
 import type { CalendarEvent, CalendarView } from "@/types/calendar";
 
 const NO_SYNC_TOAST =
@@ -41,6 +42,14 @@ export function CalendarClient({
       ),
     [events],
   );
+
+  useEffect(() => {
+    setEvents(initialEvents);
+  }, [initialEvents]);
+
+  useEffect(() => {
+    useCalendarStore.getState().setEvents(events);
+  }, [events]);
 
   const openCreate = useCallback(
     (start: Date) => {

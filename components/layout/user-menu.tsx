@@ -16,6 +16,7 @@ import {
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { ROUTES } from "@/config/routes";
 import { createClient } from "@/lib/supabase/client";
+import { resetAllStores } from "@/stores";
 import { cn } from "@/lib/utils";
 
 export function UserMenu({
@@ -39,6 +40,7 @@ export function UserMenu({
         toast.error(error.message);
         return;
       }
+      resetAllStores();
       router.refresh();
       router.push("/auth/sign-in");
     } catch {

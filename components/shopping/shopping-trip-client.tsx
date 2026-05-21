@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -25,6 +25,7 @@ import {
 } from "@/lib/shopping/shopping-actions";
 import { rankDueSoonStaples } from "@/lib/shopping/suggestions";
 import { useShoppingListRealtime } from "@/hooks/use-shopping-list-realtime";
+import { useShoppingStore } from "@/stores/shopping-store";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 
 type TripState = {
@@ -128,6 +129,27 @@ export function ShoppingTripClient({
   const positionsRef = useRef<Map<string, number>>(
     new Map(initialItems.map((i, idx) => [i.id, idx])),
   );
+
+  const didHydrateFromStore = useRef(false);
+  useEffect(() => {
+    if (didHydrateFromStore.current) return;
+    if (initialItems.length === 0 && !listPersistence) return;
+    didHydrateFromStore.current = true;
+    setTrip({
+      items: sortShoppingListItems(initialItems),
+      catalog: [...staples],
+    });
+    positionsRef.current = new Map(initialItems.map((i, idx) => [i.id, idx]));
+  }, [initialItems, listPersistence, staples]);
+
+  useEffect(() => {
+    return () => {
+      useShoppingStore.getState().patch({
+        listItems: trip.items,
+        staples: trip.catalog,
+      });
+    };
+  }, [trip]);
 
   const { items, catalog } = trip;
   const itemLabelSet = useMemo(
