@@ -6,6 +6,7 @@ import { ROUTES } from "@/config/routes";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { notifyTodoCommentMentions } from "@/lib/notifications/notification-events";
 import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
+import { upsertTodoTagForUser } from "@/lib/todo/fetch-todo-tags";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
@@ -107,6 +108,7 @@ export async function createTodoItem(input: {
   title: string;
   status?: TodoStatus;
   category?: string | null;
+  categoryIcon?: string | null;
 }): Promise<CreateTodoResult> {
   const title = input.title.trim();
   if (!title) {
@@ -149,6 +151,16 @@ export async function createTodoItem(input: {
     return { ok: false, message: error?.message ?? "Insert failed." };
   }
 
+  if (category) {
+    const tagResult = await upsertTodoTagForUser({
+      label: category,
+      icon: input.categoryIcon ?? "tag",
+    });
+    if (!tagResult.ok) {
+      return { ok: false, message: tagResult.message };
+    }
+  }
+
   return ok({ ok: true, id: created.id });
 }
 
@@ -158,6 +170,7 @@ export async function updateTodoItem(input: {
   id: string;
   title?: string;
   category?: string | null;
+  categoryIcon?: string | null;
   description?: string | null;
   dueAt?: string | null;
   progressPercent?: number | null;
@@ -267,6 +280,16 @@ export async function updateTodoItem(input: {
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  if (input.category !== undefined && patch.category) {
+    const tagResult = await upsertTodoTagForUser({
+      label: patch.category,
+      icon: input.categoryIcon ?? "tag",
+    });
+    if (!tagResult.ok) {
+      return { ok: false, message: tagResult.message };
+    }
   }
 
   return ok({ ok: true });

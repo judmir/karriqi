@@ -25,6 +25,7 @@ import {
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
+import { TodoTagChip } from "@/components/todo/tag-input";
 import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
@@ -358,14 +359,7 @@ export function KanbanCard({
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           {item.category ? (
-            <span
-              className={cn(
-                "border-border/70 text-foreground inline-flex max-w-full items-center gap-1 truncate rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-              )}
-              title={item.category}
-            >
-              <span className="truncate">{item.category}</span>
-            </span>
+            <TodoTagChip label={item.category} icon={item.categoryIcon} />
           ) : (
             <span className="text-muted-foreground/70 text-[11px]">
               No tag

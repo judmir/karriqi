@@ -128,6 +128,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      todo_tags: {
+        Row: {
+          id: string;
+          user_id: string;
+          label: string;
+          icon: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          label: string;
+          icon?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          label?: string;
+          icon?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       todo_items: {
         Row: {
           id: string;
