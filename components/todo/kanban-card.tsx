@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { isTodoChecklistComplete } from "@/lib/todo/checklist-complete";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
 import { TodoTagChip } from "@/components/todo/tag-input";
@@ -149,6 +150,9 @@ export function KanbanCard({
   const attachmentCount = item.attachments.length;
   const subtaskTotal = item.subtasks.length;
   const subtaskDone = item.subtasks.filter((s) => s.done).length;
+  const checklistComplete = isTodoChecklistComplete(item.subtasks);
+  const blockedMoveToDone =
+    item.status !== "done" && subtaskTotal > 0 && !checklistComplete;
   const progress = clampProgress(item.progressPercent);
   const hasProgress =
     item.progressPercent !== null && item.progressPercent !== undefined;
@@ -208,15 +212,24 @@ export function KanbanCard({
               <span>Open / edit</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {TODO_STATUSES.filter((s) => s !== item.status).map((s) => (
-              <DropdownMenuItem
-                key={s}
-                onClick={() => onStatusChange(s)}
-                disabled={!persistence}
-              >
-                Move to {todoStatusLabel(s)}
-              </DropdownMenuItem>
-            ))}
+            {TODO_STATUSES.filter((s) => s !== item.status).map((s) => {
+              const disabled =
+                !persistence || (s === "done" && blockedMoveToDone);
+              return (
+                <DropdownMenuItem
+                  key={s}
+                  onClick={() => onStatusChange(s)}
+                  disabled={disabled}
+                  title={
+                    s === "done" && blockedMoveToDone
+                      ? "Complete all checklist items first"
+                      : undefined
+                  }
+                >
+                  Move to {todoStatusLabel(s)}
+                </DropdownMenuItem>
+              );
+            })}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"

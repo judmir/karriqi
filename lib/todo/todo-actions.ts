@@ -6,6 +6,10 @@ import { ROUTES } from "@/config/routes";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { notifyTodoCommentMentions } from "@/lib/notifications/notification-events";
 import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
+import {
+  CHECKLIST_INCOMPLETE_MESSAGE,
+  isTodoChecklistComplete,
+} from "@/lib/todo/checklist-complete";
 import { upsertTodoTagForUser } from "@/lib/todo/fetch-todo-tags";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { createClient } from "@/lib/supabase/server";
@@ -229,6 +233,20 @@ export async function updateTodoItem(input: {
     input.status !== undefined && input.status !== existing.status;
 
   if (statusChanging) {
+    if (input.status === "done") {
+      const { data: subtasks, error: subtaskErr } = await supabase
+        .from("todo_subtasks")
+        .select("done")
+        .eq("todo_item_id", input.id);
+
+      if (subtaskErr) {
+        return { ok: false, message: subtaskErr.message };
+      }
+      if (!isTodoChecklistComplete(subtasks ?? [])) {
+        return { ok: false, message: CHECKLIST_INCOMPLETE_MESSAGE };
+      }
+    }
+
     patch.status = input.status;
     patch.position = await nextPositionForStatus(
       supabase,
@@ -705,6 +723,33 @@ export async function reorderTodoBoard(input: {
   for (const id of flatIds) {
     if (!allowed.has(id)) {
       return { ok: false, message: "Unknown task in board order." };
+    }
+  }
+
+  const doneIds = orderedIdsByColumn.done ?? [];
+  if (doneIds.length > 0) {
+    const { data: subtasks, error: subtaskErr } = await supabase
+      .from("todo_subtasks")
+      .select("todo_item_id, done")
+      .in("todo_item_id", doneIds);
+
+    if (subtaskErr) {
+      return { ok: false, message: subtaskErr.message };
+    }
+
+    const stats = new Map<string, { total: number; done: number }>();
+    for (const row of subtasks ?? []) {
+      const cur = stats.get(row.todo_item_id) ?? { total: 0, done: 0 };
+      cur.total += 1;
+      if (row.done) cur.done += 1;
+      stats.set(row.todo_item_id, cur);
+    }
+
+    for (const id of doneIds) {
+      const s = stats.get(id);
+      if (s && s.total > 0 && s.done < s.total) {
+        return { ok: false, message: CHECKLIST_INCOMPLETE_MESSAGE };
+      }
     }
   }
 
