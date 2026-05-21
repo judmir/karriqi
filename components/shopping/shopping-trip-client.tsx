@@ -1,14 +1,19 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/patterns/page-header";
 import { ShoppingList } from "@/components/shopping/shopping-list";
+import { SwipeRevealRow } from "@/components/shopping/swipe-reveal-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isUuid } from "@/lib/shopping/is-uuid";
+import {
+  insertUncheckedShoppingListItem,
+  sortShoppingListItems,
+} from "@/lib/shopping/list-order";
 import { newShoppingListItemId } from "@/lib/shopping/new-list-item-id";
 import {
   clearShoppingList,
@@ -19,7 +24,7 @@ import {
   upsertShoppingListItem,
 } from "@/lib/shopping/shopping-actions";
 import { rankDueSoonStaples } from "@/lib/shopping/suggestions";
-import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useShoppingListRealtime } from "@/hooks/use-shopping-list-realtime";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 
 type TripState = {
@@ -27,49 +32,43 @@ type TripState = {
   catalog: StapleItem[];
 };
 
-type ShoppingListRow = {
-  id: string;
-  user_id: string;
-  staple_id: string | null;
-  name: string;
-  quantity: string | null;
-  checked: boolean;
-  position: number;
-  created_at: string;
-};
-
 function normalizeItemLabel(label: string) {
   return label.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function rowToItem(row: ShoppingListRow): ShoppingListItem {
-  return {
-    id: row.id,
-    stapleId: row.staple_id ?? undefined,
-    name: row.name,
-    quantity: row.quantity ?? undefined,
-    checked: row.checked,
-    addedAt: row.created_at,
-  };
 }
 
 function SuggestedItemChip({
   staple,
   onAdd,
+  onDismiss,
 }: {
   staple: StapleItem;
   onAdd: () => void;
+  onDismiss: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onAdd}
-      aria-label={`Add ${staple.name} to list`}
-      className="text-foreground hover:bg-muted/80 inline-flex cursor-pointer items-center gap-1 rounded-full bg-transparent px-3 py-1 text-sm transition-colors select-none"
+    <SwipeRevealRow
+      className="max-w-full rounded-full"
+      contentClassName="rounded-full"
+      deleteLabel="Remove"
+      onSwipeDelete={onDismiss}
+      onTap={onAdd}
     >
-      <span>{staple.name}</span>
-      <Plus className="text-muted-foreground size-3" aria-hidden />
-    </button>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`Add ${staple.name} to list`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onAdd();
+          }
+        }}
+        className="text-foreground hover:bg-muted/80 inline-flex w-full cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-sm transition-colors"
+      >
+        <span>{staple.name}</span>
+        <Plus className="text-muted-foreground size-3 shrink-0" aria-hidden />
+      </div>
+    </SwipeRevealRow>
   );
 }
 
@@ -118,11 +117,13 @@ export function ShoppingTripClient({
   householdOwnerId?: string | null;
 }) {
   const [trip, setTrip] = useState<TripState>({
-    items: initialItems,
+    items: sortShoppingListItems(initialItems),
     catalog: [...staples],
   });
   const [draft, setDraft] = useState("");
-  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [dismissedSuggestedIds, setDismissedSuggestedIds] = useState(
+    () => new Set<string>(),
+  );
   // Items whose `position` we already assigned on insert; used to guess the next position.
   const positionsRef = useRef<Map<string, number>>(
     new Map(initialItems.map((i, idx) => [i.id, idx])),
@@ -137,68 +138,24 @@ export function ShoppingTripClient({
   const draftHasDuplicateLabel =
     normalizedDraft.length > 0 && itemLabelSet.has(normalizedDraft);
 
-  /**
-   * Supabase Realtime subscription — keeps the list in sync with the household
-   * partner's edits live (no page reload). Idempotent merges by id ensure that
-   * our own echoes are no-ops.
-   */
-  useEffect(() => {
-    if (!listPersistence || !householdOwnerId) return;
-
-    const supabase = createBrowserSupabaseClient();
-    const channel = supabase
-      .channel(`shopping_list_items:household=${householdOwnerId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "shopping_list_items",
-          filter: `user_id=eq.${householdOwnerId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-            const row = payload.new as ShoppingListRow;
-            const incoming = rowToItem(row);
-            positionsRef.current.set(row.id, row.position);
-            setTrip((t) => {
-              const existingIdx = t.items.findIndex((i) => i.id === incoming.id);
-              if (existingIdx >= 0) {
-                const existing = t.items[existingIdx];
-                if (
-                  existing.name === incoming.name &&
-                  existing.checked === incoming.checked &&
-                  (existing.quantity ?? null) === (incoming.quantity ?? null) &&
-                  (existing.stapleId ?? null) === (incoming.stapleId ?? null)
-                ) {
-                  return t;
-                }
-                const next = t.items.slice();
-                next[existingIdx] = { ...existing, ...incoming };
-                return { ...t, items: next };
-              }
-              return { ...t, items: [...t.items, incoming] };
-            });
-          } else if (payload.eventType === "DELETE") {
-            const row = payload.old as { id?: string };
-            if (!row?.id) return;
-            positionsRef.current.delete(row.id);
-            setTrip((t) => {
-              if (!t.items.some((i) => i.id === row.id)) return t;
-              return { ...t, items: t.items.filter((i) => i.id !== row.id) };
-            });
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [householdOwnerId, listPersistence]);
+  useShoppingListRealtime({
+    enabled: listPersistence,
+    householdOwnerId,
+    positionsRef,
+    patchItems: (updater) =>
+      setTrip((t) => ({
+        ...t,
+        items: sortShoppingListItems(updater(t.items)),
+      })),
+  });
 
   const doneCount = useMemo(
     () => items.filter((i) => i.checked).length,
+    [items],
+  );
+
+  const showClearConfirm = useMemo(
+    () => items.length > 0 && items.every((i) => i.checked),
     [items],
   );
 
@@ -227,14 +184,29 @@ export function ShoppingTripClient({
   const suggestedCatalog = useMemo(
     () => [
       ...catalog.filter(
-        (s) => dueSoonStapleIds.has(s.id) && !stapleIdsOnList.has(s.id),
+        (s) =>
+          dueSoonStapleIds.has(s.id) &&
+          !stapleIdsOnList.has(s.id) &&
+          !dismissedSuggestedIds.has(s.id),
       ),
       ...catalog.filter(
-        (s) => !dueSoonStapleIds.has(s.id) && !stapleIdsOnList.has(s.id),
+        (s) =>
+          !dueSoonStapleIds.has(s.id) &&
+          !stapleIdsOnList.has(s.id) &&
+          !dismissedSuggestedIds.has(s.id),
       ),
     ],
-    [catalog, dueSoonStapleIds, stapleIdsOnList],
+    [catalog, dueSoonStapleIds, stapleIdsOnList, dismissedSuggestedIds],
   );
+
+  function dismissSuggested(stapleId: string) {
+    setDismissedSuggestedIds((prev) => {
+      if (prev.has(stapleId)) return prev;
+      const next = new Set(prev);
+      next.add(stapleId);
+      return next;
+    });
+  }
 
   function nextPosition() {
     let max = -1;
@@ -273,8 +245,9 @@ export function ShoppingTripClient({
       checked: false,
       addedAt: new Date().toISOString(),
     };
-    const position = nextPosition();
-    setTrip((t) => ({ ...t, items: [...t.items, next] }));
+    const itemsNext = insertUncheckedShoppingListItem(items, next);
+    const position = itemsNext.findIndex((i) => i.id === next.id);
+    setTrip((t) => ({ ...t, items: itemsNext }));
     persistItem(next, position);
   }
 
@@ -291,42 +264,26 @@ export function ShoppingTripClient({
       checked: false,
       addedAt: new Date().toISOString(),
     };
-    const position = nextPosition();
-    setTrip((t) => ({ ...t, items: [...t.items, next] }));
-    setDraft("");
+    const itemsNext = insertUncheckedShoppingListItem(items, next);
+    const position = itemsNext.findIndex((i) => i.id === next.id);
+    setTrip((t) => ({ ...t, items: itemsNext }));
     persistItem(next, position);
+    setDraft("");
   }
 
   function handleItemsChange(next: ShoppingListItem[]) {
-    const prevAllChecked =
-      items.length > 0 && items.every((item) => item.checked);
-    const nextAllChecked =
-      next.length > 0 && next.every((item) => item.checked);
+    const ordered = sortShoppingListItems(next);
 
     const prevById = new Map(items.map((i) => [i.id, i]));
-    const nextById = new Map(next.map((i) => [i.id, i]));
+    const nextById = new Map(ordered.map((i) => [i.id, i]));
 
     const removed: ShoppingListItem[] = [];
     for (const prev of items) {
       if (!nextById.has(prev.id)) removed.push(prev);
     }
 
-    const changed: ShoppingListItem[] = [];
-    for (const n of next) {
-      const prev = prevById.get(n.id);
-      if (!prev) continue;
-      if (
-        prev.name !== n.name ||
-        prev.checked !== n.checked ||
-        (prev.quantity ?? null) !== (n.quantity ?? null) ||
-        (prev.stapleId ?? null) !== (n.stapleId ?? null)
-      ) {
-        changed.push(n);
-      }
-    }
-
     if (purchasePersistence) {
-      for (const item of next) {
+      for (const item of ordered) {
         const prev = prevById.get(item.id);
         if (prev && !prev.checked && item.checked) {
           const rawId = item.stapleId ?? null;
@@ -350,13 +307,22 @@ export function ShoppingTripClient({
       }
     }
 
-    setTrip((t) => ({ ...t, items: next }));
+    setTrip((t) => ({ ...t, items: ordered }));
 
     if (listPersistence) {
-      for (const item of changed) {
-        const position = positionsRef.current.get(item.id) ?? nextPosition();
-        persistItem(item, position);
-      }
+      ordered.forEach((item, index) => {
+        const prev = prevById.get(item.id);
+        const prevPos = positionsRef.current.get(item.id);
+        const fieldsChanged =
+          prev &&
+          (prev.name !== item.name ||
+            prev.checked !== item.checked ||
+            (prev.quantity ?? null) !== (item.quantity ?? null) ||
+            (prev.stapleId ?? null) !== (item.stapleId ?? null));
+        if (!prev || fieldsChanged || prevPos !== index) {
+          persistItem(item, index);
+        }
+      });
       for (const item of removed) {
         positionsRef.current.delete(item.id);
         void deleteShoppingListItem(item.id).then((r) => {
@@ -366,19 +332,16 @@ export function ShoppingTripClient({
         });
       }
     }
-
-    if (nextAllChecked && !prevAllChecked) {
-      setClearConfirmOpen(true);
-    }
   }
 
   function setAllChecked(checked: boolean) {
     if (items.every((item) => item.checked === checked)) return;
-    setTrip((t) => ({
-      ...t,
-      items: t.items.map((item) => ({ ...item, checked })),
-    }));
+    const nextItems = sortShoppingListItems(
+      items.map((item) => ({ ...item, checked })),
+    );
+    setTrip((t) => ({ ...t, items: nextItems }));
     if (listPersistence) {
+      nextItems.forEach((item, index) => persistItem(item, index));
       void setAllShoppingListItemsChecked(checked).then((r) => {
         if (!r.ok) {
           toast.error(`Couldn't update list: ${r.message}`);
@@ -390,7 +353,6 @@ export function ShoppingTripClient({
   function removeAllItems() {
     setTrip((t) => ({ ...t, items: [] }));
     positionsRef.current.clear();
-    setClearConfirmOpen(false);
     if (listPersistence) {
       void clearShoppingList().then((r) => {
         if (!r.ok) {
@@ -482,12 +444,13 @@ export function ShoppingTripClient({
         {suggestedCatalog.length === 0 ? (
           <p className="text-muted-foreground text-sm">—</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-2">
             {suggestedCatalog.map((staple) => (
               <SuggestedItemChip
                 key={staple.id}
                 staple={staple}
                 onAdd={() => addFromStaple(staple)}
+                onDismiss={() => dismissSuggested(staple.id)}
               />
             ))}
           </div>
@@ -519,7 +482,7 @@ export function ShoppingTripClient({
           </p>
         ) : null}
         <TripProgress done={doneCount} total={items.length} />
-        {clearConfirmOpen ? (
+        {showClearConfirm ? (
           <div
             role="alertdialog"
             aria-labelledby="clear-confirm-title"
@@ -528,24 +491,15 @@ export function ShoppingTripClient({
             <p id="clear-confirm-title" className="text-sm">
               Nice — everything is checked. Clear the list?
             </p>
-            <div className="flex gap-2 sm:shrink-0">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setClearConfirmOpen(false)}
-              >
-                Keep
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={confirmClearList}
-              >
-                Clear list
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="sm:shrink-0"
+              onClick={confirmClearList}
+            >
+              Clear list
+            </Button>
           </div>
         ) : null}
         {items.length > 0 ? (

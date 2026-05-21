@@ -1,4 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  fetchTodoTagsForUser,
+  resolveCategoryIcon,
+  todoTagIconByLabel,
+} from "@/lib/todo/fetch-todo-tags";
 import { normalizeTodoPriority } from "@/lib/todo/priority";
 import type {
   TodoAttachment,
@@ -102,6 +107,7 @@ function isTodoStatus(s: string): s is TodoStatus {
 function mapItem(
   row: ItemRow,
   attachmentsByItem: Map<string, TodoAttachment[]>,
+  iconByLabel: Map<string, string>,
 ): TodoItem {
   const status = isTodoStatus(row.status) ? row.status : "backlog";
   const comments = (row.todo_comments ?? [])
@@ -121,6 +127,7 @@ function mapItem(
     assignedUserId: row.assigned_user_id,
     title: row.title,
     category: row.category,
+    categoryIcon: resolveCategoryIcon(row.category, iconByLabel),
     description: row.description,
     status,
     priority: normalizeTodoPriority(row.priority),
@@ -209,31 +216,40 @@ async function fetchAttachmentsForItems(
 
 export async function fetchTodosForUser(): Promise<TodoItem[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("todo_items")
-    .select(TODO_ITEM_SELECT)
-    .order("list_order", { ascending: true });
+  const [tagsResult, itemsResult] = await Promise.all([
+    fetchTodoTagsForUser().catch(() => [] as Awaited<ReturnType<typeof fetchTodoTagsForUser>>),
+    supabase
+      .from("todo_items")
+      .select(TODO_ITEM_SELECT)
+      .order("list_order", { ascending: true }),
+  ]);
 
+  const { data, error } = itemsResult;
   if (error) {
     throw new Error(error.message);
   }
 
+  const iconByLabel = todoTagIconByLabel(tagsResult);
   const rows = (data ?? []) as unknown as ItemRow[];
   const attachmentsByItem = await fetchAttachmentsForItems(
     supabase,
     rows.map((r) => r.id),
   );
-  return rows.map((row) => mapItem(row, attachmentsByItem));
+  return rows.map((row) => mapItem(row, attachmentsByItem, iconByLabel));
 }
 
 export async function fetchTodoByIdForUser(id: string): Promise<TodoItem | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("todo_items")
-    .select(TODO_ITEM_SELECT)
-    .eq("id", id)
-    .maybeSingle();
+  const [tagsResult, itemResult] = await Promise.all([
+    fetchTodoTagsForUser().catch(() => [] as Awaited<ReturnType<typeof fetchTodoTagsForUser>>),
+    supabase
+      .from("todo_items")
+      .select(TODO_ITEM_SELECT)
+      .eq("id", id)
+      .maybeSingle(),
+  ]);
 
+  const { data, error } = itemResult;
   if (error) {
     throw new Error(error.message);
   }
@@ -242,7 +258,8 @@ export async function fetchTodoByIdForUser(id: string): Promise<TodoItem | null>
     return null;
   }
 
+  const iconByLabel = todoTagIconByLabel(tagsResult);
   const row = data as unknown as ItemRow;
   const attachmentsByItem = await fetchAttachmentsForItems(supabase, [row.id]);
-  return mapItem(row, attachmentsByItem);
+  return mapItem(row, attachmentsByItem, iconByLabel);
 }

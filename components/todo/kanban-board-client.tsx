@@ -43,6 +43,10 @@ import {
   reorderTodoBoard,
   updateTodoItem,
 } from "@/lib/todo/todo-actions";
+import {
+  CHECKLIST_INCOMPLETE_MESSAGE,
+  isTodoChecklistComplete,
+} from "@/lib/todo/checklist-complete";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { compareTodoItemsByPriorityAndPosition } from "@/lib/todo/priority";
 import { todoStatusLabel } from "@/lib/todo/status-label";
@@ -197,6 +201,13 @@ export function KanbanBoardClient({
 
     if (activeItem.status === targetCol) return;
 
+    if (
+      targetCol === "done" &&
+      !isTodoChecklistComplete(activeItem.subtasks)
+    ) {
+      return;
+    }
+
     setColumns((prev) => {
       const next: ColumnMap = {
         backlog: [...prev.backlog],
@@ -237,6 +248,15 @@ export function KanbanBoardClient({
     if (!activeItem) return;
     const targetCol = resolveTargetColumn(overIdStr, itemById);
     if (!targetCol) return;
+
+    if (
+      targetCol === "done" &&
+      !isTodoChecklistComplete(activeItem.subtasks)
+    ) {
+      toast.error(CHECKLIST_INCOMPLETE_MESSAGE);
+      setColumns(buildColumnMap(initialTodos));
+      return;
+    }
 
     setColumns((prev) => {
       const next: ColumnMap = {
@@ -340,6 +360,10 @@ export function KanbanBoardClient({
     if (status === item.status) return;
     if (!persistence) {
       toast.error(NO_SYNC_TOAST);
+      return;
+    }
+    if (status === "done" && !isTodoChecklistComplete(item.subtasks)) {
+      toast.error(CHECKLIST_INCOMPLETE_MESSAGE);
       return;
     }
     setColumns((prev) => {

@@ -50,6 +50,13 @@ export type TodoAttachment = {
   createdAt: IsoDateString;
 };
 
+/** Saved tag in the user's registry (`todo_tags`). */
+export type TodoTag = {
+  id: string;
+  label: string;
+  icon: string;
+};
+
 /** Someone the list owner may assign a task to (from `household_members` + self). */
 export type TodoAssignableMember = {
   userId: string;
@@ -66,6 +73,8 @@ export type TodoItem = {
   title: string;
   /** Short label shown under the title (e.g. “Taxes”, “Home”). */
   category: string | null;
+  /** Lucide icon key from the user's tag registry, when known. */
+  categoryIcon: string | null;
   description: string | null;
   status: TodoStatus;
   /** Jira-style priority; higher urgency sorts toward the top of a column. */
