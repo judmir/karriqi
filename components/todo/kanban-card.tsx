@@ -23,10 +23,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { PriorityIcon, PriorityMenuLabel } from "@/components/todo/priority-icon";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
-import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
-import { TODO_STATUSES } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem, TodoPriority, TodoStatus } from "@/types/todo";
+import { TODO_PRIORITIES, TODO_STATUSES } from "@/types/todo";
 
 function assigneeFor(
   assigneeUserId: string | null,
@@ -108,6 +109,7 @@ export function KanbanCard({
   onDelete,
   onStatusChange,
   onAssign,
+  onPriorityChange,
 }: {
   item: TodoItem;
   persistence: boolean;
@@ -118,6 +120,7 @@ export function KanbanCard({
   onDelete: () => void;
   onStatusChange: (status: TodoStatus) => void;
   onAssign: (userId: string | null) => void;
+  onPriorityChange: (priority: TodoPriority) => void;
 }) {
   const sortable = useSortable({
     id: item.id,
@@ -178,8 +181,9 @@ export function KanbanCard({
       {...(isOverlay ? {} : attributes)}
       {...(isOverlay ? {} : listeners)}
     >
-      {/* Header: title + actions menu (whole card is the click target) */}
+      {/* Header: priority + title + actions menu (whole card is the click target) */}
       <div className="flex items-start gap-2">
+        <PriorityIcon priority={item.priority} className="mt-0.5" />
         <h3 className="text-foreground font-heading min-w-0 flex-1 text-[15px] leading-snug font-semibold tracking-tight">
           {item.title}
         </h3>
@@ -206,6 +210,16 @@ export function KanbanCard({
               <Pencil className="size-4" aria-hidden />
               <span>Open / edit</span>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {TODO_PRIORITIES.map((p) => (
+              <DropdownMenuItem
+                key={p}
+                onClick={() => onPriorityChange(p)}
+                disabled={!persistence || p === item.priority}
+              >
+                <PriorityMenuLabel priority={p} selected={p === item.priority} />
+              </DropdownMenuItem>
+            ))}
             <DropdownMenuSeparator />
             {TODO_STATUSES.filter((s) => s !== item.status).map((s) => (
               <DropdownMenuItem

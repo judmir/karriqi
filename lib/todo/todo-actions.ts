@@ -7,9 +7,14 @@ import { isUuid } from "@/lib/shopping/is-uuid";
 import { notifyTodoCommentMentions } from "@/lib/notifications/notification-events";
 import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
+import {
+  compareTodoItemsByPriorityAndPosition,
+  isTodoPriority,
+  normalizeTodoPriority,
+} from "@/lib/todo/priority";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
-import type { TodoStatus } from "@/types/todo";
+import type { TodoPriority, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
 type TodoItemUpdate = Database["public"]["Tables"]["todo_items"]["Update"];
@@ -99,6 +104,46 @@ async function nextListOrder(
   return (rows?.[0]?.list_order ?? -1) + 1;
 }
 
+/** Reassigns `position` for every item in a column so priority order is reflected. */
+async function reorderColumnByPriority(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  status: TodoStatus,
+): Promise<void> {
+  const { data: rows } = await supabase
+    .from("todo_items")
+    .select("id, priority, position, list_order")
+    .eq("user_id", userId)
+    .eq("status", status);
+
+  if (!rows || rows.length === 0) return;
+
+  const sorted = [...rows].sort((a, b) =>
+    compareTodoItemsByPriorityAndPosition(
+      {
+        priority: normalizeTodoPriority(a.priority),
+        position: a.position,
+        listOrder: a.list_order,
+      },
+      {
+        priority: normalizeTodoPriority(b.priority),
+        position: b.position,
+        listOrder: b.list_order,
+      },
+    ),
+  );
+
+  for (let i = 0; i < sorted.length; i++) {
+    const row = sorted[i]!;
+    if (row.position === i) continue;
+    await supabase
+      .from("todo_items")
+      .update({ position: i })
+      .eq("id", row.id)
+      .eq("user_id", userId);
+  }
+}
+
 export type CreateTodoResult =
   | { ok: true; id: string }
   | { ok: false; message: string };
@@ -107,6 +152,7 @@ export async function createTodoItem(input: {
   title: string;
   status?: TodoStatus;
   category?: string | null;
+  priority?: TodoPriority;
 }): Promise<CreateTodoResult> {
   const title = input.title.trim();
   if (!title) {
@@ -114,6 +160,7 @@ export async function createTodoItem(input: {
   }
 
   const status = input.status ?? "backlog";
+  const priority = input.priority ?? "medium";
   const supabase = await createClient();
   const {
     data: { user },
@@ -137,6 +184,7 @@ export async function createTodoItem(input: {
       assigned_user_id: user.id,
       title,
       status,
+      priority,
       position,
       list_order: listOrder,
       category,
@@ -148,6 +196,8 @@ export async function createTodoItem(input: {
   if (error || !created) {
     return { ok: false, message: error?.message ?? "Insert failed." };
   }
+
+  await reorderColumnByPriority(supabase, user.id, status);
 
   return ok({ ok: true, id: created.id });
 }
@@ -162,6 +212,7 @@ export async function updateTodoItem(input: {
   dueAt?: string | null;
   progressPercent?: number | null;
   status?: TodoStatus;
+  priority?: TodoPriority;
   assignedUserId?: string | null;
 }): Promise<UpdateTodoResult> {
   if (!isUuid(input.id)) {
@@ -179,7 +230,7 @@ export async function updateTodoItem(input: {
 
   const { data: existing, error: readError } = await supabase
     .from("todo_items")
-    .select("id, status")
+    .select("id, status, priority")
     .eq("id", input.id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -253,6 +304,13 @@ export async function updateTodoItem(input: {
     patch.assigned_user_id = v;
   }
 
+  if (input.priority !== undefined) {
+    if (!isTodoPriority(input.priority)) {
+      return { ok: false, message: "Invalid priority." };
+    }
+    patch.priority = input.priority;
+  }
+
   if (Object.keys(patch).length === 0) {
     return ok({ ok: true });
   }
@@ -267,6 +325,18 @@ export async function updateTodoItem(input: {
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  const priorityChanging =
+    input.priority !== undefined &&
+    input.priority !== normalizeTodoPriority(existing.priority);
+  const effectiveStatus = (patch.status ?? existing.status) as TodoStatus;
+
+  if (priorityChanging || statusChanging) {
+    await reorderColumnByPriority(supabase, user.id, effectiveStatus);
+    if (statusChanging && existing.status !== effectiveStatus) {
+      await reorderColumnByPriority(supabase, user.id, existing.status);
+    }
   }
 
   return ok({ ok: true });

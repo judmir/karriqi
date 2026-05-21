@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { normalizeTodoPriority } from "@/lib/todo/priority";
 import type {
   TodoAttachment,
   TodoComment,
@@ -45,6 +46,7 @@ type ItemRow = {
   category: string | null;
   description: string | null;
   status: string;
+  priority: string | null;
   position: number;
   list_order: number;
   due_at: string | null;
@@ -121,6 +123,7 @@ function mapItem(
     category: row.category,
     description: row.description,
     status,
+    priority: normalizeTodoPriority(row.priority),
     position: row.position,
     listOrder: row.list_order,
     dueAt: row.due_at,

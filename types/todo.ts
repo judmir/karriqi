@@ -9,6 +9,17 @@ export const TODO_STATUSES: readonly TodoStatus[] = [
   "done",
 ] as const;
 
+/** Jira-style priority levels (highest urgency first). */
+export type TodoPriority = "highest" | "high" | "medium" | "low" | "lowest";
+
+export const TODO_PRIORITIES: readonly TodoPriority[] = [
+  "highest",
+  "high",
+  "medium",
+  "low",
+  "lowest",
+] as const;
+
 export type TodoComment = {
   id: string;
   todoItemId: string;
@@ -57,6 +68,8 @@ export type TodoItem = {
   category: string | null;
   description: string | null;
   status: TodoStatus;
+  /** Jira-style priority; higher urgency sorts toward the top of a column. */
+  priority: TodoPriority;
   position: number;
   /** Order in the single main list (lower = higher on the page). */
   listOrder: number;

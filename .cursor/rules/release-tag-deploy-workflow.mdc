@@ -15,30 +15,36 @@ alwaysApply: true
 
 ## ✅ Required steps when the user asks to release
 
-Execute in order. Do not skip. Do not stop until step 7 is complete.
+Execute in order. Do not skip. Do not stop until step 8 is complete.
 
 1. **Verify clean state** — `git status` shows the changes you intend to release. No surprise files.
 2. **Commit remaining work** on the current branch with a clear message (`feat:` / `fix:` / `chore:` etc.).
 3. **Bump `package.json` version** — patch / minor / major per the principles above. Commit as `chore(release): bump version to X.Y.Z`.
 4. **Land on `main`** — merge or fast-forward push the current HEAD to `origin/main`. If `main` is checked out in another worktree (it usually is, in the prime checkout), use `git push origin HEAD:main` directly.
-5. **Tag from main HEAD** — `git tag -a vX.Y.Z -m "vX.Y.Z"` (annotated, matches existing tags).
-6. **Push the tag** — `git push origin vX.Y.Z`. This is what triggers the Cloudflare deploy. Without this step, you have NOT released.
-7. **Shut down the worktree dev server** — the release is done, the preview is no longer needed:
+5. **Push migrations to cloud Supabase** — after `main` contains the merged migration files:
    ```bash
-   PORT=$(cat .worktree-dev-port 2>/dev/null); [ -n "$PORT" ] && lsof -i :"$PORT" -t 2>/dev/null | xargs -r kill
+   pnpm worktree:supabase:cloud-push
    ```
-   Confirm with `lsof -i :"$PORT"` returning empty. See `worktree-dev-server.mdc` Cleanup.
+   Requires `supabase link` once (or `SUPABASE_PROJECT_REF` + link). See `worktree-supabase-local.mdc`. **Do not skip** when the release includes new/changed files under `supabase/migrations/`.
+6. **Tag from main HEAD** — `git tag -a vX.Y.Z -m "vX.Y.Z"` (annotated, matches existing tags).
+7. **Push the tag** — `git push origin vX.Y.Z`. This is what triggers the Cloudflare deploy. Without this step, you have NOT released.
+8. **Shut down the worktree dev server and local Supabase** — mandatory cleanup:
+   ```bash
+   pnpm worktree:cleanup
+   ```
+   Confirm Next.js port is free (`lsof -i :<PORT>` empty). See `worktree-dev-server.mdc` Cleanup.
 
 ## ✅ Confirm to the user (required final reply)
 
 - Tag created: `vX.Y.Z`
 - Pushed to: `origin main` (commit hash) and tag `vX.Y.Z`
 - Cloudflare deploy is now triggered by the tag push
-- Worktree dev server on port `<PORT>` has been stopped
+- Cloud Supabase migrations pushed (if any under `supabase/migrations/`)
+- Worktree dev server and local Supabase stopped (`pnpm worktree:cleanup`)
 
 ## ❌ Do not
 
 - Do NOT infer the release workflow from `git log` history. This rule file is the source of truth.
 - Do NOT consider step 3 (version bump) sufficient on its own. Tag push (step 6) is the release.
-- Do NOT leave the worktree dev server running after a successful release. Step 7 is mandatory.
+- Do NOT leave the worktree dev server or local Supabase running after a successful release. Step 8 is mandatory.
 - Do NOT merge to `main` or create/push release tags unless the user explicitly asks for that release step.

@@ -136,6 +136,7 @@ export type Database = {
           category: string | null;
           description: string | null;
           status: string;
+          priority: string;
           position: number;
           list_order: number;
           due_at: string | null;
@@ -152,6 +153,7 @@ export type Database = {
           category?: string | null;
           description?: string | null;
           status?: string;
+          priority?: string;
           position?: number;
           list_order?: number;
           due_at?: string | null;
@@ -168,6 +170,7 @@ export type Database = {
           category?: string | null;
           description?: string | null;
           status?: string;
+          priority?: string;
           position?: number;
           list_order?: number;
           due_at?: string | null;

@@ -44,9 +44,10 @@ import {
   updateTodoItem,
 } from "@/lib/todo/todo-actions";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
+import { compareTodoItemsByPriorityAndPosition } from "@/lib/todo/priority";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
-import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem, TodoPriority, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
 const NO_SYNC_TOAST =
@@ -60,10 +61,7 @@ function buildColumnMap(items: TodoItem[]): ColumnMap {
     in_progress: [],
     done: [],
   };
-  const sorted = [...items].sort((a, b) => {
-    if (a.position !== b.position) return a.position - b.position;
-    return a.listOrder - b.listOrder;
-  });
+  const sorted = [...items].sort(compareTodoItemsByPriorityAndPosition);
   for (const item of sorted) {
     map[item.status].push(item);
   }
@@ -376,6 +374,20 @@ export function KanbanBoardClient({
     router.refresh();
   }
 
+  async function onPriorityChange(item: TodoItem, priority: TodoPriority) {
+    if (priority === item.priority) return;
+    if (!persistence) {
+      toast.error(NO_SYNC_TOAST);
+      return;
+    }
+    const r = await updateTodoItem({ id: item.id, priority });
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
+    router.refresh();
+  }
+
   const activeItem = activeId ? itemById.get(activeId) ?? null : null;
 
   return (
@@ -451,6 +463,7 @@ export function KanbanBoardClient({
               onDeleteItem={(item) => void onDelete(item)}
               onChangeItemStatus={(item, s) => void onStatusChange(item, s)}
               onAssignItem={(item, userId) => void onAssign(item, userId)}
+              onChangeItemPriority={(item, p) => void onPriorityChange(item, p)}
             />
           ))}
         </div>
@@ -467,6 +480,7 @@ export function KanbanBoardClient({
                 onDelete={() => {}}
                 onStatusChange={() => {}}
                 onAssign={() => {}}
+                onPriorityChange={() => {}}
               />
             </div>
           ) : null}
@@ -490,6 +504,7 @@ function KanbanColumn({
   onDeleteItem,
   onChangeItemStatus,
   onAssignItem,
+  onChangeItemPriority,
 }: {
   status: TodoStatus;
   items: TodoItem[];
@@ -504,6 +519,7 @@ function KanbanColumn({
   onDeleteItem: (item: TodoItem) => void;
   onChangeItemStatus: (item: TodoItem, status: TodoStatus) => void;
   onAssignItem: (item: TodoItem, userId: string | null) => void;
+  onChangeItemPriority: (item: TodoItem, priority: TodoPriority) => void;
 }) {
   return (
     <section
@@ -561,6 +577,7 @@ function KanbanColumn({
                 onDelete={() => onDeleteItem(item)}
                 onStatusChange={(s) => onChangeItemStatus(item, s)}
                 onAssign={(userId) => onAssignItem(item, userId)}
+                onPriorityChange={(p) => onChangeItemPriority(item, p)}
               />
             ))}
             {items.length === 0 ? (

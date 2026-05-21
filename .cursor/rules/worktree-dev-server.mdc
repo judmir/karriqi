@@ -38,9 +38,11 @@ pnpm worktree:dev
 
 1. Copy `.env.local` from another worktree or `/Users/judikarriqi/Documents/__dev/karriqi/.env.local` if missing
 2. Run `pnpm install` if `node_modules` is missing
-3. Pick the first free port in **3010–3019**
-4. Start `ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>`
-5. Write the port to `.worktree-dev-port` for reference
+3. **If this branch has schema/migration changes vs `origin/main`** (see `worktree-supabase-local.mdc`): start **local Supabase** (Docker), reset DB, patch `.env.local` for local keys
+4. **Link cloud Supabase** (idempotent, non-interactive): `scripts/worktree-supabase-link.sh` using `supabase/cloud-project-ref`
+5. Pick the first free port in **3010–3019**
+6. Start `ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>`
+7. Write the port to `.worktree-dev-port` for reference
 
 Run it **in the background**; poll terminal output until **Ready**.
 
@@ -89,7 +91,13 @@ Stop the worktree dev server in either of these cases:
 Shutdown command (reads the port from `.worktree-dev-port` written by `scripts/worktree-dev.sh`):
 
 ```bash
-PORT=$(cat .worktree-dev-port 2>/dev/null); [ -n "$PORT" ] && lsof -i :"$PORT" -t 2>/dev/null | xargs -r kill
+pnpm worktree:cleanup
 ```
 
-Verify with `lsof -i :"$PORT"` — empty output means stopped.
+Or manually:
+
+```bash
+bash scripts/worktree-cleanup.sh
+```
+
+This stops Next.js **and** local Supabase (if `.worktree-local-supabase` is set), restoring cloud `.env.local`.

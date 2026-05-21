@@ -45,9 +45,21 @@ pick_port() {
 
 copy_env
 
+if command -v supabase >/dev/null 2>&1; then
+  bash scripts/worktree-supabase-link.sh
+fi
+
 if [[ ! -d node_modules ]]; then
   echo "Installing dependencies…"
   pnpm install
+fi
+
+if bash scripts/worktree-supabase-local.sh needs; then
+  echo ""
+  echo "Schema changes detected vs origin/main — starting local Supabase…"
+  echo "(Set USE_LOCAL_SUPABASE=0 to skip, or USE_LOCAL_SUPABASE=1 to force.)"
+  echo ""
+  bash scripts/worktree-supabase-local.sh start
 fi
 
 PORT="$(pick_port)"
