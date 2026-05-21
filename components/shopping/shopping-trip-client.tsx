@@ -9,6 +9,10 @@ import { ShoppingList } from "@/components/shopping/shopping-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isUuid } from "@/lib/shopping/is-uuid";
+import {
+  insertUncheckedShoppingListItem,
+  sortShoppingListItems,
+} from "@/lib/shopping/list-order";
 import { newShoppingListItemId } from "@/lib/shopping/new-list-item-id";
 import {
   clearShoppingList,
@@ -118,11 +122,10 @@ export function ShoppingTripClient({
   householdOwnerId?: string | null;
 }) {
   const [trip, setTrip] = useState<TripState>({
-    items: initialItems,
+    items: sortShoppingListItems(initialItems),
     catalog: [...staples],
   });
   const [draft, setDraft] = useState("");
-  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   // Items whose `position` we already assigned on insert; used to guess the next position.
   const positionsRef = useRef<Map<string, number>>(
     new Map(initialItems.map((i, idx) => [i.id, idx])),
@@ -175,9 +178,12 @@ export function ShoppingTripClient({
                 }
                 const next = t.items.slice();
                 next[existingIdx] = { ...existing, ...incoming };
-                return { ...t, items: next };
+                return { ...t, items: sortShoppingListItems(next) };
               }
-              return { ...t, items: [...t.items, incoming] };
+              return {
+                ...t,
+                items: sortShoppingListItems([...t.items, incoming]),
+              };
             });
           } else if (payload.eventType === "DELETE") {
             const row = payload.old as { id?: string };
@@ -199,6 +205,11 @@ export function ShoppingTripClient({
 
   const doneCount = useMemo(
     () => items.filter((i) => i.checked).length,
+    [items],
+  );
+
+  const showClearConfirm = useMemo(
+    () => items.length > 0 && items.every((i) => i.checked),
     [items],
   );
 
@@ -273,8 +284,9 @@ export function ShoppingTripClient({
       checked: false,
       addedAt: new Date().toISOString(),
     };
-    const position = nextPosition();
-    setTrip((t) => ({ ...t, items: [...t.items, next] }));
+    const itemsNext = insertUncheckedShoppingListItem(items, next);
+    const position = itemsNext.findIndex((i) => i.id === next.id);
+    setTrip((t) => ({ ...t, items: itemsNext }));
     persistItem(next, position);
   }
 
@@ -291,42 +303,26 @@ export function ShoppingTripClient({
       checked: false,
       addedAt: new Date().toISOString(),
     };
-    const position = nextPosition();
-    setTrip((t) => ({ ...t, items: [...t.items, next] }));
-    setDraft("");
+    const itemsNext = insertUncheckedShoppingListItem(items, next);
+    const position = itemsNext.findIndex((i) => i.id === next.id);
+    setTrip((t) => ({ ...t, items: itemsNext }));
     persistItem(next, position);
+    setDraft("");
   }
 
   function handleItemsChange(next: ShoppingListItem[]) {
-    const prevAllChecked =
-      items.length > 0 && items.every((item) => item.checked);
-    const nextAllChecked =
-      next.length > 0 && next.every((item) => item.checked);
+    const ordered = sortShoppingListItems(next);
 
     const prevById = new Map(items.map((i) => [i.id, i]));
-    const nextById = new Map(next.map((i) => [i.id, i]));
+    const nextById = new Map(ordered.map((i) => [i.id, i]));
 
     const removed: ShoppingListItem[] = [];
     for (const prev of items) {
       if (!nextById.has(prev.id)) removed.push(prev);
     }
 
-    const changed: ShoppingListItem[] = [];
-    for (const n of next) {
-      const prev = prevById.get(n.id);
-      if (!prev) continue;
-      if (
-        prev.name !== n.name ||
-        prev.checked !== n.checked ||
-        (prev.quantity ?? null) !== (n.quantity ?? null) ||
-        (prev.stapleId ?? null) !== (n.stapleId ?? null)
-      ) {
-        changed.push(n);
-      }
-    }
-
     if (purchasePersistence) {
-      for (const item of next) {
+      for (const item of ordered) {
         const prev = prevById.get(item.id);
         if (prev && !prev.checked && item.checked) {
           const rawId = item.stapleId ?? null;
@@ -350,13 +346,22 @@ export function ShoppingTripClient({
       }
     }
 
-    setTrip((t) => ({ ...t, items: next }));
+    setTrip((t) => ({ ...t, items: ordered }));
 
     if (listPersistence) {
-      for (const item of changed) {
-        const position = positionsRef.current.get(item.id) ?? nextPosition();
-        persistItem(item, position);
-      }
+      ordered.forEach((item, index) => {
+        const prev = prevById.get(item.id);
+        const prevPos = positionsRef.current.get(item.id);
+        const fieldsChanged =
+          prev &&
+          (prev.name !== item.name ||
+            prev.checked !== item.checked ||
+            (prev.quantity ?? null) !== (item.quantity ?? null) ||
+            (prev.stapleId ?? null) !== (item.stapleId ?? null));
+        if (!prev || fieldsChanged || prevPos !== index) {
+          persistItem(item, index);
+        }
+      });
       for (const item of removed) {
         positionsRef.current.delete(item.id);
         void deleteShoppingListItem(item.id).then((r) => {
@@ -366,19 +371,16 @@ export function ShoppingTripClient({
         });
       }
     }
-
-    if (nextAllChecked && !prevAllChecked) {
-      setClearConfirmOpen(true);
-    }
   }
 
   function setAllChecked(checked: boolean) {
     if (items.every((item) => item.checked === checked)) return;
-    setTrip((t) => ({
-      ...t,
-      items: t.items.map((item) => ({ ...item, checked })),
-    }));
+    const nextItems = sortShoppingListItems(
+      items.map((item) => ({ ...item, checked })),
+    );
+    setTrip((t) => ({ ...t, items: nextItems }));
     if (listPersistence) {
+      nextItems.forEach((item, index) => persistItem(item, index));
       void setAllShoppingListItemsChecked(checked).then((r) => {
         if (!r.ok) {
           toast.error(`Couldn't update list: ${r.message}`);
@@ -390,7 +392,6 @@ export function ShoppingTripClient({
   function removeAllItems() {
     setTrip((t) => ({ ...t, items: [] }));
     positionsRef.current.clear();
-    setClearConfirmOpen(false);
     if (listPersistence) {
       void clearShoppingList().then((r) => {
         if (!r.ok) {
@@ -519,7 +520,7 @@ export function ShoppingTripClient({
           </p>
         ) : null}
         <TripProgress done={doneCount} total={items.length} />
-        {clearConfirmOpen ? (
+        {showClearConfirm ? (
           <div
             role="alertdialog"
             aria-labelledby="clear-confirm-title"
@@ -528,24 +529,15 @@ export function ShoppingTripClient({
             <p id="clear-confirm-title" className="text-sm">
               Nice — everything is checked. Clear the list?
             </p>
-            <div className="flex gap-2 sm:shrink-0">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setClearConfirmOpen(false)}
-              >
-                Keep
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={confirmClearList}
-              >
-                Clear list
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="sm:shrink-0"
+              onClick={confirmClearList}
+            >
+              Clear list
+            </Button>
           </div>
         ) : null}
         {items.length > 0 ? (
