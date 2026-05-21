@@ -5,7 +5,7 @@ import { cache } from "react";
 import { isSupabaseConfigured } from "@/lib/env";
 import type { Database } from "@/types/database";
 
-export async function createClient() {
+export const createClient = cache(async function createClient() {
   if (!isSupabaseConfigured()) {
     throw new Error(
       "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
@@ -34,7 +34,7 @@ export async function createClient() {
       },
     },
   );
-}
+});
 
 export const getSessionUser = cache(async function getSessionUser() {
   if (!isSupabaseConfigured()) {

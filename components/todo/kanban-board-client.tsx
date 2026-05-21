@@ -45,21 +45,21 @@ import {
 } from "@/lib/todo/todo-actions";
 import {
   CHECKLIST_INCOMPLETE_MESSAGE,
-  isTodoChecklistComplete,
+  isTodoBoardChecklistComplete,
 } from "@/lib/todo/checklist-complete";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { compareTodoItemsByPriorityAndPosition } from "@/lib/todo/priority";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
-import type { TodoAssignableMember, TodoItem, TodoPriority, TodoStatus } from "@/types/todo";
+import type { TodoAssignableMember, TodoBoardItem, TodoPriority, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
 const NO_SYNC_TOAST =
   "Tasks are not syncing. Configure Supabase and run db push before saving.";
 
-type ColumnMap = Record<TodoStatus, TodoItem[]>;
+type ColumnMap = Record<TodoStatus, TodoBoardItem[]>;
 
-function buildColumnMap(items: TodoItem[]): ColumnMap {
+function buildColumnMap(items: TodoBoardItem[]): ColumnMap {
   const map: ColumnMap = {
     backlog: [],
     in_progress: [],
@@ -87,7 +87,7 @@ function isTodoStatus(s: string): s is TodoStatus {
 /** Resolves which column an active drag should land in. */
 function resolveTargetColumn(
   overId: string,
-  itemById: Map<string, TodoItem>,
+  itemById: Map<string, TodoBoardItem>,
 ): TodoStatus | null {
   if (isTodoStatus(overId)) return overId;
   const over = itemById.get(overId);
@@ -116,12 +116,11 @@ export function KanbanBoardClient({
   persistence,
   assignableUsers,
 }: {
-  initialTodos: TodoItem[];
+  initialTodos: TodoBoardItem[];
   persistence: boolean;
   assignableUsers: TodoAssignableMember[];
 }) {
   const router = useRouter();
-
   const initialMap = useMemo(() => buildColumnMap(initialTodos), [initialTodos]);
   const [columns, setColumns] = useState<ColumnMap>(initialMap);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -145,7 +144,7 @@ export function KanbanBoardClient({
   }, [initialTodos]);
 
   const itemById = useMemo(() => {
-    const m = new Map<string, TodoItem>();
+    const m = new Map<string, TodoBoardItem>();
     for (const list of Object.values(columns)) {
       for (const it of list) m.set(it.id, it);
     }
@@ -176,9 +175,8 @@ export function KanbanBoardClient({
         setColumns(buildColumnMap(initialTodos));
         return;
       }
-      router.refresh();
     },
-    [initialTodos, router],
+    [initialTodos],
   );
 
   function handleDragStart(e: DragStartEvent) {
@@ -203,7 +201,7 @@ export function KanbanBoardClient({
 
     if (
       targetCol === "done" &&
-      !isTodoChecklistComplete(activeItem.subtasks)
+      !isTodoBoardChecklistComplete(activeItem)
     ) {
       return;
     }
@@ -220,7 +218,7 @@ export function KanbanBoardClient({
       if (idx === -1) return prev;
       const [moved] = sourceList.splice(idx, 1);
       if (!moved) return prev;
-      const updated: TodoItem = {
+      const updated: TodoBoardItem = {
         ...moved,
         status: targetCol,
         progressPercent: progressPercentForStatus(targetCol),
@@ -251,7 +249,7 @@ export function KanbanBoardClient({
 
     if (
       targetCol === "done" &&
-      !isTodoChecklistComplete(activeItem.subtasks)
+      !isTodoBoardChecklistComplete(activeItem)
     ) {
       toast.error(CHECKLIST_INCOMPLETE_MESSAGE);
       setColumns(buildColumnMap(initialTodos));
@@ -279,7 +277,7 @@ export function KanbanBoardClient({
 
       const [moved] = next[fromCol].splice(fromIdx, 1);
       if (!moved) return prev;
-      const updated: TodoItem = {
+      const updated: TodoBoardItem = {
         ...moved,
         status: targetCol,
         progressPercent: progressPercentForStatus(targetCol),
@@ -325,10 +323,37 @@ export function KanbanBoardClient({
       return;
     }
     setDrafts((d) => ({ ...d, [status]: "" }));
-    router.refresh();
+    setColumns((prev) => {
+      const now = new Date().toISOString();
+      const created: TodoBoardItem = {
+        id: r.id,
+        userId: "",
+        assignedUserId: null,
+        title,
+        category: null,
+        categoryIcon: null,
+        description: null,
+        status,
+        priority: "medium",
+        position: prev[status].length,
+        listOrder: 999_999,
+        dueAt: null,
+        progressPercent: progressPercentForStatus(status),
+        createdAt: now,
+        updatedAt: now,
+        commentCount: 0,
+        subtaskCount: 0,
+        subtaskDoneCount: 0,
+        attachmentCount: 0,
+      };
+      return {
+        ...prev,
+        [status]: [...prev[status], created],
+      };
+    });
   }
 
-  async function onDelete(item: TodoItem) {
+  async function onDelete(item: TodoBoardItem) {
     if (!persistence) {
       toast.error(NO_SYNC_TOAST);
       return;
@@ -353,16 +378,15 @@ export function KanbanBoardClient({
       };
       return next;
     });
-    router.refresh();
   }
 
-  async function onStatusChange(item: TodoItem, status: TodoStatus) {
+  async function onStatusChange(item: TodoBoardItem, status: TodoStatus) {
     if (status === item.status) return;
     if (!persistence) {
       toast.error(NO_SYNC_TOAST);
       return;
     }
-    if (status === "done" && !isTodoChecklistComplete(item.subtasks)) {
+    if (status === "done" && !isTodoBoardChecklistComplete(item)) {
       toast.error(CHECKLIST_INCOMPLETE_MESSAGE);
       return;
     }
@@ -385,7 +409,34 @@ export function KanbanBoardClient({
     });
   }
 
-  async function onAssign(item: TodoItem, userId: string | null) {
+  function updateItemInColumns(
+    itemId: string,
+    patch: Partial<TodoBoardItem>,
+  ): void {
+    setColumns((prev) => {
+      let changed = false;
+      const next: ColumnMap = {
+        backlog: prev.backlog.map((item) => {
+          if (item.id !== itemId) return item;
+          changed = true;
+          return { ...item, ...patch };
+        }),
+        in_progress: prev.in_progress.map((item) => {
+          if (item.id !== itemId) return item;
+          changed = true;
+          return { ...item, ...patch };
+        }),
+        done: prev.done.map((item) => {
+          if (item.id !== itemId) return item;
+          changed = true;
+          return { ...item, ...patch };
+        }),
+      };
+      return changed ? next : prev;
+    });
+  }
+
+  async function onAssign(item: TodoBoardItem, userId: string | null) {
     if (!persistence) {
       toast.error(NO_SYNC_TOAST);
       return;
@@ -395,10 +446,10 @@ export function KanbanBoardClient({
       toast.error(r.message);
       return;
     }
-    router.refresh();
+    updateItemInColumns(item.id, { assignedUserId: userId });
   }
 
-  async function onPriorityChange(item: TodoItem, priority: TodoPriority) {
+  async function onPriorityChange(item: TodoBoardItem, priority: TodoPriority) {
     if (priority === item.priority) return;
     if (!persistence) {
       toast.error(NO_SYNC_TOAST);
@@ -409,7 +460,7 @@ export function KanbanBoardClient({
       toast.error(r.message);
       return;
     }
-    router.refresh();
+    updateItemInColumns(item.id, { priority });
   }
 
   const activeItem = activeId ? itemById.get(activeId) ?? null : null;
@@ -531,7 +582,7 @@ function KanbanColumn({
   onChangeItemPriority,
 }: {
   status: TodoStatus;
-  items: TodoItem[];
+  items: TodoBoardItem[];
   persistence: boolean;
   assignableUsers: TodoAssignableMember[];
   composerOpen: boolean;
@@ -539,11 +590,11 @@ function KanbanColumn({
   onDraftChange: (v: string) => void;
   onOpenComposer: () => void;
   onSubmitComposer: (e: FormEvent) => void;
-  onOpenItem: (item: TodoItem) => void;
-  onDeleteItem: (item: TodoItem) => void;
-  onChangeItemStatus: (item: TodoItem, status: TodoStatus) => void;
-  onAssignItem: (item: TodoItem, userId: string | null) => void;
-  onChangeItemPriority: (item: TodoItem, priority: TodoPriority) => void;
+  onOpenItem: (item: TodoBoardItem) => void;
+  onDeleteItem: (item: TodoBoardItem) => void;
+  onChangeItemStatus: (item: TodoBoardItem, status: TodoStatus) => void;
+  onAssignItem: (item: TodoBoardItem, userId: string | null) => void;
+  onChangeItemPriority: (item: TodoBoardItem, priority: TodoPriority) => void;
 }) {
   return (
     <section

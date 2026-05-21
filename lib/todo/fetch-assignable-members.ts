@@ -54,13 +54,16 @@ async function fetchAssignableMembersFromAuthAdmin(): Promise<
   );
 }
 
-/** People you can assign tasks to: all Auth users (with service role), else `household_members` + self. */
+/** People you can assign tasks to: household members + self by default; all Auth users when requested. */
 export async function fetchAssignableMembers(
   currentUser?: User | null,
+  options?: { includeAllAuthUsers?: boolean },
 ): Promise<TodoAssignableMember[]> {
-  const fromAuth = await fetchAssignableMembersFromAuthAdmin();
-  if (fromAuth !== null) {
-    return fromAuth;
+  if (options?.includeAllAuthUsers) {
+    const fromAuth = await fetchAssignableMembersFromAuthAdmin();
+    if (fromAuth !== null) {
+      return fromAuth;
+    }
   }
 
   const supabase = await createClient();
@@ -68,6 +71,13 @@ export async function fetchAssignableMembers(
 
   if (!user) return [];
 
+  return fetchHouseholdAssignableMembers(user);
+}
+
+async function fetchHouseholdAssignableMembers(
+  user: User,
+): Promise<TodoAssignableMember[]> {
+  const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("household_members")
     .select("member_user_id, display_name")

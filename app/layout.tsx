@@ -3,7 +3,6 @@ import { Geist_Mono, Outfit } from "next/font/google";
 
 import { AppProviders } from "@/components/providers/app-providers";
 
-import "@xyflow/react/dist/style.css";
 import "./globals.css";
 
 const outfitSans = Outfit({

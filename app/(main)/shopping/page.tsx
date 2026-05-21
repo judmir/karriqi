@@ -21,14 +21,17 @@ export default async function ShoppingPage() {
   if (isSupabaseConfigured()) {
     const user = await getSessionUser();
     if (user) {
-      householdOwnerId = await resolveHouseholdOwnerUserId(user.id);
-
-      const [staplesResult, listResult, eventsResult] =
+      const [ownerResult, staplesResult, listResult, eventsResult] =
         await Promise.allSettled([
-          fetchStaplesWithDefaults(),
+          resolveHouseholdOwnerUserId(user.id),
+          fetchStaplesWithDefaults(user.id),
           fetchShoppingListForUser(),
           fetchRecentPurchaseEventsForCadence(),
         ]);
+
+      if (ownerResult.status === "fulfilled") {
+        householdOwnerId = ownerResult.value;
+      }
 
       if (staplesResult.status === "fulfilled") {
         staples = staplesResult.value;

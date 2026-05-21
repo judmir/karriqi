@@ -90,3 +90,14 @@ export type TodoItem = {
   subtasks: TodoSubtask[];
   attachments: TodoAttachment[];
 };
+
+/** Lightweight Kanban card payload — aggregate counts, no nested relations. */
+export type TodoBoardItem = Omit<
+  TodoItem,
+  "comments" | "subtasks" | "attachments"
+> & {
+  commentCount: number;
+  subtaskCount: number;
+  subtaskDoneCount: number;
+  attachmentCount: number;
+};

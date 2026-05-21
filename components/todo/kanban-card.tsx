@@ -25,10 +25,10 @@ import {
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PriorityIcon, PriorityMenuLabel } from "@/components/todo/priority-icon";
 import { TodoTagChip } from "@/components/todo/tag-input";
-import { isTodoChecklistComplete } from "@/lib/todo/checklist-complete";
+import { isTodoBoardChecklistComplete } from "@/lib/todo/checklist-complete";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
-import type { TodoAssignableMember, TodoItem, TodoPriority, TodoStatus } from "@/types/todo";
+import type { TodoAssignableMember, TodoBoardItem, TodoPriority, TodoStatus } from "@/types/todo";
 import { TODO_PRIORITIES, TODO_STATUSES } from "@/types/todo";
 
 function assigneeFor(
@@ -113,7 +113,7 @@ export function KanbanCard({
   onAssign,
   onPriorityChange,
 }: {
-  item: TodoItem;
+  item: TodoBoardItem;
   persistence: boolean;
   assignableUsers: TodoAssignableMember[];
   /** When true, render without sortable wiring (used inside DragOverlay). */
@@ -149,11 +149,11 @@ export function KanbanCard({
   const assigneeLabel =
     assignee?.displayName ?? (assigneeUserId ? "Unknown" : null);
   const dueShort = formatDueBadge(item.dueAt);
-  const commentCount = item.comments.length;
-  const attachmentCount = item.attachments.length;
-  const subtaskTotal = item.subtasks.length;
-  const subtaskDone = item.subtasks.filter((s) => s.done).length;
-  const checklistComplete = isTodoChecklistComplete(item.subtasks);
+  const commentCount = item.commentCount;
+  const attachmentCount = item.attachmentCount;
+  const subtaskTotal = item.subtaskCount;
+  const subtaskDone = item.subtaskDoneCount;
+  const checklistComplete = isTodoBoardChecklistComplete(item);
   const blockedMoveToDone =
     item.status !== "done" && subtaskTotal > 0 && !checklistComplete;
   const progress = clampProgress(item.progressPercent);

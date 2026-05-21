@@ -366,7 +366,11 @@ export async function updateTodoItem(input: {
   if (priorityChanging || statusChanging) {
     await reorderColumnByPriority(supabase, user.id, effectiveStatus);
     if (statusChanging && existing.status !== effectiveStatus) {
-      await reorderColumnByPriority(supabase, user.id, existing.status);
+      await reorderColumnByPriority(
+        supabase,
+        user.id,
+        existing.status as TodoStatus,
+      );
     }
   }
 

@@ -10,3 +10,12 @@ export function isTodoChecklistComplete(
   if (subtasks.length === 0) return true;
   return subtasks.every((s) => s.done);
 }
+
+/** Board summary variant using pre-aggregated subtask counts. */
+export function isTodoBoardChecklistComplete(item: {
+  subtaskCount: number;
+  subtaskDoneCount: number;
+}): boolean {
+  if (item.subtaskCount === 0) return true;
+  return item.subtaskDoneCount === item.subtaskCount;
+}

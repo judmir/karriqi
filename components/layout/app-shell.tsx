@@ -1,26 +1,20 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 
 import { AppHeader } from "@/components/layout/app-header";
 import { MainNavDesktop, MainNavMobile } from "@/components/layout/main-nav";
+import { useMainLayoutUser } from "@/components/layout/main-layout-user-context";
 import { useNotificationSubscription } from "@/hooks/use-notification-subscription";
 
 export function AppShell({
-  userId,
-  userEmail,
-  userDisplayName,
-  userAvatarPreset,
-  includeDevNav,
+  userMenu,
   children,
 }: {
-  userId: string | null;
-  userEmail: string;
-  userDisplayName?: string | null;
-  userAvatarPreset?: string | null;
-  includeDevNav?: boolean;
+  userMenu: ReactNode;
   children: React.ReactNode;
 }) {
+  const { userId, includeDevNav } = useMainLayoutUser();
   useNotificationSubscription(userId);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -33,14 +27,9 @@ export function AppShell({
     <div className="bg-sidebar flex min-h-[100dvh] flex-1 flex-col md:flex-row md:pt-2">
       <MainNavDesktop includeDevNav={includeDevNav} open={sidebarOpen} />
       <div className="bg-background flex min-h-0 min-h-[100dvh] flex-1 flex-col md:min-h-0 md:overflow-hidden md:rounded-t-2xl">
-        <AppHeader
-          userId={userId}
-          userEmail={userEmail}
-          userDisplayName={userDisplayName ?? null}
-          userAvatarPreset={userAvatarPreset ?? null}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={toggleSidebar}
-        />
+        <AppHeader sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar}>
+          {userMenu}
+        </AppHeader>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[max(5.5rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-0">
           {children}
         </div>

@@ -8,22 +8,29 @@ import type { StapleItem } from "@/types/shopping";
  * Loads staples; if the household has none, inserts the default Albanian
  * catalog once (under the canonical household owner so both partners share it).
  */
-export async function fetchStaplesWithDefaults(): Promise<StapleItem[]> {
+export async function fetchStaplesWithDefaults(
+  ownerUserId?: string,
+): Promise<StapleItem[]> {
   let staples = await fetchStaplesForUser();
   if (staples.length > 0) {
     return staples;
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let userId = ownerUserId;
 
-  if (!user) {
+  if (!userId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id;
+  }
+
+  if (!userId) {
     return staples;
   }
 
-  const ownerId = await resolveHouseholdOwnerUserId(user.id);
+  const ownerId = await resolveHouseholdOwnerUserId(userId);
 
   const rows = DEFAULT_ALBANIAN_STAPLES.map((s) => ({
     user_id: ownerId,

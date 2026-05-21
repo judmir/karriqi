@@ -54,8 +54,10 @@ export default async function SettingsPage() {
 
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
-  const pinStatus = await getOwnPinStatus();
-  const householdOverview = await fetchHouseholdOverview();
+  const [pinStatus, householdOverview] = await Promise.all([
+    getOwnPinStatus(),
+    fetchHouseholdOverview(),
+  ]);
 
   return (
     <PageContainer>
