@@ -50,6 +50,10 @@ if [[ ! -d node_modules ]]; then
   pnpm install
 fi
 
+echo ""
+echo "Bootstrapping local Supabase…"
+bash scripts/worktree-supabase.sh
+
 PORT="$(pick_port)"
 echo "$PORT" >"$PORT_FILE"
 

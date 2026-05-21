@@ -38,9 +38,10 @@ pnpm worktree:dev
 
 1. Copy `.env.local` from another worktree or `/Users/judikarriqi/Documents/__dev/karriqi/.env.local` if missing
 2. Run `pnpm install` if `node_modules` is missing
-3. Pick the first free port in **3010–3019**
-4. Start `ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>`
-5. Write the port to `.worktree-dev-port` for reference
+3. Run **`scripts/worktree-supabase.sh`** — start local Supabase in Docker, **`supabase db reset`** when `supabase/migrations/` changed since last run, merge local API URL/keys into `.env.local`, bootstrap dev Auth user
+4. Pick the first free port in **3010–3019**
+5. Start `ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>`
+6. Write the port to `.worktree-dev-port` for reference
 
 Run it **in the background**; poll terminal output until **Ready**.
 
@@ -64,6 +65,8 @@ Run it **in the background**; poll terminal output until **Ready**.
 In the first reply after worktree setup:
 
 - **Worktree preview:** `http://localhost:<PORT>`
+- **Local Supabase Studio:** `http://127.0.0.1:54323` (when Docker bootstrap succeeded)
+- **Dev sign-in:** `dev@local.test` / `devlocal123` (override with `KARRIQI_DEV_EMAIL` / `KARRIQI_DEV_PASSWORD`)
 - **LAN URL** if Next.js prints one (optional)
 - If prime uses 3010, say explicitly: main on 3010, this branch on `<PORT>`
 
