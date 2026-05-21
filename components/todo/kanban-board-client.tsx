@@ -43,10 +43,15 @@ import {
   reorderTodoBoard,
   updateTodoItem,
 } from "@/lib/todo/todo-actions";
+import {
+  CHECKLIST_INCOMPLETE_MESSAGE,
+  isTodoChecklistComplete,
+} from "@/lib/todo/checklist-complete";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
+import { compareTodoItemsByPriorityAndPosition } from "@/lib/todo/priority";
 import { todoStatusLabel } from "@/lib/todo/status-label";
 import { cn } from "@/lib/utils";
-import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem, TodoPriority, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
 const NO_SYNC_TOAST =
@@ -60,10 +65,7 @@ function buildColumnMap(items: TodoItem[]): ColumnMap {
     in_progress: [],
     done: [],
   };
-  const sorted = [...items].sort((a, b) => {
-    if (a.position !== b.position) return a.position - b.position;
-    return a.listOrder - b.listOrder;
-  });
+  const sorted = [...items].sort(compareTodoItemsByPriorityAndPosition);
   for (const item of sorted) {
     map[item.status].push(item);
   }
@@ -199,6 +201,13 @@ export function KanbanBoardClient({
 
     if (activeItem.status === targetCol) return;
 
+    if (
+      targetCol === "done" &&
+      !isTodoChecklistComplete(activeItem.subtasks)
+    ) {
+      return;
+    }
+
     setColumns((prev) => {
       const next: ColumnMap = {
         backlog: [...prev.backlog],
@@ -239,6 +248,15 @@ export function KanbanBoardClient({
     if (!activeItem) return;
     const targetCol = resolveTargetColumn(overIdStr, itemById);
     if (!targetCol) return;
+
+    if (
+      targetCol === "done" &&
+      !isTodoChecklistComplete(activeItem.subtasks)
+    ) {
+      toast.error(CHECKLIST_INCOMPLETE_MESSAGE);
+      setColumns(buildColumnMap(initialTodos));
+      return;
+    }
 
     setColumns((prev) => {
       const next: ColumnMap = {
@@ -344,6 +362,10 @@ export function KanbanBoardClient({
       toast.error(NO_SYNC_TOAST);
       return;
     }
+    if (status === "done" && !isTodoChecklistComplete(item.subtasks)) {
+      toast.error(CHECKLIST_INCOMPLETE_MESSAGE);
+      return;
+    }
     setColumns((prev) => {
       const next: ColumnMap = {
         backlog: prev.backlog.filter((i) => i.id !== item.id),
@@ -369,6 +391,20 @@ export function KanbanBoardClient({
       return;
     }
     const r = await updateTodoItem({ id: item.id, assignedUserId: userId });
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  async function onPriorityChange(item: TodoItem, priority: TodoPriority) {
+    if (priority === item.priority) return;
+    if (!persistence) {
+      toast.error(NO_SYNC_TOAST);
+      return;
+    }
+    const r = await updateTodoItem({ id: item.id, priority });
     if (!r.ok) {
       toast.error(r.message);
       return;
@@ -451,6 +487,7 @@ export function KanbanBoardClient({
               onDeleteItem={(item) => void onDelete(item)}
               onChangeItemStatus={(item, s) => void onStatusChange(item, s)}
               onAssignItem={(item, userId) => void onAssign(item, userId)}
+              onChangeItemPriority={(item, p) => void onPriorityChange(item, p)}
             />
           ))}
         </div>
@@ -467,6 +504,7 @@ export function KanbanBoardClient({
                 onDelete={() => {}}
                 onStatusChange={() => {}}
                 onAssign={() => {}}
+                onPriorityChange={() => {}}
               />
             </div>
           ) : null}
@@ -490,6 +528,7 @@ function KanbanColumn({
   onDeleteItem,
   onChangeItemStatus,
   onAssignItem,
+  onChangeItemPriority,
 }: {
   status: TodoStatus;
   items: TodoItem[];
@@ -504,6 +543,7 @@ function KanbanColumn({
   onDeleteItem: (item: TodoItem) => void;
   onChangeItemStatus: (item: TodoItem, status: TodoStatus) => void;
   onAssignItem: (item: TodoItem, userId: string | null) => void;
+  onChangeItemPriority: (item: TodoItem, priority: TodoPriority) => void;
 }) {
   return (
     <section
@@ -561,6 +601,7 @@ function KanbanColumn({
                 onDelete={() => onDeleteItem(item)}
                 onStatusChange={(s) => onChangeItemStatus(item, s)}
                 onAssign={(userId) => onAssignItem(item, userId)}
+                onPriorityChange={(p) => onChangeItemPriority(item, p)}
               />
             ))}
             {items.length === 0 ? (

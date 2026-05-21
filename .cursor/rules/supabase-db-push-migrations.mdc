@@ -7,19 +7,8 @@ alwaysApply: true
 
 - **`supabase db push` only applies** timestamped SQL under **`supabase/migrations/`**. It does **not** run ad-hoc files such as `supabase/seed_*.sql` or one-off scripts unless they are folded into a migration.
 - Whenever you add or change **tables, columns, indexes, RLS policies, functions, triggers, or seed/backfill data** that must run on linked / remote databases, **add a new migration** (e.g. `supabase/migrations/YYYYMMDDHHMMSS_short_description.sql`) instead of only editing standalone SQL outside `migrations/`.
+- **Worktrees with schema changes:** apply migrations locally (`pnpm worktree:dev` auto-starts local Supabase, or `pnpm worktree:supabase:start`). **Do not** push to shared cloud from parallel branches — see `worktree-supabase-local.mdc`.
+- **Release to cloud:** after merge to `main`, run `pnpm worktree:supabase:cloud-push` (see `release-tag-deploy-workflow.mdc`).
+- **`supabase/seed.sql`** runs only on **local** `supabase db reset` (worktree Docker). It is **not** applied by cloud `db push`.
 - Prefer **idempotent** data steps where reasonable (`where not exists`, `on conflict`, etc.) so re-runs and partial deploys are safe.
 - If you document a manual step for humans, still put the authoritative DDL/DML in **`migrations/`** so `db push` is the single apply path.
-
-## Local worktree dev (automatic)
-
-When **`pnpm worktree:dev`** runs (see `worktree-dev-server.mdc`), **`scripts/worktree-supabase.sh`** also:
-
-1. Requires **Docker** to be running
-2. Runs **`supabase start`** (shared local stack, `project_id = karriqi` in `supabase/config.toml`)
-3. Hashes **`supabase/migrations/`** — if changed since `.supabase-migrations-hash`, runs **`supabase db reset`** (all migrations + `supabase/seed.sql`)
-4. Writes local **`NEXT_PUBLIC_SUPABASE_URL`**, anon key, and service role key into **`.env.local`**
-5. Ensures a dev Auth user exists (`dev@local.test` / `devlocal123` by default)
-
-After adding a migration in a worktree, rerun **`pnpm worktree:dev`** or **`pnpm worktree:supabase`** to apply it locally. For the linked remote project, still run **`supabase db push`** before release.
-
-To force a local rebuild: delete **`.supabase-migrations-hash`** and rerun **`pnpm worktree:supabase`**.

@@ -2,7 +2,7 @@
 
 ## ⛔ Worktree dev server — BLOCKING, FIRST TOOL CALL
 
-If the workspace path contains `/.cursor/worktrees/`, your **very first tool call** must be `pnpm worktree:dev` (background). Wait for `Ready` / `Local: http://localhost:<PORT>`, then open your first reply with `Worktree preview: http://localhost:<PORT>`. That command also bootstraps **local Supabase in Docker** (migrations + `.env.local` keys). Do this BEFORE any Read / Grep / Glob / Edit / Write. See `.cursor/rules/worktree-dev-server.mdc` and `.cursor/rules/supabase-db-push-migrations.mdc`.
+If the workspace path contains `/.cursor/worktrees/`, your **very first tool call** must be `pnpm worktree:dev` (background). Wait for `Ready` / `Local: http://localhost:<PORT>`, then open your first reply with `Worktree preview: http://localhost:<PORT>`. Do this BEFORE any Read / Grep / Glob / Edit / Write. See `.cursor/rules/worktree-dev-server.mdc`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 ## This is NOT the Next.js you know

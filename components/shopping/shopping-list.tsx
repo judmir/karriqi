@@ -1,10 +1,55 @@
 "use client";
 
 import { ListPlus, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import {
+  reorderShoppingListAfterToggle,
+  sortShoppingListItems,
+} from "@/lib/shopping/list-order";
 import { cn } from "@/lib/utils";
 import type { ShoppingListItem } from "@/types/shopping";
+
+const ROW_MOVE_MS = 220;
+
+function useShoppingListFlip(itemIds: string[]) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const topsRef = useRef<Map<string, number>>(new Map());
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const rows = list.querySelectorAll<HTMLElement>("[data-item-id]");
+    const nextTops = new Map<string, number>();
+
+    rows.forEach((row) => {
+      const id = row.dataset.itemId;
+      if (!id) return;
+
+      const top = row.getBoundingClientRect().top;
+      nextTops.set(id, top);
+
+      const prevTop = topsRef.current.get(id);
+      if (prevTop === undefined) return;
+
+      const deltaY = prevTop - top;
+      if (Math.abs(deltaY) < 1) return;
+
+      row.style.transition = "none";
+      row.style.transform = `translateY(${deltaY}px)`;
+
+      requestAnimationFrame(() => {
+        row.style.transition = `transform ${ROW_MOVE_MS}ms ease-out`;
+        row.style.transform = "";
+      });
+    });
+
+    topsRef.current = nextTops;
+  }, [itemIds.join("|")]);
+
+  return listRef;
+}
 
 const REVEAL_PX = 72;
 const DELETE_THRESHOLD_PX = 44;
@@ -109,7 +154,10 @@ function ShoppingListRow({
   const fromSuggested = Boolean(item.stapleId);
 
   return (
-    <li className="relative overflow-hidden rounded-lg">
+    <li
+      data-item-id={item.id}
+      className="relative overflow-hidden rounded-lg will-change-transform"
+    >
       {showPromote ? (
         <div
           className="bg-primary/15 text-primary absolute inset-y-0 left-0 flex w-[4.5rem] items-center justify-center gap-1 text-xs font-medium"
@@ -184,25 +232,32 @@ export function ShoppingList({
   onItemsChange: (next: ShoppingListItem[]) => void;
   onPromoteToSuggested?: (itemId: string) => void;
 }) {
+  const displayItems = useMemo(() => sortShoppingListItems(items), [items]);
+  const listRef = useShoppingListFlip(displayItems.map((i) => i.id));
+
   function toggleChecked(id: string) {
-    onItemsChange(
-      items.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)),
+    const toggled = items.map((i) =>
+      i.id === id ? { ...i, checked: !i.checked } : i,
     );
+    onItemsChange(reorderShoppingListAfterToggle(toggled, id));
   }
 
   function removeItem(id: string) {
     onItemsChange(items.filter((i) => i.id !== id));
   }
 
-  if (items.length === 0) {
+  if (displayItems.length === 0) {
     return (
       <p className="text-muted-foreground py-2 text-sm">Nothing here yet.</p>
     );
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-border/80">
-      {items.map((item) => (
+    <ul
+      ref={listRef}
+      className="flex flex-col divide-y divide-border/80"
+    >
+      {displayItems.map((item) => (
         <ShoppingListRow
           key={item.id}
           item={item}

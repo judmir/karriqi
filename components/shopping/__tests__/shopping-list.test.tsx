@@ -54,15 +54,25 @@ describe("ShoppingList", () => {
     expect(onItemsChange).toHaveBeenCalledWith([]);
   });
 
-  it("toggles checked state when the checkbox is clicked", () => {
+  it("toggles checked state and moves the item to the top of the checked block", () => {
     const onItemsChange = vi.fn();
+    const list: ShoppingListItem[] = [
+      items[0],
+      {
+        id: "item-2",
+        name: "Eggs",
+        checked: true,
+        addedAt: "2026-05-05T18:00:00.000Z",
+      },
+    ];
 
-    render(<ShoppingList items={items} onItemsChange={onItemsChange} />);
+    render(<ShoppingList items={list} onItemsChange={onItemsChange} />);
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Got Milk" }));
 
     expect(onItemsChange).toHaveBeenCalledWith([
-      { ...items[0], checked: true },
+      { ...list[0], checked: true },
+      list[1],
     ]);
   });
 

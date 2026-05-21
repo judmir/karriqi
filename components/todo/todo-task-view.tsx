@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AttachmentHoverPreview } from "@/components/todo/attachment-hover-preview";
 import { CommentBody } from "@/components/todo/comment-body";
+import { TagInput } from "@/components/todo/tag-input";
+import { DEFAULT_TODO_TAG_ICON } from "@/lib/todo/tag-icons";
 import { getAttachmentPreviewKind } from "@/lib/todo/attachment-preview";
 import { ROUTES, todoTaskPath } from "@/config/routes";
 import {
@@ -30,10 +32,11 @@ import {
   updateTodoItem,
 } from "@/lib/todo/todo-actions";
 import { todoStatusLabel } from "@/lib/todo/status-label";
+import { todoPriorityLabel } from "@/lib/todo/priority";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { cn } from "@/lib/utils";
-import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
-import { TODO_STATUSES } from "@/types/todo";
+import type { TodoAssignableMember, TodoItem, TodoPriority, TodoStatus, TodoTag } from "@/types/todo";
+import { TODO_PRIORITIES, TODO_STATUSES } from "@/types/todo";
 
 const NO_SYNC_TOAST =
   "Tasks are not syncing. Configure Supabase and run db push before saving.";
@@ -73,21 +76,27 @@ export function TodoTaskView({
   initialItem,
   persistence,
   assignableUsers,
+  existingTags,
 }: {
   initialItem: TodoItem;
   persistence: boolean;
   assignableUsers: TodoAssignableMember[];
+  existingTags: TodoTag[];
 }) {
   const router = useRouter();
 
   const [title, setTitle] = useState(initialItem.title);
   const [category, setCategory] = useState(initialItem.category ?? "");
+  const [categoryIcon, setCategoryIcon] = useState(
+    initialItem.categoryIcon ?? DEFAULT_TODO_TAG_ICON,
+  );
   const [description, setDescription] = useState(initialItem.description ?? "");
   const [dueLocal, setDueLocal] = useState(toLocalDatetimeValue(initialItem.dueAt));
   const [progressText, setProgressText] = useState(
     initialItem.progressPercent != null ? String(initialItem.progressPercent) : "",
   );
   const [status, setStatus] = useState<TodoStatus>(initialItem.status);
+  const [priority, setPriority] = useState<TodoPriority>(initialItem.priority);
   const [assignedUserId, setAssignedUserId] = useState<string | null>(
     initialItem.assignedUserId ?? null,
   );
@@ -128,10 +137,12 @@ export function TodoTaskView({
       id: initialItem.id,
       title: t,
       category: category.trim() || null,
+      categoryIcon: category.trim() ? categoryIcon : null,
       description: description.trim() || null,
       dueAt: fromLocalDatetimeValue(dueLocal),
       progressPercent,
       status,
+      priority,
       assignedUserId,
     });
     setSaving(false);
@@ -378,7 +389,7 @@ export function TodoTaskView({
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="space-y-2">
             <Label htmlFor="task-status">Status</Label>
             <select
@@ -403,12 +414,34 @@ export function TodoTaskView({
             </select>
           </div>
           <div className="space-y-2">
+            <Label htmlFor="task-priority">Priority</Label>
+            <select
+              id="task-priority"
+              className={cn(
+                "border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm outline-none",
+                "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+                "dark:bg-input/30",
+              )}
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TodoPriority)}
+            >
+              {TODO_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {todoPriorityLabel(p)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="task-tag">Tag</Label>
-            <Input
-              id="task-tag"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g. Home"
+            <TagInput
+              inputId="task-tag"
+              label={category}
+              icon={categoryIcon}
+              existingTags={existingTags}
+              disabled={!persistence}
+              onLabelChange={setCategory}
+              onIconChange={setCategoryIcon}
             />
           </div>
           <div className="space-y-2">

@@ -9,7 +9,7 @@ alwaysApply: true
 
 ## New agent session (first substantive change)
 
-0. **Worktree path** (`/.cursor/worktrees/` in workspace): complete **`worktree-dev-server.mdc`** first (`pnpm worktree:dev`, then **Worktree preview:** URL in the first reply). No feature work before that.
+0. **Worktree path** (`/.cursor/worktrees/` in workspace): complete **`worktree-dev-server.mdc`** first (`pnpm worktree:dev`, then **Worktree preview:** URL in the first reply). No feature work before that. If the task changes **schema/migrations**, local Supabase starts automatically (see **`worktree-supabase-local.mdc`**).
 1. **Fetch** and ensure a clean working tree (stash or commit WIP if needed).
 2. **Create and switch** to a new branch from `main` (or the user’s named base):
    - Name: `agent/YYYY-MM-DD-<short-slug>` (slug: topic, e.g. `todo-card-status`, `fix-login`).

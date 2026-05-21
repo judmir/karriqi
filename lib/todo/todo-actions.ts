@@ -6,10 +6,20 @@ import { ROUTES } from "@/config/routes";
 import { isUuid } from "@/lib/shopping/is-uuid";
 import { notifyTodoCommentMentions } from "@/lib/notifications/notification-events";
 import { userMayAssignTask } from "@/lib/todo/fetch-assignable-members";
+import {
+  CHECKLIST_INCOMPLETE_MESSAGE,
+  isTodoChecklistComplete,
+} from "@/lib/todo/checklist-complete";
+import { upsertTodoTagForUser } from "@/lib/todo/fetch-todo-tags";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
+import {
+  compareTodoItemsByPriorityAndPosition,
+  isTodoPriority,
+  normalizeTodoPriority,
+} from "@/lib/todo/priority";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
-import type { TodoStatus } from "@/types/todo";
+import type { TodoPriority, TodoStatus } from "@/types/todo";
 import { TODO_STATUSES } from "@/types/todo";
 
 type TodoItemUpdate = Database["public"]["Tables"]["todo_items"]["Update"];
@@ -99,6 +109,46 @@ async function nextListOrder(
   return (rows?.[0]?.list_order ?? -1) + 1;
 }
 
+/** Reassigns `position` for every item in a column so priority order is reflected. */
+async function reorderColumnByPriority(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  status: TodoStatus,
+): Promise<void> {
+  const { data: rows } = await supabase
+    .from("todo_items")
+    .select("id, priority, position, list_order")
+    .eq("user_id", userId)
+    .eq("status", status);
+
+  if (!rows || rows.length === 0) return;
+
+  const sorted = [...rows].sort((a, b) =>
+    compareTodoItemsByPriorityAndPosition(
+      {
+        priority: normalizeTodoPriority(a.priority),
+        position: a.position,
+        listOrder: a.list_order,
+      },
+      {
+        priority: normalizeTodoPriority(b.priority),
+        position: b.position,
+        listOrder: b.list_order,
+      },
+    ),
+  );
+
+  for (let i = 0; i < sorted.length; i++) {
+    const row = sorted[i]!;
+    if (row.position === i) continue;
+    await supabase
+      .from("todo_items")
+      .update({ position: i })
+      .eq("id", row.id)
+      .eq("user_id", userId);
+  }
+}
+
 export type CreateTodoResult =
   | { ok: true; id: string }
   | { ok: false; message: string };
@@ -107,6 +157,8 @@ export async function createTodoItem(input: {
   title: string;
   status?: TodoStatus;
   category?: string | null;
+  categoryIcon?: string | null;
+  priority?: TodoPriority;
 }): Promise<CreateTodoResult> {
   const title = input.title.trim();
   if (!title) {
@@ -114,6 +166,7 @@ export async function createTodoItem(input: {
   }
 
   const status = input.status ?? "backlog";
+  const priority = input.priority ?? "medium";
   const supabase = await createClient();
   const {
     data: { user },
@@ -137,6 +190,7 @@ export async function createTodoItem(input: {
       assigned_user_id: user.id,
       title,
       status,
+      priority,
       position,
       list_order: listOrder,
       category,
@@ -149,6 +203,18 @@ export async function createTodoItem(input: {
     return { ok: false, message: error?.message ?? "Insert failed." };
   }
 
+  await reorderColumnByPriority(supabase, user.id, status);
+
+  if (category) {
+    const tagResult = await upsertTodoTagForUser({
+      label: category,
+      icon: input.categoryIcon ?? "tag",
+    });
+    if (!tagResult.ok) {
+      return { ok: false, message: tagResult.message };
+    }
+  }
+
   return ok({ ok: true, id: created.id });
 }
 
@@ -158,10 +224,12 @@ export async function updateTodoItem(input: {
   id: string;
   title?: string;
   category?: string | null;
+  categoryIcon?: string | null;
   description?: string | null;
   dueAt?: string | null;
   progressPercent?: number | null;
   status?: TodoStatus;
+  priority?: TodoPriority;
   assignedUserId?: string | null;
 }): Promise<UpdateTodoResult> {
   if (!isUuid(input.id)) {
@@ -179,7 +247,7 @@ export async function updateTodoItem(input: {
 
   const { data: existing, error: readError } = await supabase
     .from("todo_items")
-    .select("id, status")
+    .select("id, status, priority")
     .eq("id", input.id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -216,6 +284,20 @@ export async function updateTodoItem(input: {
     input.status !== undefined && input.status !== existing.status;
 
   if (statusChanging) {
+    if (input.status === "done") {
+      const { data: subtasks, error: subtaskErr } = await supabase
+        .from("todo_subtasks")
+        .select("done")
+        .eq("todo_item_id", input.id);
+
+      if (subtaskErr) {
+        return { ok: false, message: subtaskErr.message };
+      }
+      if (!isTodoChecklistComplete(subtasks ?? [])) {
+        return { ok: false, message: CHECKLIST_INCOMPLETE_MESSAGE };
+      }
+    }
+
     patch.status = input.status;
     patch.position = await nextPositionForStatus(
       supabase,
@@ -253,6 +335,13 @@ export async function updateTodoItem(input: {
     patch.assigned_user_id = v;
   }
 
+  if (input.priority !== undefined) {
+    if (!isTodoPriority(input.priority)) {
+      return { ok: false, message: "Invalid priority." };
+    }
+    patch.priority = input.priority;
+  }
+
   if (Object.keys(patch).length === 0) {
     return ok({ ok: true });
   }
@@ -267,6 +356,28 @@ export async function updateTodoItem(input: {
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  const priorityChanging =
+    input.priority !== undefined &&
+    input.priority !== normalizeTodoPriority(existing.priority);
+  const effectiveStatus = (patch.status ?? existing.status) as TodoStatus;
+
+  if (priorityChanging || statusChanging) {
+    await reorderColumnByPriority(supabase, user.id, effectiveStatus);
+    if (statusChanging && existing.status !== effectiveStatus) {
+      await reorderColumnByPriority(supabase, user.id, existing.status);
+    }
+  }
+
+  if (input.category !== undefined && patch.category) {
+    const tagResult = await upsertTodoTagForUser({
+      label: patch.category,
+      icon: input.categoryIcon ?? "tag",
+    });
+    if (!tagResult.ok) {
+      return { ok: false, message: tagResult.message };
+    }
   }
 
   return ok({ ok: true });
@@ -682,6 +793,33 @@ export async function reorderTodoBoard(input: {
   for (const id of flatIds) {
     if (!allowed.has(id)) {
       return { ok: false, message: "Unknown task in board order." };
+    }
+  }
+
+  const doneIds = orderedIdsByColumn.done ?? [];
+  if (doneIds.length > 0) {
+    const { data: subtasks, error: subtaskErr } = await supabase
+      .from("todo_subtasks")
+      .select("todo_item_id, done")
+      .in("todo_item_id", doneIds);
+
+    if (subtaskErr) {
+      return { ok: false, message: subtaskErr.message };
+    }
+
+    const stats = new Map<string, { total: number; done: number }>();
+    for (const row of subtasks ?? []) {
+      const cur = stats.get(row.todo_item_id) ?? { total: 0, done: 0 };
+      cur.total += 1;
+      if (row.done) cur.done += 1;
+      stats.set(row.todo_item_id, cur);
+    }
+
+    for (const id of doneIds) {
+      const s = stats.get(id);
+      if (s && s.total > 0 && s.done < s.total) {
+        return { ok: false, message: CHECKLIST_INCOMPLETE_MESSAGE };
+      }
     }
   }
 

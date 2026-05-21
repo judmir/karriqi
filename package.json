@@ -1,12 +1,16 @@
 {
   "name": "karriqi",
-  "version": "0.10.0",
+  "version": "0.15.0",
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "ENABLE_PWA_IN_DEV=0 next dev --turbopack --port 3010",
     "worktree:dev": "bash scripts/worktree-dev.sh",
-    "worktree:supabase": "bash scripts/worktree-supabase.sh",
+    "worktree:cleanup": "bash scripts/worktree-cleanup.sh",
+    "worktree:supabase:start": "bash scripts/worktree-supabase-local.sh start",
+    "worktree:supabase:stop": "bash scripts/worktree-supabase-local.sh stop",
+    "worktree:supabase:link": "bash scripts/worktree-supabase-link.sh",
+    "worktree:supabase:cloud-push": "bash scripts/worktree-supabase-cloud-push.sh",
     "dev:pwa": "ENABLE_PWA_IN_DEV=1 next dev --webpack --port 3010",
     "build": "next build --webpack",
     "build:cloudflare": "opennextjs-cloudflare build",

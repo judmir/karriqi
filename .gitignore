@@ -24,7 +24,7 @@
 # misc
 .DS_Store
 .worktree-dev-port
-.supabase-migrations-hash
+.worktree-local-supabase
 *.pem
 
 # debug
