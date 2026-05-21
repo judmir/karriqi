@@ -38,7 +38,7 @@ if [[ -n "${SUPABASE_DB_PASSWORD:-}" ]]; then
   LINK_ARGS+=(-p "$SUPABASE_DB_PASSWORD")
 fi
 
-echo "Linking cloud Supabase project $PROJECT_REF…"
+echo "Linking cloud Supabase project ${PROJECT_REF}..."
 if supabase "${LINK_ARGS[@]}"; then
   echo "Supabase linked to $PROJECT_REF"
 else
