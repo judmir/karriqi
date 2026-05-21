@@ -10,7 +10,7 @@ PORT_FILE="$ROOT/.worktree-dev-port"
 if [[ -f "$PORT_FILE" ]]; then
   PORT="$(tr -d '[:space:]' <"$PORT_FILE")"
   if [[ -n "$PORT" ]]; then
-    echo "Stopping Next.js dev server on port $PORT…"
+    echo "Stopping Next.js dev server on port ${PORT}..."
     PIDS="$(lsof -i :"$PORT" -sTCP:LISTEN -t 2>/dev/null || true)"
     if [[ -n "$PIDS" ]]; then
       # shellcheck disable=SC2086
