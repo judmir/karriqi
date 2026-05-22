@@ -5,30 +5,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PRIME_ENV="/Users/judikarriqi/Documents/__dev/karriqi/.env.local"
 PORT_FILE="$ROOT/.worktree-dev-port"
 
 copy_env() {
-  if [[ -f .env.local ]]; then
-    return 0
-  fi
-  local src=""
-  while IFS= read -r line; do
-    local wt="${line%% *}"
-    if [[ -f "$wt/.env.local" ]]; then
-      src="$wt/.env.local"
-      break
-    fi
-  done < <(git worktree list 2>/dev/null || true)
-  if [[ -z "$src" && -f "$PRIME_ENV" ]]; then
-    src="$PRIME_ENV"
-  fi
-  if [[ -n "$src" ]]; then
-    cp "$src" .env.local
-    echo "Copied .env.local from $src"
-  else
-    echo "No .env.local found. Copy from .env.example before using auth routes." >&2
-  fi
+  bash "$ROOT/scripts/worktree-env-bootstrap.sh"
 }
 
 pick_port() {
