@@ -9,6 +9,17 @@ export const TODO_STATUSES: readonly TodoStatus[] = [
   "done",
 ] as const;
 
+/** Jira-style priority levels (highest urgency first). */
+export type TodoPriority = "highest" | "high" | "medium" | "low" | "lowest";
+
+export const TODO_PRIORITIES: readonly TodoPriority[] = [
+  "highest",
+  "high",
+  "medium",
+  "low",
+  "lowest",
+] as const;
+
 export type TodoComment = {
   id: string;
   todoItemId: string;
@@ -39,6 +50,13 @@ export type TodoAttachment = {
   createdAt: IsoDateString;
 };
 
+/** Saved tag in the user's registry (`todo_tags`). */
+export type TodoTag = {
+  id: string;
+  label: string;
+  icon: string;
+};
+
 /** Someone the list owner may assign a task to (from `household_members` + self). */
 export type TodoAssignableMember = {
   userId: string;
@@ -55,8 +73,12 @@ export type TodoItem = {
   title: string;
   /** Short label shown under the title (e.g. “Taxes”, “Home”). */
   category: string | null;
+  /** Lucide icon key from the user's tag registry, when known. */
+  categoryIcon: string | null;
   description: string | null;
   status: TodoStatus;
+  /** Jira-style priority; higher urgency sorts toward the top of a column. */
+  priority: TodoPriority;
   position: number;
   /** Order in the single main list (lower = higher on the page). */
   listOrder: number;
@@ -67,4 +89,15 @@ export type TodoItem = {
   comments: TodoComment[];
   subtasks: TodoSubtask[];
   attachments: TodoAttachment[];
+};
+
+/** Lightweight Kanban card payload — aggregate counts, no nested relations. */
+export type TodoBoardItem = Omit<
+  TodoItem,
+  "comments" | "subtasks" | "attachments"
+> & {
+  commentCount: number;
+  subtaskCount: number;
+  subtaskDoneCount: number;
+  attachmentCount: number;
 };

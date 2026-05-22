@@ -8,7 +8,7 @@ export type PurchaseEventCadenceRow = Pick<
 
 /** Recent purchase events with a staple link (for cadence / median gap). */
 export async function fetchRecentPurchaseEventsForCadence(
-  limit = 500,
+  limit = 150,
 ): Promise<PurchaseEventCadenceRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

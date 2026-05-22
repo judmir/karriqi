@@ -1,0 +1,39 @@
+---
+description: In .cursor/worktrees — bootstrap .env.local from .env.example with a generated AUTH_PIN_PEPPER before dev or PIN work.
+alwaysApply: true
+---
+
+# Worktree environment bootstrap
+
+## Why PIN sign-in fails in a new worktree
+
+Next.js loads **`.env.local`**, not `.env`, for local secrets. `.env.local` overrides `.env` when both exist.
+
+Each Cursor worktree is its own checkout. Editing `.env` in the worktree does **not** help if:
+
+- there is no `.env.local` in that worktree, or
+- you are hitting another checkout's dev server (e.g. main on port **3010** while the worktree runs on **3011+**).
+
+PIN sign-in returns **"PIN sign-in is not configured on this server."** when `AUTH_PIN_PEPPER` is missing or shorter than 16 characters in the **running** server's environment.
+
+## Mandatory bootstrap (worktrees)
+
+When the workspace path contains `/.cursor/worktrees/` and `.env.local` is missing **or** `AUTH_PIN_PEPPER` is unset/commented/too short:
+
+1. Run **`bash scripts/worktree-env-bootstrap.sh`** from the worktree root (or **`pnpm worktree:dev`**, which calls it automatically).
+2. The script will:
+   - copy `.env.local` from another worktree or the prime checkout (`/Users/judikarriqi/Documents/__dev/karriqi/.env.local`) when available, **otherwise** copy `.env.example` → `.env.local`;
+   - generate **`AUTH_PIN_PEPPER`** with `openssl rand -hex 32` if it is not already a valid server pepper (≥ 16 chars).
+3. Start or restart dev with **`pnpm worktree:dev`** so Next.js picks up the new env. **Do not** assume port 3010 — use the port printed for **this** worktree.
+
+Do this **before** debugging PIN auth, settings PIN forms, or `/api/auth/pin`.
+
+## Do not
+
+- Rely on `.env` alone in worktrees — use **`.env.local`** (gitignored; safe for secrets).
+- Edit env files outside the active worktree unless the user asks.
+- Commit `.env.local` or generated pepper values.
+
+## Note on worktree-local peppers
+
+Each worktree may get its own `AUTH_PIN_PEPPER`. That is intentional for isolated dev. PINs set in one checkout will not verify in another until re-set in Settings.

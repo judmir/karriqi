@@ -5,30 +5,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PRIME_ENV="/Users/judikarriqi/Documents/__dev/karriqi/.env.local"
 PORT_FILE="$ROOT/.worktree-dev-port"
 
 copy_env() {
-  if [[ -f .env.local ]]; then
-    return 0
-  fi
-  local src=""
-  while IFS= read -r line; do
-    local wt="${line%% *}"
-    if [[ -f "$wt/.env.local" ]]; then
-      src="$wt/.env.local"
-      break
-    fi
-  done < <(git worktree list 2>/dev/null || true)
-  if [[ -z "$src" && -f "$PRIME_ENV" ]]; then
-    src="$PRIME_ENV"
-  fi
-  if [[ -n "$src" ]]; then
-    cp "$src" .env.local
-    echo "Copied .env.local from $src"
-  else
-    echo "No .env.local found. Copy from .env.example before using auth routes." >&2
-  fi
+  bash "$ROOT/scripts/worktree-env-bootstrap.sh"
 }
 
 pick_port() {
@@ -45,9 +25,21 @@ pick_port() {
 
 copy_env
 
+if command -v supabase >/dev/null 2>&1; then
+  bash scripts/worktree-supabase-link.sh
+fi
+
 if [[ ! -d node_modules ]]; then
   echo "Installing dependencies…"
   pnpm install
+fi
+
+if bash scripts/worktree-supabase-local.sh needs; then
+  echo ""
+  echo "Schema changes detected vs origin/main — starting local Supabase…"
+  echo "(Set USE_LOCAL_SUPABASE=0 to skip, or USE_LOCAL_SUPABASE=1 to force.)"
+  echo ""
+  bash scripts/worktree-supabase-local.sh start
 fi
 
 PORT="$(pick_port)"

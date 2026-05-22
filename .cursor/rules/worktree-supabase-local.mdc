@@ -1,0 +1,60 @@
+---
+description: Local Supabase in worktrees when schema/migrations differ from main; cloud push on release
+alwaysApply: true
+---
+
+# Worktree local Supabase
+
+## When local Supabase starts automatically
+
+In `/.cursor/worktrees/`, `pnpm worktree:dev` calls `scripts/worktree-supabase-local.sh` when **any** of:
+
+1. `.worktree-local-supabase` marker exists (from a prior start in this worktree)
+2. `USE_LOCAL_SUPABASE=1` is set
+3. **Auto-detect:** `supabase/migrations/` differs from `origin/main` (new/changed migration files on this branch)
+
+Set `USE_LOCAL_SUPABASE=0` to skip auto-start even when migrations differ (use shared cloud dev instead).
+
+## What the script does
+
+`scripts/worktree-supabase-local.sh start`:
+
+1. Requires **Docker Desktop** running
+2. `supabase init` if `supabase/config.toml` is missing
+3. `supabase start` → local Postgres + Auth + Studio
+4. `supabase db reset` → applies **this branch's** migrations + loads **`supabase/seed.sql`** (kanban, shopping, calendar fixtures)
+5. Backs up cloud keys to `.env.local.cloud`, patches `.env.local` with local URL/anon key
+6. Writes `.worktree-local-supabase` marker
+
+**Local dev sign-in:** on `/auth/sign-in` choose **Use email & password instead** → `dev@karriqi.local` / `devpassword123`
+
+## During development (schema work)
+
+- **Do NOT** `supabase db push` to the shared cloud project from a parallel worktree branch.
+- Add migrations under `supabase/migrations/`; they apply locally via reset/start.
+- Test against local Supabase (Studio: http://127.0.0.1:54323).
+
+## Cloud project link (automatic)
+
+`pnpm worktree:dev` runs `scripts/worktree-supabase-link.sh` on every worktree start:
+
+- Reads project ref from **`supabase/cloud-project-ref`** (currently `xopqzujfcmtjwznyrjll`)
+- Runs `supabase link --project-ref <ref> --yes` (no interactive picker)
+- Skips if this worktree is already linked to the same ref
+- Requires **`supabase login`** once per machine (CLI auth), not per worktree
+
+Override ref: `SUPABASE_PROJECT_REF=otherref`. DB password (if prompted): `SUPABASE_DB_PASSWORD`.
+
+## Manual commands
+
+| Command | Purpose |
+|---------|---------|
+| `pnpm worktree:supabase:link` | Link/re-link cloud project (idempotent) |
+| `pnpm worktree:supabase:start` | Force local Supabase |
+| `pnpm worktree:supabase:stop` | Stop local stack, restore cloud `.env.local` |
+| `pnpm worktree:supabase:cloud-push` | Push migrations to linked **cloud** project (release) |
+
+## Agents
+
+- If the task adds/changes **schema/migrations**, ensure local Supabase is running (`pnpm worktree:dev` handles auto-start, or `pnpm worktree:supabase:start`).
+- Never `repair` cloud migration history to work around parallel branches — use local Supabase instead.

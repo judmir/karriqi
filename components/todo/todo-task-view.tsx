@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AttachmentHoverPreview } from "@/components/todo/attachment-hover-preview";
 import { CommentBody } from "@/components/todo/comment-body";
+import { TagInput } from "@/components/todo/tag-input";
+import { DEFAULT_TODO_TAG_ICON } from "@/lib/todo/tag-icons";
 import { getAttachmentPreviewKind } from "@/lib/todo/attachment-preview";
 import { ROUTES, todoTaskPath } from "@/config/routes";
 import {
@@ -30,10 +32,11 @@ import {
   updateTodoItem,
 } from "@/lib/todo/todo-actions";
 import { todoStatusLabel } from "@/lib/todo/status-label";
+import { todoPriorityLabel } from "@/lib/todo/priority";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { cn } from "@/lib/utils";
-import type { TodoAssignableMember, TodoItem, TodoStatus } from "@/types/todo";
-import { TODO_STATUSES } from "@/types/todo";
+import type { TodoAttachment, TodoAssignableMember, TodoComment, TodoItem, TodoPriority, TodoStatus, TodoSubtask, TodoTag } from "@/types/todo";
+import { TODO_PRIORITIES, TODO_STATUSES } from "@/types/todo";
 
 const NO_SYNC_TOAST =
   "Tasks are not syncing. Configure Supabase and run db push before saving.";
@@ -73,25 +76,36 @@ export function TodoTaskView({
   initialItem,
   persistence,
   assignableUsers,
+  existingTags,
 }: {
   initialItem: TodoItem;
   persistence: boolean;
   assignableUsers: TodoAssignableMember[];
+  existingTags: TodoTag[];
 }) {
   const router = useRouter();
 
   const [title, setTitle] = useState(initialItem.title);
   const [category, setCategory] = useState(initialItem.category ?? "");
+  const [categoryIcon, setCategoryIcon] = useState(
+    initialItem.categoryIcon ?? DEFAULT_TODO_TAG_ICON,
+  );
   const [description, setDescription] = useState(initialItem.description ?? "");
   const [dueLocal, setDueLocal] = useState(toLocalDatetimeValue(initialItem.dueAt));
   const [progressText, setProgressText] = useState(
     initialItem.progressPercent != null ? String(initialItem.progressPercent) : "",
   );
   const [status, setStatus] = useState<TodoStatus>(initialItem.status);
+  const [priority, setPriority] = useState<TodoPriority>(initialItem.priority);
   const [assignedUserId, setAssignedUserId] = useState<string | null>(
     initialItem.assignedUserId ?? null,
   );
   const [saving, setSaving] = useState(false);
+  const [comments, setComments] = useState<TodoComment[]>(initialItem.comments);
+  const [subtasks, setSubtasks] = useState<TodoSubtask[]>(initialItem.subtasks);
+  const [attachments, setAttachments] = useState<TodoAttachment[]>(
+    initialItem.attachments,
+  );
   const [commentDraft, setCommentDraft] = useState("");
   const [subtaskDraft, setSubtaskDraft] = useState("");
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -128,10 +142,12 @@ export function TodoTaskView({
       id: initialItem.id,
       title: t,
       category: category.trim() || null,
+      categoryIcon: category.trim() ? categoryIcon : null,
       description: description.trim() || null,
       dueAt: fromLocalDatetimeValue(dueLocal),
       progressPercent,
       status,
+      priority,
       assignedUserId,
     });
     setSaving(false);
@@ -139,7 +155,6 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    router.refresh();
   }
 
   async function onAddComment() {
@@ -147,6 +162,8 @@ export function TodoTaskView({
       toast.error(NO_SYNC_TOAST);
       return;
     }
+    const body = commentDraft.trim();
+    if (!body) return;
     const r = await addTodoComment({
       todoItemId: initialItem.id,
       body: commentDraft,
@@ -156,7 +173,16 @@ export function TodoTaskView({
       return;
     }
     setCommentDraft("");
-    router.refresh();
+    setComments((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        todoItemId: initialItem.id,
+        userId: initialItem.userId,
+        body,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
   }
 
   async function onAddSubtask() {
@@ -164,6 +190,8 @@ export function TodoTaskView({
       toast.error(NO_SYNC_TOAST);
       return;
     }
+    const label = subtaskDraft.trim();
+    if (!label) return;
     const r = await addTodoSubtask({
       todoItemId: initialItem.id,
       label: subtaskDraft,
@@ -173,7 +201,16 @@ export function TodoTaskView({
       return;
     }
     setSubtaskDraft("");
-    router.refresh();
+    setSubtasks((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        todoItemId: initialItem.id,
+        label,
+        done: false,
+        position: prev.length,
+      },
+    ]);
   }
 
   async function onToggleSubtask(id: string, done: boolean) {
@@ -186,7 +223,9 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    router.refresh();
+    setSubtasks((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, done } : s)),
+    );
   }
 
   async function onRemoveSubtask(id: string) {
@@ -199,7 +238,7 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    router.refresh();
+    setSubtasks((prev) => prev.filter((s) => s.id !== id));
   }
 
   async function onAssigneeChange(next: string | null) {
@@ -216,7 +255,6 @@ export function TodoTaskView({
       return;
     }
     setAssignedUserId(next);
-    router.refresh();
   }
 
   async function uploadFiles(files: File[] | FileList | null) {
@@ -243,14 +281,29 @@ export function TodoTaskView({
         const r = await addTodoAttachment(fd);
         if (!r.ok) {
           toast.error(`${file.name}: ${r.message}`);
+          continue;
         }
+        const blobUrl = URL.createObjectURL(file);
+        setAttachments((prev) => [
+          ...prev,
+          {
+            id: r.id,
+            todoItemId: initialItem.id,
+            userId: initialItem.userId,
+            fileName: file.name,
+            mimeType: file.type || null,
+            sizeBytes: file.size,
+            storagePath: "",
+            signedUrl: blobUrl,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
       }
     } finally {
       setUploadingAttachment(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      router.refresh();
     }
   }
 
@@ -295,7 +348,7 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    router.refresh();
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
   }
 
   async function onDeleteItem() {
@@ -312,7 +365,6 @@ export function TodoTaskView({
       return;
     }
     router.push(ROUTES.todo);
-    router.refresh();
   }
 
   return (
@@ -378,7 +430,7 @@ export function TodoTaskView({
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="space-y-2">
             <Label htmlFor="task-status">Status</Label>
             <select
@@ -403,12 +455,34 @@ export function TodoTaskView({
             </select>
           </div>
           <div className="space-y-2">
+            <Label htmlFor="task-priority">Priority</Label>
+            <select
+              id="task-priority"
+              className={cn(
+                "border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm outline-none",
+                "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+                "dark:bg-input/30",
+              )}
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TodoPriority)}
+            >
+              {TODO_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {todoPriorityLabel(p)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="task-tag">Tag</Label>
-            <Input
-              id="task-tag"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g. Home"
+            <TagInput
+              inputId="task-tag"
+              label={category}
+              icon={categoryIcon}
+              existingTags={existingTags}
+              disabled={!persistence}
+              onLabelChange={setCategory}
+              onIconChange={setCategoryIcon}
             />
           </div>
           <div className="space-y-2">
@@ -482,7 +556,7 @@ export function TodoTaskView({
           </CardHeader>
           <CardContent className="space-y-3">
             <ul className="space-y-2">
-            {initialItem.subtasks.map((s) => (
+            {subtasks.map((s) => (
               <li key={s.id} className="flex items-start gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -540,14 +614,14 @@ export function TodoTaskView({
             <CardTitle>Attachments</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {initialItem.attachments.length === 0 ? (
+            {attachments.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 No files yet. Add receipts, screenshots, PDFs—anything up to 10 MB
                 each.
               </p>
             ) : (
               <ul className="divide-border divide-y rounded-lg border">
-                {initialItem.attachments.map((a) => {
+                {attachments.map((a) => {
                   const sizeLabel = formatBytes(a.sizeBytes);
                   const meta = [sizeLabel, a.mimeType].filter(Boolean).join(" · ");
                   const hasPreview =
@@ -669,7 +743,7 @@ export function TodoTaskView({
               unless you add shared access later.
             </p>
             <ul className="border-border space-y-4 border-l-2 pl-4">
-              {initialItem.comments.map((c) => (
+              {comments.map((c) => (
                 <li key={c.id} className="space-y-1">
                   <CommentBody text={c.body} className="text-foreground text-sm" />
                   <p className="text-muted-foreground text-xs tabular-nums">

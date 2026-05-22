@@ -4,10 +4,11 @@ import { PageContainer } from "@/components/layout/page-container";
 import { TodoTaskView } from "@/components/todo/todo-task-view";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
-import { isUuid } from "@/lib/shopping/is-uuid";
+import { fetchTodoTagsForUser } from "@/lib/todo/fetch-todo-tags";
 import { fetchTodoByIdForUser } from "@/lib/todo/fetch-todos";
+import { isUuid } from "@/lib/shopping/is-uuid";
 import { getSessionUser } from "@/lib/supabase/server";
-import type { TodoAssignableMember } from "@/types/todo";
+import type { TodoAssignableMember, TodoTag } from "@/types/todo";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -29,9 +30,10 @@ export default async function TodoTaskPage({ params }: Props) {
     notFound();
   }
 
-  const [itemResult, assignableResult] = await Promise.allSettled([
+  const [itemResult, assignableResult, tagsResult] = await Promise.allSettled([
     fetchTodoByIdForUser(id),
     fetchAssignableMembers(user),
+    fetchTodoTagsForUser(),
   ]);
 
   if (itemResult.status === "rejected") {
@@ -48,6 +50,11 @@ export default async function TodoTaskPage({ params }: Props) {
     assignableUsers = assignableResult.value;
   }
 
+  let existingTags: TodoTag[] = [];
+  if (tagsResult.status === "fulfilled") {
+    existingTags = tagsResult.value;
+  }
+
   return (
     <PageContainer>
       <TodoTaskView
@@ -55,6 +62,7 @@ export default async function TodoTaskPage({ params }: Props) {
         initialItem={item}
         persistence
         assignableUsers={assignableUsers}
+        existingTags={existingTags}
       />
     </PageContainer>
   );
