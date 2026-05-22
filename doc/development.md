@@ -16,27 +16,38 @@ Edit **`.env.local`** with your Supabase project URL and anon key (see [authenti
 
 ## Dev server
 
+### Primary checkout (main)
+
 ```bash
+pnpm setup:local-host   # once — Herd nginx proxy → 3010; restart Herd after
 pnpm dev
 ```
 
-- Uses **`next dev --turbopack --port 3010`** with the PWA service worker forced off for faster UI feedback (see [`package.json`](../package.json)).
+- Opens at **http://karriqi.test** (Herd proxies port 80 → Next.js on 3010).
+- **Use `http://`**, not `https://`. Avoid **`.dev`** for local URLs — Chrome and other browsers **require HTTPS** on `.dev` (HSTS preload), which causes certificate errors without a trusted local cert.
+- The Herd **proxy** overrides the default parked-site PHP handler for this folder (Next.js, not PHP).
+- Uses **`next dev --turbopack --hostname 0.0.0.0 --port 3010`** with the PWA service worker forced off for faster UI feedback (see [`package.json`](../package.json)).
 - Use **`pnpm dev:pwa`** only when testing the generated service worker, web push, or install/offline behavior locally.
-- Open **http://localhost:3010**
+- [`next.config.ts`](../next.config.ts) sets **`allowedDevOrigins: ["karriqi.test"]`** so Next allows that host for dev assets / HMR.
 
-### Optional hostname: `karriqi.test`
+Register **http://karriqi.test** in **Supabase → Authentication → URL configuration** if you use redirects or OAuth.
 
-1. Add to **`/etc/hosts`**: `127.0.0.1 karriqi.test`
-2. Open **http://karriqi.test:3010**
-3. [`next.config.ts`](../next.config.ts) sets **`allowedDevOrigins: ["karriqi.test"]`** so Next allows that host for dev assets / HMR.
+### Git worktrees
 
-Register the same origins in **Supabase → Authentication → URL configuration** if you use redirects or OAuth.
+```bash
+pnpm worktree:dev
+```
+
+- Each worktree gets the first free port in **3010–3019** and prints **`http://localhost:<port>`**.
+- The primary checkout keeps **http://karriqi.test**; do not run **`pnpm dev`** inside a worktree (the script will tell you to use **`pnpm worktree:dev`**).
 
 ## Other scripts
 
-| Command             | Purpose                                                        |
-| ------------------- | -------------------------------------------------------------- |
-| `pnpm dev:pwa`      | Dev server with Webpack and PWA service worker enabled         |
+| Command                  | Purpose                                                        |
+| ------------------------ | -------------------------------------------------------------- |
+| `pnpm setup:local-host`  | One-time: Herd nginx proxy → 3010 for karriqi.test |
+| `pnpm dev:pwa`           | Dev server with Webpack and PWA service worker enabled         |
+| `pnpm worktree:dev`      | Dev server for git worktrees (`localhost:<port>`)              |
 | `pnpm build`        | Production build (`next build --webpack`)                      |
 | `pnpm start`        | Run production server (default port 3000 unless `PORT` is set) |
 | `pnpm lint`         | ESLint                                                         |

@@ -18,13 +18,16 @@ Production-minded **scaffold only**: app shell, routing, Supabase Auth wiring, P
 ```bash
 pnpm install
 cp .env.example .env.local
+pnpm setup:local-host   # once
 # Add your Supabase URL and anon key, then:
 pnpm dev
 ```
 
-**Dev URL:** [http://localhost:3010](http://localhost:3010) (`pnpm dev` binds to port **3010**).
+**Dev URL:** [http://karriqi.test](http://karriqi.test) — run **`pnpm setup:local-host`** once (Herd nginx proxy → Next.js :3010), restart Herd, then **`pnpm dev`** from the **primary checkout**. Use **`http://`** (not `https://`). Do **not** use `.dev` locally — browsers force HTTPS on `.dev` (HSTS).
 
-**Optional — `karriqi.test`:** add `127.0.0.1 karriqi.test` to `/etc/hosts`, then use [http://karriqi.test:3010](http://karriqi.test:3010). Add that origin under **Supabase → Authentication → URL configuration** if you use redirects/OAuth.
+**Worktrees:** use **`pnpm worktree:dev`** — each gets `http://localhost:<port>` on the first free port in 3010–3019.
+
+Add **`http://karriqi.test`** (and worktree origins if needed) under **Supabase → Authentication → URL configuration** for redirects/OAuth.
 
 **Secrets:** copy `.env.example` to `.env.local` and put real keys only in `.env.local` (never commit `.env.local`). The example file must stay placeholder-only.
 
@@ -32,9 +35,11 @@ Protected routes redirect to `/auth/sign-in` when there is no session.
 
 ## Scripts
 
-| Command             | Purpose               |
-| ------------------- | --------------------- |
-| `pnpm dev`          | Development server    |
+| Command                  | Purpose                                      |
+| ------------------------ | -------------------------------------------- |
+| `pnpm setup:local-host`  | One-time Herd nginx proxy for karriqi.test |
+| `pnpm dev`               | Primary checkout dev server (karriqi.test)   |
+| `pnpm worktree:dev`      | Worktree dev server (localhost port)         |
 | `pnpm build`        | Production build      |
 | `pnpm start`        | Run production server |
 | `pnpm lint`         | ESLint                |

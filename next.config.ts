@@ -32,7 +32,7 @@ const withPWA = withPWAInit({
 const nextConfig: NextConfig = {
   // Avoid picking a parent directory lockfile when multiple exist on the machine.
   outputFileTracingRoot: rootDir,
-  // Allow dev over a local DNS name (see README: /etc/hosts → karriqi.test).
+  // Allow dev over Herd proxy (http://karriqi.test → Next.js :3010).
   allowedDevOrigins: ["karriqi.test"],
   // Hide the floating Next.js dev tools badge so it does not obscure the app UI.
   devIndicators: false,
