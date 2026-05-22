@@ -4,9 +4,10 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "ENABLE_PWA_IN_DEV=0 next dev --turbopack --port 3010",
+    "dev": "bash scripts/main-dev.sh",
     "worktree:dev": "bash scripts/worktree-dev.sh",
-    "dev:pwa": "ENABLE_PWA_IN_DEV=1 next dev --webpack --port 3010",
+    "dev:pwa": "bash scripts/main-dev.sh --pwa",
+    "setup:local-host": "bash scripts/setup-karriqi-dev-host.sh",
     "build": "next build --webpack",
     "build:cloudflare": "opennextjs-cloudflare build",
     "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

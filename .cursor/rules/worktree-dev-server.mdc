@@ -13,7 +13,7 @@ Concretely, before any of: `Read`, `Write`, `Grep`, `Glob`, `pnpm test`, file ed
 
 1. Run **`pnpm worktree:dev`** in the **background** from the worktree root (or `bash scripts/worktree-dev.sh` — same thing). Set `block_until_ms: 0` and poll with `AwaitShell` using a regex like `Ready|Local:\s+http://localhost`.
 2. Wait until output shows **Ready** or `Local: http://localhost:<PORT>`.
-3. In your **first reply** to the user, include a line starting with **`Worktree preview:`** and the URL (plus LAN if shown). Note which port is main vs this worktree if 3010 is taken elsewhere.
+3. In your **first reply** to the user, include a line starting with **`Worktree preview:`** and the URL (plus LAN if shown). Note that the primary checkout stays on **http://karriqi.test**.
 
 **Do not skip** because the prime checkout already has a server — each worktree needs its **own** port.
 
@@ -65,9 +65,9 @@ In the first reply after worktree setup:
 
 - **Worktree preview:** `http://localhost:<PORT>`
 - **LAN URL** if Next.js prints one (optional)
-- If prime uses 3010, say explicitly: main on 3010, this branch on `<PORT>`
+- Primary checkout: **http://karriqi.test** (this worktree: `http://localhost:<PORT>`)
 
-Example: **Worktree preview:** http://localhost:3012 — main checkout stays on http://localhost:3010.
+Example: **Worktree preview:** http://localhost:3012 — primary checkout stays on http://karriqi.test.
 
 ---
 

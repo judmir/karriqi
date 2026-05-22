@@ -47,6 +47,7 @@ URLs:
 ```txt
 https://karriqi.com/auth/callback
 https://www.karriqi.com/auth/callback
+http://karriqi.test/auth/callback
 http://localhost:3010/auth/callback
 ```
 

@@ -39,7 +39,7 @@ If a key was ever committed, **rotate** it in the Supabase dashboard and update 
 
 ## OAuth / magic link (future)
 
-- [`app/auth/callback/route.ts`](../app/auth/callback/route.ts) implements **`exchangeCodeForSession`** for the `code` query param. Add redirect URLs in Supabase for each origin you use (e.g. `http://localhost:3010`, `http://karriqi.test:3010`, production URL).
+- [`app/auth/callback/route.ts`](../app/auth/callback/route.ts) implements **`exchangeCodeForSession`** for the `code` query param. Add redirect URLs in Supabase for each origin you use (e.g. `http://karriqi.test`, `http://localhost:3010` for worktrees, production URL).
 
 ## Profiles / multi-tenant data
 
