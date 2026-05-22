@@ -1,0 +1,30 @@
+---
+description: Keep Hermes ingest APIs and OpenAPI contract in sync (source of truth).
+globs: app/api/ingest/**,modules/ingest/**,lib/repositories/ingest/**,lib/ingest/**
+alwaysApply: false
+---
+
+# Ingest API & OpenAPI contract (Hermes)
+
+Third-party agents (Hermes, cron jobs) use **`GET /openapi.json`** or **`GET /openapi.yaml`** as the **source of truth**. The spec is generated at runtime from the same Zod schemas that validate `POST /api/ingest/*` requests. **`GET /developers`** embeds Swagger UI for the same spec.
+
+## When adding or changing an ingest resource
+
+1. **Zod schema** — `modules/ingest/schemas/<resource>.ts` (request body + types).
+2. **Route** — `app/api/ingest/<resource>/route.ts` using `handleIngestPost` + schema.
+3. **Repository** — `lib/repositories/ingest/<resource>.ts` (admin Supabase writes).
+4. **Register OpenAPI** — add path in `modules/ingest/openapi/registry.ts` via `registerIngestPost`.
+5. **Route manifest** — append `"/api/ingest/<resource>"` to `INGEST_ROUTE_PATHS` in `modules/ingest/routes.ts`.
+6. **Tests** — schema test + route test; `modules/ingest/openapi/__tests__/contract-sync.test.ts` must pass (paths ↔ filesystem ↔ OpenAPI).
+7. **Docs** — update bullet list on `app/developers/page.tsx` if user-facing resource list changes; add a row to `modules/ingest/HERMES.md` resource mapping table.
+
+Do **not** hand-edit `openapi.json` as a separate artifact. Do **not** document ingest shapes only in Markdown.
+
+## Auth & env
+
+- Bearer `INGEST_TOKEN` (server-only). Document in `.env.example`.
+- Hermes env: `KARRIQI_URL`, `INGEST_TOKEN`, `USER_ID` (maps to body `userId`).
+
+## Future resources
+
+New ingest endpoints follow `POST /api/ingest/<resource>` (e.g. `apartment` when added). Same checklist as above.

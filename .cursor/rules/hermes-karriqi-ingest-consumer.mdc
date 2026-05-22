@@ -1,0 +1,41 @@
+---
+description: How Hermes (or any external agent) discovers and calls Karriqi ingest — always via openapi.json.
+alwaysApply: false
+---
+
+# Hermes consumer — Karriqi ingest
+
+Use this when the user asks how **Hermes**, a **cron job**, or another **third-party agent** should push data into Karriqi, or when drafting Hermes prompts/rules.
+
+## Authoritative guide
+
+Read and follow **`modules/ingest/HERMES.md`**. Prefer linking or copying that file into the Hermes project.
+
+## Rules for the agent (Hermes behavior)
+
+1. **Discover from the live contract** — `GET {KARRIQI_URL}/openapi.json` (or `.yaml`). Do not invent paths, fields, or enums.
+2. **Pick the resource** — find `POST /api/ingest/<resource>` under `paths` in the spec.
+3. **Match the schema** — request body must match `requestBody.content['application/json'].schema` (required fields, types).
+4. **Authenticate** — `Authorization: Bearer {INGEST_TOKEN}` per `components.securitySchemes.bearerAuth`.
+5. **Scope to user** — include `"userId": "{USER_ID}"` in the JSON body on every ingest call.
+6. **Idempotent cron** — reuse stable `id` per external entity when the schema allows optional `id`.
+7. **Stop if missing** — if the needed resource is not in `openapi.json`, report that Karriqi must ship the endpoint first; do not call undocumented APIs.
+8. **Human fallback** — `{KARRIQI_URL}/developers` for Try-it-out; machines use JSON/YAML spec only.
+
+## Env vars (Hermes)
+
+- `KARRIQI_URL`
+- `INGEST_TOKEN`
+- `USER_ID`
+
+## Example user → Hermes prompt
+
+When the user says “push X to Karriqi”, respond with a prompt template that:
+
+- Starts with fetching `openapi.json`
+- Names the ingest path for X (from spec, not memory)
+- References `HERMES.md` for env and error handling
+
+## Karriqi repo changes (maintainers)
+
+Do **not** duplicate ingest shapes in Hermes-only docs. Update Zod + OpenAPI per `.cursor/rules/ingest-openapi-contract.mdc`, then extend the mapping table in `modules/ingest/HERMES.md` if a new resource is added.
