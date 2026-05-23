@@ -1,5 +1,9 @@
 # READ THIS FIRST
 
+## Product context
+
+**Karriqi** is a mobile-first family hub PWA (shopping, kanban, calendar, notifications, agent ingest). Before substantive changes, read **`doc/project-context.md`**. When behavior or scope changes, keep that file, **`README.md`**, and related docs in sync — see **`.cursor/rules/project-context-coherence.mdc`**.
+
 ## ⛔ Worktree dev server — BLOCKING, FIRST TOOL CALL
 
 If the workspace path contains `/.cursor/worktrees/`, your **very first tool call** must be `pnpm worktree:dev` (background). Wait for `Ready` / `Local: http://localhost:<PORT>`, then open your first reply with `Worktree preview: http://localhost:<PORT>`. Do this BEFORE any Read / Grep / Glob / Edit / Write. See `.cursor/rules/worktree-dev-server.mdc`.

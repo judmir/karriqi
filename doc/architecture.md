@@ -2,9 +2,9 @@
 
 ## Product intent
 
-**Karriqi** is a **mobile-first family hub**: one authenticated shell (header, sidebar, bottom nav) with modules for shopping, todos, calendar, settings, notifications, and maintainer-only Dev tooling.
+**Karriqi** is a **mobile-first family hub**: one authenticated PWA shell (header, sidebar, bottom nav) with modules for shopping, kanban tasks, calendar, dashboard (agent-curated weekend ideas), settings, notifications, and maintainer-only Dev tooling. See [project-context.md](./project-context.md).
 
-## Stack (locked for phase 1)
+## Stack
 
 | Layer           | Choice                                                                   |
 | --------------- | ------------------------------------------------------------------------ |
@@ -73,8 +73,8 @@ Protected prefixes are defined in [`config/routes.ts`](../config/routes.ts) (`PR
 | `lib/repositories/`           | Intended home for Supabase data access                                  |
 | `lib/push/`                   | Web push helpers and VAPID delivery                                     |
 | `hooks/`                      | Client hooks such as notification subscription state                    |
-| `modules/`                    | Intended home for vertical slices (`shopping`, etc.) — empty in phase 1 |
-| `types/database.ts`           | Placeholder `Database` type until `supabase gen types`                  |
+| `modules/`                    | Vertical slices — ingest schemas, operator payloads; feature UI may live here or under `components/` |
+| `types/database.ts`           | Generated Supabase types (keep in sync with migrations)                  |
 | `public/manifest.webmanifest` | PWA manifest                                                            |
 | `public/icons/`               | Placeholder PNGs (replace with brand assets)                            |
 | `middleware.ts`               | Session refresh + auth gating                                           |

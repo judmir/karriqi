@@ -1,17 +1,33 @@
-# Karriqi — family app foundation (phase 1)
+# Karriqi
 
-Production-minded **scaffold only**: app shell, routing, Supabase Auth wiring, PWA baseline, and a small design system. No shopping, todos, calendar, meals, chat, or real notifications.
+**Mobile-first family hub** — one private PWA for household shopping, tasks, calendar, notifications, and agent-curated weekend ideas.
 
-**Deeper reference:** see the [`doc/`](./doc/README.md) folder (architecture, auth, dev setup, PWA, notifications, roadmap).
+**Product context (read first):** [`doc/project-context.md`](./doc/project-context.md) — goal, modules, principles, and what to keep in sync when you change the app.
+
+**Technical deep dive:** [`doc/`](./doc/README.md) (architecture, auth, dev setup, PWA, notifications, roadmap).
+
+## What’s built
+
+| Area | Summary |
+| --- | --- |
+| **App shell** | Authenticated layout — mobile bottom nav, desktop sidebar, dark-first theme, PWA install |
+| **Dashboard** | Weekend activity options from agent ingest (operator entries) |
+| **Shopping** | Shared household staples, list, purchases; Albanian default catalog |
+| **Kanban** | Family tasks — assignees, priority, tags, attachments |
+| **Calendar** | Shared household events |
+| **Settings** | Profile, household members, PIN sign-in, Web Push |
+| **Ingest API** | OpenAPI contract at `/openapi.json`; Hermes and agents push via `/api/ingest/*` |
+| **Notifications** | In-app records + Web Push to household peers |
+| **Auth** | Supabase (email + PIN); no public sign-up |
 
 ## Stack
 
 - **Next.js** (App Router) · **TypeScript** · **pnpm**
-- **Tailwind CSS v4** · **shadcn/ui** (Base UI primitives) · **lucide-react**
-- **Supabase** Auth + SSR (`@supabase/ssr`)
-- **PWA** via `@ducanh2912/next-pwa`
+- **Tailwind CSS v4** · **shadcn/ui** (Base UI) · **lucide-react**
+- **Supabase** Auth + Postgres (RLS) · SSR (`@supabase/ssr`)
+- **PWA** via `@ducanh2912/next-pwa` · **Web Push** (VAPID)
 - **Forms:** `react-hook-form` + **Zod**
-- **Theme:** `next-themes` (dark-first)
+- **Deploy:** Cloudflare Workers (OpenNext) — see [`CLOUDFLARE.md`](./CLOUDFLARE.md)
 
 ## Setup
 
@@ -40,12 +56,13 @@ Protected routes redirect to `/auth/sign-in` when there is no session.
 | `pnpm setup:local-host`  | One-time Herd nginx proxy for karriqi.test |
 | `pnpm dev`               | Primary checkout dev server (karriqi.test)   |
 | `pnpm worktree:dev`      | Worktree dev server (localhost port)         |
-| `pnpm build`        | Production build      |
-| `pnpm start`        | Run production server |
-| `pnpm lint`         | ESLint                |
-| `pnpm typecheck`    | TypeScript (`noEmit`) |
-| `pnpm format`       | Prettier write        |
-| `pnpm format:check` | Prettier check        |
+| `pnpm build`             | Production build                             |
+| `pnpm start`             | Run production server                        |
+| `pnpm lint`              | ESLint                                       |
+| `pnpm typecheck`         | TypeScript (`noEmit`)                        |
+| `pnpm test`              | Vitest                                       |
+| `pnpm format`            | Prettier write                               |
+| `pnpm format:check`      | Prettier check                               |
 
 ## Environment variables
 
@@ -54,65 +71,36 @@ Protected routes redirect to `/auth/sign-in` when there is no session.
 | `NEXT_PUBLIC_SUPABASE_URL`      | Yes               | Project URL                                   |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes               | Public anon key (never use service role here) |
 
-Validated lightly in [`lib/env.ts`](lib/env.ts). Without them, protected routes still redirect to sign-in, which shows a “Configure Supabase” card.
+Additional server-only vars (ingest token, VAPID, service role, PIN pepper): see `.env.example` and [`CLOUDFLARE.md`](./CLOUDFLARE.md).
+
+Validated lightly in [`lib/env.ts`](lib/env.ts). Without Supabase config, protected routes still redirect to sign-in, which shows a “Configure Supabase” card.
 
 ## Architecture (short)
 
 - **`app/(main)/`** — Authenticated shell (`AppShell`: header, desktop sidebar, mobile bottom nav). Routes: `/dashboard`, `/shopping`, `/kanban`, `/calendar`, `/settings`.
-- **`app/auth/`** — Sign-in only; **`/auth/sign-up`** redirects to sign-in. OAuth/magic-link **`/auth/callback`** handler.
-- **`middleware.ts`** — Refreshes Supabase session; guards paths listed in [`config/routes.ts`](config/routes.ts).
+- **`app/auth/`** — Sign-in (email/password + PIN); **`/auth/sign-up`** redirects to sign-in. OAuth/magic-link **`/auth/callback`** handler.
+- **`middleware.ts`** — Refreshes Supabase session; guards paths in [`config/routes.ts`](config/routes.ts).
 - **`config/navigation.ts`** — Single nav config for mobile + desktop.
-- **`components/patterns/`** — Page header, section, list placeholder, placeholder module page.
-- **`lib/supabase/`** — Browser + server clients; session helper for layouts.
-- **`lib/notifications/`** — Types + no-op service; Realtime/push hooks documented for later.
-- **`lib/repositories/`** — Placeholder for data access; **`modules/`** for future feature slices.
+- **`lib/repositories/`** — Supabase data access; **`modules/`** — ingest schemas, operator payloads, feature slices.
+- **`modules/ingest/`** — OpenAPI + Zod contract for external agents.
 
 ```mermaid
 flowchart LR
-  subgraph client [Browser]
-    PWA[PWA SW workbox]
+  subgraph client [Browser PWA]
     Shell[AppShell]
   end
   MW[middleware.ts]
-  SB[(Supabase Auth)]
+  SB[(Supabase Auth + Postgres)]
+  Agents[Hermes / agents]
   Shell --> MW
   MW --> SB
+  Agents -->|POST /api/ingest| SB
 ```
+
+Living architecture diagram (maintainer): `/dev/architecture`.
 
 ## PWA
 
 - Manifest: [`public/manifest.webmanifest`](public/manifest.webmanifest)
-- Icons: [`public/icons/`](public/icons/) (replace with branded assets)
+- Icons: [`public/icons/`](public/icons/)
 - Service worker is **disabled in development**; generated under `public/` on `pnpm build`.
-
-## Implemented in phase 1
-
-- Next.js app with linting, Prettier, TypeScript paths (`@/*`)
-- Dark-first theming and shadcn/ui primitives used by the shell
-- Mobile-first layout: bottom navigation + desktop sidebar
-- Placeholder pages for all routes in the spec
-- Supabase client/server helpers, middleware session refresh, protected routes
-- Minimal sign-in form (`react-hook-form` + Zod); add users in Supabase (no self-service sign-up)
-- PWA manifest + installability baseline
-- Notification **contracts** and README map (no realtime, no push)
-
-## Intentionally deferred (phase 2+)
-
-- Domain features (shopping lists, todos, calendar events, meals, etc.)
-- Profiles / households tables (add when a module needs RLS or shared identity)
-- In-app notification feed and Supabase Realtime subscriptions
-- Web Push, VAPID, and Edge Function send path
-- Rich settings and roles
-
-## Phase 2 suggestion (Shopping)
-
-1. Add Supabase tables + RLS for lists/items.
-2. Generate types: `supabase gen types typescript` into `types/`.
-3. Implement `lib/repositories/shopping-repository.ts` and a `modules/shopping` entry component.
-4. Swap [`app/(main)/shopping/page.tsx`](<app/(main)/shopping/page.tsx>) to render the real module root — keep `AppShell` and `config/navigation` unchanged.
-
-## Extra decisions
-
-- **Next.js 16** was installed by `create-next-app@latest` (plan assumed 15; no downgrade needed).
-- **No `profiles` table** yet — Auth JWT is enough until relational data is required.
-- **Tailwind 4 + shadcn “base”** stack from current CLI defaults.

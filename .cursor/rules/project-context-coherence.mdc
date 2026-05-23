@@ -1,0 +1,32 @@
+---
+description: Keep Karriqi product context docs aligned when changing features or scope
+alwaysApply: true
+---
+
+# Project context coherence
+
+Karriqi is a **mobile-first family hub PWA** for one household — shopping, kanban tasks, calendar, notifications, settings, and agent-driven dashboard content. Full product context: **`doc/project-context.md`**.
+
+## Before substantive work
+
+Skim **`doc/project-context.md`** and the intro of **`README.md`** so changes match the product goal (household coordination, mobile-first, closed auth, RLS-backed shared data, OpenAPI ingest for agents).
+
+## When you change product behavior or scope
+
+Update **in the same change** (same commit when the user asks for one):
+
+1. **`doc/project-context.md`** — modules table, principles, or out-of-scope list if affected
+2. **`README.md`** — “What Karriqi is” / “What’s built” if user-visible capabilities changed
+3. **`doc/roadmap-and-scope.md`** — if something moves from deferred → shipped or vice versa
+4. **`components/dev/architecture/architecture-flow-data.ts`** — add/update nodes or edges for new features, services, or important flows
+5. **`app/layout.tsx`** metadata description and **`public/manifest.webmanifest`** `description` if the one-line product pitch changes
+
+## Do not
+
+- Leave README or `doc/project-context.md` describing “phase 1 scaffold only” when real modules exist
+- Document ingest shapes only in Markdown — use Zod + OpenAPI per `ingest-openapi-contract.mdc`
+- Add nav routes without updating `config/navigation.ts` (mobile + desktop stay in sync)
+
+## Quick sanity check
+
+After a feature change, ask: *Would a new contributor reading only `doc/project-context.md` and `README.md` understand what the app does and what I just added?* If not, update those files before finishing.

@@ -1,31 +1,38 @@
 # Roadmap and scope
 
-## Phase 1 (current) — implemented
+See **[project-context.md](./project-context.md)** for the current product goal and module list. Update both files when scope shifts.
 
-- Next.js App Router app with TypeScript, Tailwind 4, shadcn/ui, ESLint, Prettier.
-- **App shell:** mobile bottom navigation, desktop sidebar, header, user menu, safe-area-friendly layout.
-- **Routes:** placeholder content for `/`, `/dashboard`, `/shopping`, `/kanban`, `/calendar`, `/settings`; auth routes + callback handler.
-- **Supabase Auth:** SSR clients, middleware session refresh, protected routes, sign-in only (no self-service sign-up).
-- **PWA:** manifest, icons, production service worker via `@ducanh2912/next-pwa`.
-- **Notifications:** types + no-op service + hook stub + README pointers.
-- **Docs:** root README + this **`doc/`** folder.
+## Shipped (current)
 
-## Explicitly out of scope (phase 1)
+- **App shell** — mobile bottom nav, desktop sidebar, header, user menu, dark-first theme, PWA baseline
+- **Auth** — Supabase email sessions, PIN quick sign-in, no public sign-up, middleware-protected routes
+- **Household** — member linking; RLS-scoped shared shopping, tasks, calendar, notifications
+- **Shopping** — staples catalog (incl. default Albanian seed), shared list, purchases, admin catalog
+- **Kanban** — boards, categories, assignees, priority, tags, attachments
+- **Calendar** — shared household events
+- **Dashboard** — weekend planner card from operator/agent ingest
+- **Notifications + Web Push** — notification rows, household peer delivery, settings subscription UI
+- **Ingest API** — OpenAPI at `/openapi.json`; shopping, kanban, calendar ingest routes
+- **Dev tools** — maintainer push tests, living architecture map at `/dev/architecture`
+- **Deploy** — Cloudflare Workers (OpenNext), tag-triggered releases
 
-- Shopping lists, todos, calendar events, meals, chat, real notification delivery.
-- Household/family member management product features.
-- Full database schema beyond auth needs; **`profiles` table** deferred until a module requires it.
-- Advanced roles beyond what Supabase Auth provides per user.
+## Explicitly deferred
 
-## Suggested phase 2 — Shopping module
+- Public sign-up or multi-tenant SaaS for arbitrary families
+- In-app chat, meal planning, and other modules not in [`config/navigation.ts`](../config/navigation.ts)
+- OAuth as primary sign-in (callback route exists; email + PIN are the main path today)
 
-1. Design Supabase tables (lists, items, optional household id) with **RLS**.
-2. `supabase gen types` → wire [`types/database.ts`](../types/database.ts).
-3. Add [`lib/repositories/shopping-repository.ts`](../lib/repositories/README.md) (or similar).
-4. Add [`modules/shopping/`](../modules/README.md) with UI entry and domain types.
-5. Update [`app/(main)/shopping/page.tsx`](<../app/(main)/shopping/page.tsx>) to render the module root; **do not** fork the global shell — keep [`config/navigation.ts`](../config/navigation.ts) as the nav source of truth.
+## Adding a new module
+
+1. Design Supabase tables + **RLS** (migration under `supabase/migrations/`).
+2. `supabase gen types` → update [`types/database.ts`](../types/database.ts) as needed.
+3. Add **`lib/repositories/<feature>.ts`** for data access.
+4. Add UI under **`components/<feature>/`** or **`modules/<feature>/`**.
+5. Mount from **`app/(main)/<route>/page.tsx`** — keep `AppShell` and [`config/navigation.ts`](../config/navigation.ts) as nav source of truth.
+6. If agents should write data: follow ingest checklist in `.cursor/rules/ingest-openapi-contract.mdc`.
+7. Update **`doc/project-context.md`**, **`README.md`**, and **`architecture-flow-data.ts`** per `.cursor/rules/project-context-coherence.mdc`.
 
 ## Maintenance notes
 
 - Next.js may deprecate **`middleware.ts`** in favor of a **proxy** convention; watch upgrade guides when bumping Next.
-- If you change dev host/port, update **Supabase redirect URLs** and this doc as needed.
+- If you change dev host/port, update **Supabase redirect URLs** and [development.md](./development.md).

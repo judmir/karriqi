@@ -1,7 +1,7 @@
 {
   "name": "Karriqi",
   "short_name": "Karriqi",
-  "description": "Family management app — foundation scaffold.",
+  "description": "Mobile-first family hub — shopping, tasks, calendar, and notifications.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

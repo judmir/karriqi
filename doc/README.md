@@ -4,6 +4,7 @@ Reference for how this repo is structured, why choices were made, and how to ext
 
 | Document                                                           | Contents                                                      |
 | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| [project-context.md](./project-context.md)                         | **Product goal**, modules, principles, scope — update with feature changes |
 | [architecture.md](./architecture.md)                               | Stack, request flow, folders, routing, design patterns        |
 | [authentication-and-security.md](./authentication-and-security.md) | Supabase Auth, middleware, env secrets, household-only access |
 | [development.md](./development.md)                                 | Scripts, ports, `karriqi.test`, TypeScript, lint/format       |

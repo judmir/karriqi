@@ -1,9 +1,12 @@
-# Feature modules (phase 2+)
+# Feature modules
 
-Add vertical slices here as the product grows, for example:
+Vertical slices and shared domain logic live here. UI entry components are mounted from `app/(main)/<route>/`.
 
-- `modules/shopping` — types, use-cases, UI entry components mounted from `app/(main)/shopping/`
-- `modules/todo`
-- `modules/calendar`
+| Module | Path | Role |
+| --- | --- | --- |
+| **Ingest** | `modules/ingest/` | Zod schemas, OpenAPI registry, route manifest for `/api/ingest/*` |
+| **Operator** | `modules/operator/` | Payload schemas for agent-written content (e.g. weekend planner) |
 
-Phase 1 intentionally has **no** module implementations — only this placeholder.
+Feature UI for shopping, kanban, and calendar currently lives in `components/` and `lib/repositories/`; new vertical slices can move here as the codebase grows.
+
+See [`doc/project-context.md`](../doc/project-context.md) for the product map.

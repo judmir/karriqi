@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: { default: "Karriqi", template: "%s · Karriqi" },
   description:
-    "Mobile-first family app foundation — modules and data come in later phases.",
+    "Mobile-first family hub — shared shopping, tasks, calendar, and notifications for your household.",
   applicationName: "Karriqi",
   manifest: "/manifest.webmanifest",
   icons: {
