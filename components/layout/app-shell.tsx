@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 
 import { AppHeader } from "@/components/layout/app-header";
 import { MainNavDesktop, MainNavMobile } from "@/components/layout/main-nav";
 import { useMainLayoutUser } from "@/components/layout/main-layout-user-context";
+import { useAppearance } from "@/components/providers/appearance-provider";
 import { useNotificationSubscription } from "@/hooks/use-notification-subscription";
 
 export function AppShell({
@@ -15,12 +16,12 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const { userId, includeDevNav } = useMainLayoutUser();
+  const { setSidebarOpen, sidebarOpen } = useAppearance();
   useNotificationSubscription(userId);
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const toggleSidebar = useCallback(
     () => setSidebarOpen((prev) => !prev),
-    [],
+    [setSidebarOpen],
   );
 
   return (

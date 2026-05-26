@@ -1,8 +1,6 @@
 ---
-description: How Hermes (or any external agent) discovers and calls Karriqi ingest — always via openapi.json.
 alwaysApply: false
 ---
-
 # Hermes consumer — Karriqi ingest
 
 Use this when the user asks how **Hermes**, a **cron job**, or another **third-party agent** should push data into Karriqi, or when drafting Hermes prompts/rules.

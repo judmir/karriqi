@@ -6,9 +6,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      forcedTheme="dark"
+      defaultTheme="dark"
       enableSystem={false}
       disableTransitionOnChange
+      storageKey="karriqi.color-mode"
     >
       {children}
     </NextThemesProvider>

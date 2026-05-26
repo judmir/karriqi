@@ -15,6 +15,7 @@ export type MainLayoutUserState = {
   userDisplayName: string | null;
   userAvatarPreset: string | null;
   includeDevNav: boolean;
+  includeThemeCustomizer: boolean;
 };
 
 const defaultState: MainLayoutUserState = {
@@ -23,6 +24,7 @@ const defaultState: MainLayoutUserState = {
   userDisplayName: null,
   userAvatarPreset: null,
   includeDevNav: false,
+  includeThemeCustomizer: false,
 };
 
 type MainLayoutUserContextValue = MainLayoutUserState & {

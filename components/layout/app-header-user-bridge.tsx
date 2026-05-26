@@ -2,30 +2,40 @@
 
 import { useEffect } from "react";
 
+import { ThemeCustomizer } from "@/components/layout/theme-customizer";
 import { UserMenu } from "@/components/layout/user-menu";
 import {
   useMainLayoutUser,
   type MainLayoutUserState,
 } from "@/components/layout/main-layout-user-context";
+import { useAppearance } from "@/components/providers/appearance-provider";
+import type { AppearanceState } from "@/lib/theme/appearance";
 
 export function AppHeaderUserBridge({
+  appearance,
   user,
 }: {
+  appearance: AppearanceState;
   user: MainLayoutUserState;
 }) {
   const { setUser } = useMainLayoutUser();
+  const { hydrateAppearance } = useAppearance();
 
   useEffect(() => {
     setUser(user);
-  }, [setUser, user]);
+    hydrateAppearance(appearance);
+  }, [appearance, hydrateAppearance, setUser, user]);
 
   return (
-    <UserMenu
-      userId={user.userId}
-      email={user.userEmail}
-      displayName={user.userDisplayName}
-      avatarPreset={user.userAvatarPreset}
-    />
+    <div className="ml-auto flex items-center gap-2">
+      {user.includeThemeCustomizer ? <ThemeCustomizer /> : null}
+      <UserMenu
+        userId={user.userId}
+        email={user.userEmail}
+        displayName={user.userDisplayName}
+        avatarPreset={user.userAvatarPreset}
+      />
+    </div>
   );
 }
 

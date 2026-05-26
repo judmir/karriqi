@@ -10,7 +10,7 @@ const widthClass: Record<PageContainerWidth, string> = {
 export function PageContainer({
   children,
   className,
-  width = "narrow",
+  width,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -20,7 +20,7 @@ export function PageContainer({
     <div
       className={cn(
         "mx-auto w-full p-4 md:p-6",
-        widthClass[width],
+        width ? widthClass[width] : "page-container-default",
         className,
       )}
     >

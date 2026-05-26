@@ -2,6 +2,8 @@ import { AppHeaderUserBridge } from "@/components/layout/app-header-user-bridge"
 import { avatarPresetFromUserMeta } from "@/lib/avatar/presets";
 import { canUseDevMenu } from "@/lib/dev/dev-access";
 import { getSessionUser } from "@/lib/supabase/server";
+import { appearanceFromUserMeta } from "@/lib/theme/appearance";
+import { canUseThemeCustomizerEmail } from "@/lib/theme/theme-customizer-access";
 import { displayNameFromUserMeta } from "@/lib/todo/assignable-members";
 
 export async function AppHeaderUserLoader() {
@@ -10,12 +12,14 @@ export async function AppHeaderUserLoader() {
 
   return (
     <AppHeaderUserBridge
+      appearance={appearanceFromUserMeta(meta)}
       user={{
         userId: user?.id ?? null,
         userEmail: user?.email ?? "Signed in",
         userDisplayName: displayNameFromUserMeta(meta),
         userAvatarPreset: avatarPresetFromUserMeta(meta),
         includeDevNav: canUseDevMenu(user),
+        includeThemeCustomizer: canUseThemeCustomizerEmail(user?.email),
       }}
     />
   );
