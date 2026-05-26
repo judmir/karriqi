@@ -27,6 +27,23 @@ function priorityIconClass(priority: TodoPriority): string {
   }
 }
 
+function priorityBadgeClass(priority: TodoPriority): string {
+  switch (priority) {
+    case "highest":
+      return "border-red-500/25 bg-red-500/10 text-red-300";
+    case "high":
+      return "border-orange-500/25 bg-orange-500/10 text-orange-300";
+    case "medium":
+      return "border-amber-500/25 bg-amber-500/10 text-amber-200";
+    case "low":
+      return "border-emerald-500/25 bg-emerald-500/10 text-emerald-300";
+    case "lowest":
+      return "border-sky-500/25 bg-sky-500/10 text-sky-300";
+    default:
+      return "border-border/70 bg-muted text-muted-foreground";
+  }
+}
+
 function PriorityGlyph({
   priority,
   className,
@@ -71,6 +88,30 @@ export function PriorityIcon({
         priority={priority}
         className={size === "sm" ? "size-3.5" : undefined}
       />
+    </span>
+  );
+}
+
+export function PriorityBadge({
+  priority,
+  className,
+}: {
+  priority: TodoPriority;
+  className?: string;
+}) {
+  const label = todoPriorityLabel(priority);
+  return (
+    <span
+      className={cn(
+        "inline-flex w-fit shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        priorityBadgeClass(priority),
+        className,
+      )}
+      title={`Priority: ${label}`}
+      aria-label={`Priority: ${label}`}
+    >
+      <PriorityGlyph priority={priority} className="size-3.5" />
+      <span>{label}</span>
     </span>
   );
 }
