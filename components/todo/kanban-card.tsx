@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { PriorityIcon, PriorityMenuLabel } from "@/components/todo/priority-icon";
+import { PriorityBadge, PriorityMenuLabel } from "@/components/todo/priority-icon";
 import { TodoTagChip } from "@/components/todo/tag-input";
 import { isTodoBoardChecklistComplete } from "@/lib/todo/checklist-complete";
 import { todoStatusLabel } from "@/lib/todo/status-label";
@@ -186,12 +186,14 @@ export function KanbanCard({
       {...(isOverlay ? {} : attributes)}
       {...(isOverlay ? {} : listeners)}
     >
-      {/* Header: priority + title + actions menu (whole card is the click target) */}
+      {/* Header: visible priority badge + title + actions menu. */}
       <div className="flex items-start gap-2">
-        <PriorityIcon priority={item.priority} className="mt-0.5" />
-        <h3 className="text-foreground font-heading min-w-0 flex-1 text-[15px] leading-snug font-semibold tracking-tight">
-          {item.title}
-        </h3>
+        <div className="min-w-0 flex-1 space-y-2">
+          <PriorityBadge priority={item.priority} />
+          <h3 className="text-foreground font-heading text-[15px] leading-snug font-semibold tracking-tight">
+            {item.title}
+          </h3>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger
