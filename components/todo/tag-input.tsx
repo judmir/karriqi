@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import {
+  createElement,
   useEffect,
   useId,
   useMemo,
@@ -27,12 +28,29 @@ function tagMatchesQuery(tag: TodoTag, query: string): boolean {
   return tag.label.toLowerCase().includes(q);
 }
 
+function TodoTagIconGlyph({
+  icon,
+  className,
+  style,
+}: {
+  icon: string | null | undefined;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return createElement(todoTagIconComponent(icon), {
+    className,
+    style,
+    "aria-hidden": true,
+  });
+}
+
 export function TagInput({
   label,
   icon,
   existingTags,
   onLabelChange,
   onIconChange,
+  onSubmit,
   disabled = false,
   inputId,
 }: {
@@ -41,6 +59,7 @@ export function TagInput({
   existingTags: TodoTag[];
   onLabelChange: (label: string) => void;
   onIconChange: (icon: string) => void;
+  onSubmit?: () => void;
   disabled?: boolean;
   inputId?: string;
 }) {
@@ -51,8 +70,6 @@ export function TagInput({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  const SelectedIcon = todoTagIconComponent(icon);
   const filteredIcons = useMemo(
     () => filterTodoTagIcons(iconSearch),
     [iconSearch],
@@ -62,10 +79,6 @@ export function TagInput({
     if (!label.trim()) return [];
     return existingTags.filter((tag) => tagMatchesQuery(tag, label));
   }, [existingTags, label]);
-
-  useEffect(() => {
-    setHighlightIndex(0);
-  }, [label, suggestions.length]);
 
   useEffect(() => {
     const exact = existingTags.find(
@@ -94,6 +107,7 @@ export function TagInput({
 
   function onTextChange(next: string) {
     onLabelChange(next);
+    setHighlightIndex(0);
     const trimmed = next.trim();
     if (!trimmed) {
       setSuggestionsOpen(false);
@@ -128,6 +142,14 @@ export function TagInput({
     }
   }
 
+  function onRootInputKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    onTextKeyDown(e);
+    if (e.defaultPrevented) return;
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    onSubmit?.();
+  }
+
   return (
     <div ref={rootRef} className="relative">
       <div
@@ -155,10 +177,10 @@ export function TagInput({
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
             )}
           >
-            <SelectedIcon
+            <TodoTagIconGlyph
+              icon={icon}
               className="size-4"
               style={{ color: TODO_TAG_ICON_COLOR }}
-              aria-hidden
             />
           </PopoverTrigger>
           <PopoverContent align="start" className="w-72 p-3">
@@ -232,7 +254,7 @@ export function TagInput({
               setSuggestionsOpen(true);
             }
           }}
-          onKeyDown={onTextKeyDown}
+          onKeyDown={onRootInputKeyDown}
           className={cn(
             "placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-2.5 text-sm outline-none",
           )}
@@ -246,7 +268,6 @@ export function TagInput({
           className="border-border bg-popover absolute top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border shadow-md"
         >
           {suggestions.map((tag, index) => {
-            const TagIcon = todoTagIconComponent(tag.icon);
             const highlighted = index === highlightIndex;
             return (
               <li key={tag.id} role="presentation">
@@ -263,10 +284,10 @@ export function TagInput({
                       : "text-foreground hover:bg-muted/70",
                   )}
                 >
-                  <TagIcon
+                  <TodoTagIconGlyph
+                    icon={tag.icon}
                     className="size-4 shrink-0"
                     style={{ color: TODO_TAG_ICON_COLOR }}
-                    aria-hidden
                   />
                   <span className="truncate">{tag.label}</span>
                 </button>
@@ -288,7 +309,6 @@ export function TodoTagChip({
   icon?: string | null;
   className?: string;
 }) {
-  const TagIcon = todoTagIconComponent(icon ?? DEFAULT_TODO_TAG_ICON);
   return (
     <span
       className={cn(
@@ -300,7 +320,10 @@ export function TodoTagChip({
       )}
       title={label}
     >
-      <TagIcon style={{ color: TODO_TAG_ICON_COLOR }} aria-hidden />
+      <TodoTagIconGlyph
+        icon={icon ?? DEFAULT_TODO_TAG_ICON}
+        style={{ color: TODO_TAG_ICON_COLOR }}
+      />
       <span className="truncate">{label}</span>
     </span>
   );

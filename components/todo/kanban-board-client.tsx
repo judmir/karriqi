@@ -25,7 +25,6 @@ import {
   type FormEvent,
   type ReactNode,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -126,8 +125,12 @@ export function KanbanBoardClient({
   assignableUsers: TodoAssignableMember[];
 }) {
   const router = useRouter();
-  const initialMap = useMemo(() => buildColumnMap(initialTodos), [initialTodos]);
-  const [columns, setColumns] = useState<ColumnMap>(initialMap);
+  const initialColumns = useMemo(
+    () => buildColumnMap(initialTodos),
+    [initialTodos],
+  );
+  const [columns, setColumns] = useState<ColumnMap | null>(null);
+  const resolvedColumns = columns ?? initialColumns;
   const [activeId, setActiveId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<TodoStatus, string>>({
     backlog: "",
@@ -138,36 +141,26 @@ export function KanbanBoardClient({
     initialTodos.length === 0 ? "backlog" : null,
   );
 
-  // Hydrate once when the Pinia-style store delivers cached/fetched board data.
-  const didHydrateFromStore = useRef(false);
   const dragStartLayoutRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (didHydrateFromStore.current) return;
-    if (initialTodos.length === 0) return;
-    didHydrateFromStore.current = true;
-    setColumns(buildColumnMap(initialTodos));
-  }, [initialTodos]);
 
-  useEffect(() => {
-    return () => {
-      useTodoStore.getState().setBoardItems(flattenColumns(columns));
-    };
-  }, [columns]);
+  function syncBoardStore(next: ColumnMap): void {
+    useTodoStore.getState().setBoardItems(flattenColumns(next));
+  }
 
   const itemById = useMemo(() => {
     const m = new Map<string, TodoBoardItem>();
-    for (const list of Object.values(columns)) {
+    for (const list of Object.values(resolvedColumns)) {
       for (const it of list) m.set(it.id, it);
     }
     return m;
-  }, [columns]);
+  }, [resolvedColumns]);
 
   const totalProgress = useMemo(() => {
-    const total = totalCount(columns);
+    const total = totalCount(resolvedColumns);
     if (total === 0) return { done: 0, total: 0, pct: 0 };
-    const done = columns.done.length;
+    const done = resolvedColumns.done.length;
     return { done, total, pct: Math.round((done / total) * 100) };
-  }, [columns]);
+  }, [resolvedColumns]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -179,19 +172,19 @@ export function KanbanBoardClient({
   );
 
   const persistBoard = useCallback(async (next: ColumnMap) => {
-    const snapshot = flattenColumns(columns);
+    const snapshot = flattenColumns(resolvedColumns);
     const r = await reorderTodoBoard({ columns: columnIdsRecord(next) });
     if (!r.ok) {
       toast.error(r.message);
       setColumns(buildColumnMap(snapshot));
+      useTodoStore.getState().setBoardItems(snapshot);
       return;
     }
-    useTodoStore.getState().setBoardItems(flattenColumns(next));
-  }, [columns]);
+  }, [resolvedColumns]);
 
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
-    dragStartLayoutRef.current = JSON.stringify(columnIdsRecord(columns));
+    dragStartLayoutRef.current = JSON.stringify(columnIdsRecord(resolvedColumns));
   }
 
   function handleDragOver(e: DragOverEvent) {
@@ -217,17 +210,18 @@ export function KanbanBoardClient({
     }
 
     setColumns((prev) => {
+      const current = prev ?? initialColumns;
       const next: ColumnMap = {
-        backlog: [...prev.backlog],
-        in_progress: [...prev.in_progress],
-        done: [...prev.done],
+        backlog: [...current.backlog],
+        in_progress: [...current.in_progress],
+        done: [...current.done],
       };
       const sourceCol = activeItem.status;
       const sourceList = next[sourceCol];
       const idx = sourceList.findIndex((i) => i.id === activeIdStr);
-      if (idx === -1) return prev;
+      if (idx === -1) return current;
       const [moved] = sourceList.splice(idx, 1);
-      if (!moved) return prev;
+      if (!moved) return current;
       const updated: TodoBoardItem = {
         ...moved,
         status: targetCol,
@@ -267,10 +261,11 @@ export function KanbanBoardClient({
     }
 
     setColumns((prev) => {
+      const current = prev ?? initialColumns;
       const next: ColumnMap = {
-        backlog: [...prev.backlog],
-        in_progress: [...prev.in_progress],
-        done: [...prev.done],
+        backlog: [...current.backlog],
+        in_progress: [...current.in_progress],
+        done: [...current.done],
       };
       // Locate current position of active across all columns.
       let fromCol: TodoStatus | null = null;
@@ -283,10 +278,10 @@ export function KanbanBoardClient({
           break;
         }
       }
-      if (!fromCol || fromIdx === -1) return prev;
+      if (!fromCol || fromIdx === -1) return current;
 
       const [moved] = next[fromCol].splice(fromIdx, 1);
-      if (!moved) return prev;
+      if (!moved) return current;
       const updated: TodoBoardItem = {
         ...moved,
         status: targetCol,
@@ -307,6 +302,7 @@ export function KanbanBoardClient({
       dragStartLayoutRef.current = null;
       const nextLayout = JSON.stringify(columnIdsRecord(next));
       if (startLayout !== null && startLayout !== nextLayout) {
+        syncBoardStore(next);
         void persistBoard(next);
       }
       return next;
@@ -334,6 +330,7 @@ export function KanbanBoardClient({
     }
     setDrafts((d) => ({ ...d, [status]: "" }));
     setColumns((prev) => {
+      const current = prev ?? initialColumns;
       const now = new Date().toISOString();
       const created: TodoBoardItem = {
         id: r.id,
@@ -345,7 +342,7 @@ export function KanbanBoardClient({
         description: null,
         status,
         priority: "medium",
-        position: prev[status].length,
+        position: current[status].length,
         listOrder: 999_999,
         dueAt: null,
         progressPercent: progressPercentForStatus(status),
@@ -357,10 +354,10 @@ export function KanbanBoardClient({
         attachmentCount: 0,
       };
       const next = {
-        ...prev,
-        [status]: [...prev[status], created],
+        ...current,
+        [status]: [...current[status], created],
       };
-      useTodoStore.getState().setBoardItems(flattenColumns(next));
+      syncBoardStore(next);
       return next;
     });
   }
@@ -383,11 +380,13 @@ export function KanbanBoardClient({
       return;
     }
     setColumns((prev) => {
+      const current = prev ?? initialColumns;
       const next: ColumnMap = {
-        backlog: prev.backlog.filter((i) => i.id !== item.id),
-        in_progress: prev.in_progress.filter((i) => i.id !== item.id),
-        done: prev.done.filter((i) => i.id !== item.id),
+        backlog: current.backlog.filter((i) => i.id !== item.id),
+        in_progress: current.in_progress.filter((i) => i.id !== item.id),
+        done: current.done.filter((i) => i.id !== item.id),
       };
+      syncBoardStore(next);
       return next;
     });
   }
@@ -403,10 +402,11 @@ export function KanbanBoardClient({
       return;
     }
     setColumns((prev) => {
+      const current = prev ?? initialColumns;
       const next: ColumnMap = {
-        backlog: prev.backlog.filter((i) => i.id !== item.id),
-        in_progress: prev.in_progress.filter((i) => i.id !== item.id),
-        done: prev.done.filter((i) => i.id !== item.id),
+        backlog: current.backlog.filter((i) => i.id !== item.id),
+        in_progress: current.in_progress.filter((i) => i.id !== item.id),
+        done: current.done.filter((i) => i.id !== item.id),
       };
       next[status] = [
         ...next[status],
@@ -416,6 +416,7 @@ export function KanbanBoardClient({
           progressPercent: progressPercentForStatus(status),
         },
       ];
+      syncBoardStore(next);
       void persistBoard(next);
       return next;
     });
@@ -426,25 +427,29 @@ export function KanbanBoardClient({
     patch: Partial<TodoBoardItem>,
   ): void {
     setColumns((prev) => {
+      const current = prev ?? initialColumns;
       let changed = false;
       const next: ColumnMap = {
-        backlog: prev.backlog.map((item) => {
+        backlog: current.backlog.map((item) => {
           if (item.id !== itemId) return item;
           changed = true;
           return { ...item, ...patch };
         }),
-        in_progress: prev.in_progress.map((item) => {
+        in_progress: current.in_progress.map((item) => {
           if (item.id !== itemId) return item;
           changed = true;
           return { ...item, ...patch };
         }),
-        done: prev.done.map((item) => {
+        done: current.done.map((item) => {
           if (item.id !== itemId) return item;
           changed = true;
           return { ...item, ...patch };
         }),
       };
-      return changed ? next : prev;
+      if (changed) {
+        syncBoardStore(next);
+      }
+      return changed ? next : current;
     });
   }
 
@@ -534,7 +539,7 @@ export function KanbanBoardClient({
             <KanbanColumn
               key={status}
               status={status}
-              items={columns[status]}
+              items={resolvedColumns[status]}
               persistence={persistence}
               assignableUsers={assignableUsers}
               composerOpen={openComposer === status}

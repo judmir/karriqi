@@ -3,7 +3,7 @@
 import { ArrowLeft, Download, Paperclip, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,8 @@ import { todoStatusLabel } from "@/lib/todo/status-label";
 import { todoPriorityLabel } from "@/lib/todo/priority";
 import { progressPercentForStatus } from "@/lib/todo/progress-for-status";
 import { cn } from "@/lib/utils";
-import type { TodoAttachment, TodoAssignableMember, TodoComment, TodoItem, TodoPriority, TodoStatus, TodoSubtask, TodoTag } from "@/types/todo";
+import { useTodoStore } from "@/stores/todo-store";
+import type { TodoAttachment, TodoAssignableMember, TodoBoardItem, TodoComment, TodoItem, TodoPriority, TodoStatus, TodoSubtask, TodoTag } from "@/types/todo";
 import { TODO_PRIORITIES, TODO_STATUSES } from "@/types/todo";
 
 const NO_SYNC_TOAST =
@@ -70,6 +71,74 @@ function formatBytes(bytes: number | null): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function parseProgressPercent(value: string): number | null | undefined {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+
+  const parsed = Number.parseInt(trimmed, 10);
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function replaceBoardItem(
+  boardItems: TodoBoardItem[],
+  nextItem: TodoBoardItem,
+): TodoBoardItem[] {
+  const existing = boardItems.find((item) => item.id === nextItem.id);
+  if (!existing) {
+    return boardItems;
+  }
+
+  if (existing.status === nextItem.status) {
+    const merged = {
+      ...existing,
+      ...nextItem,
+      position: existing.position,
+      listOrder: existing.listOrder,
+    };
+    return boardItems.map((item) => (item.id === merged.id ? merged : item));
+  }
+
+  const remaining = boardItems.filter((item) => item.id !== nextItem.id);
+  const nextPosition =
+    remaining
+      .filter((item) => item.status === nextItem.status)
+      .reduce((max, item) => Math.max(max, item.position), -1) + 1;
+  const moved = {
+    ...existing,
+    ...nextItem,
+    position: nextPosition,
+  };
+  const targetStatusIndex = TODO_STATUSES.indexOf(moved.status);
+  let insertAt = remaining.length;
+
+  for (let index = 0; index < remaining.length; index += 1) {
+    const item = remaining[index]!;
+    const itemStatusIndex = TODO_STATUSES.indexOf(item.status);
+
+    if (item.status === moved.status) {
+      insertAt = index + 1;
+      continue;
+    }
+
+    if (itemStatusIndex > targetStatusIndex) {
+      insertAt = index;
+      break;
+    }
+  }
+
+  const next = [...remaining];
+  next.splice(insertAt, 0, moved);
+
+  return next.map((item, index) => ({
+    ...item,
+    listOrder: index,
+  }));
 }
 
 export function TodoTaskView({
@@ -112,39 +181,123 @@ export function TodoTaskView({
   const [dropActive, setDropActive] = useState(false);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const normalizedTitle = title.trim();
+  const normalizedCategory = category.trim() || null;
+  const normalizedCategoryIcon = normalizedCategory ? categoryIcon : null;
+  const normalizedDescription = description.trim() || null;
+  const normalizedDueAt = fromLocalDatetimeValue(dueLocal);
+  const parsedProgressPercent = parseProgressPercent(progressText);
+  const hasPendingChanges = useMemo(
+    () =>
+      normalizedTitle !== initialItem.title ||
+      normalizedCategory !== initialItem.category ||
+      normalizedCategoryIcon !== initialItem.categoryIcon ||
+      normalizedDescription !== initialItem.description ||
+      normalizedDueAt !== initialItem.dueAt ||
+      parsedProgressPercent !== initialItem.progressPercent ||
+      status !== initialItem.status ||
+      priority !== initialItem.priority ||
+      assignedUserId !== initialItem.assignedUserId,
+    [
+      assignedUserId,
+      initialItem.assignedUserId,
+      initialItem.category,
+      initialItem.categoryIcon,
+      initialItem.description,
+      initialItem.dueAt,
+      initialItem.priority,
+      initialItem.progressPercent,
+      initialItem.status,
+      initialItem.title,
+      normalizedCategory,
+      normalizedCategoryIcon,
+      normalizedDescription,
+      normalizedDueAt,
+      normalizedTitle,
+      parsedProgressPercent,
+      priority,
+      status,
+    ],
+  );
+
+  function handleSaveOnEnter(
+    e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+  ) {
+    if (e.key !== "Enter" || e.shiftKey) {
+      return;
+    }
+    if (e.nativeEvent.isComposing) {
+      return;
+    }
+    e.preventDefault();
+    if (saving) {
+      return;
+    }
+    void saveDetails();
+  }
+
+  function syncBoardStore(overrides?: Partial<TodoBoardItem>) {
+    const store = useTodoStore.getState();
+    const boardItems = store.boardItems;
+    if (boardItems.length === 0) {
+      return;
+    }
+
+    const existing = boardItems.find((item) => item.id === initialItem.id);
+    if (!existing) {
+      return;
+    }
+
+    const nextBoardItem: TodoBoardItem = {
+      ...existing,
+      updatedAt: new Date().toISOString(),
+      ...overrides,
+    };
+
+    store.setBoardItems(replaceBoardItem(boardItems, nextBoardItem));
+  }
+
+  function removeBoardItemFromStore() {
+    const store = useTodoStore.getState();
+    if (store.boardItems.length === 0) {
+      return;
+    }
+
+    store.setBoardItems(
+      store.boardItems.filter((item) => item.id !== initialItem.id),
+    );
+  }
 
   async function saveDetails() {
     if (!persistence) {
       toast.error(NO_SYNC_TOAST);
       return;
     }
-    const t = title.trim();
+    const t = normalizedTitle;
     if (!t) {
       toast.error("Title cannot be empty.");
       return;
     }
 
-    let progressPercent: number | null | undefined;
-    const pt = progressText.trim();
-    if (pt === "") {
-      progressPercent = null;
-    } else {
-      const n = Number.parseInt(pt, 10);
-      if (Number.isNaN(n) || n < 0 || n > 100) {
-        toast.error("Progress must be between 0 and 100.");
-        return;
-      }
-      progressPercent = n;
+    const progressPercent = parsedProgressPercent;
+    if (progressPercent === undefined) {
+      toast.error("Progress must be between 0 and 100.");
+      return;
+    }
+
+    if (!hasPendingChanges) {
+      router.push(ROUTES.todo);
+      return;
     }
 
     setSaving(true);
     const r = await updateTodoItem({
       id: initialItem.id,
       title: t,
-      category: category.trim() || null,
-      categoryIcon: category.trim() ? categoryIcon : null,
-      description: description.trim() || null,
-      dueAt: fromLocalDatetimeValue(dueLocal),
+      category: normalizedCategory,
+      categoryIcon: normalizedCategoryIcon,
+      description: normalizedDescription,
+      dueAt: normalizedDueAt,
       progressPercent,
       status,
       priority,
@@ -155,6 +308,20 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
+
+    syncBoardStore({
+      title: t,
+      category: normalizedCategory,
+      categoryIcon: normalizedCategoryIcon,
+      description: normalizedDescription,
+      dueAt: normalizedDueAt,
+      progressPercent,
+      status,
+      priority,
+      assignedUserId,
+    });
+    toast.success("Task saved.");
+    router.push(ROUTES.todo);
   }
 
   async function onAddComment() {
@@ -172,17 +339,23 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    setCommentDraft("");
-    setComments((prev) => [
-      ...prev,
+    const now = new Date().toISOString();
+    const nextComments = [
+      ...comments,
       {
         id: crypto.randomUUID(),
         todoItemId: initialItem.id,
         userId: initialItem.userId,
         body,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
       },
-    ]);
+    ];
+    setCommentDraft("");
+    setComments(nextComments);
+    syncBoardStore({
+      commentCount: nextComments.length,
+      updatedAt: now,
+    });
   }
 
   async function onAddSubtask() {
@@ -200,17 +373,22 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    setSubtaskDraft("");
-    setSubtasks((prev) => [
-      ...prev,
+    const nextSubtasks = [
+      ...subtasks,
       {
         id: crypto.randomUUID(),
         todoItemId: initialItem.id,
         label,
         done: false,
-        position: prev.length,
+        position: subtasks.length,
       },
-    ]);
+    ];
+    setSubtaskDraft("");
+    setSubtasks(nextSubtasks);
+    syncBoardStore({
+      subtaskCount: nextSubtasks.length,
+      subtaskDoneCount: nextSubtasks.filter((subtask) => subtask.done).length,
+    });
   }
 
   async function onToggleSubtask(id: string, done: boolean) {
@@ -223,9 +401,14 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    setSubtasks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, done } : s)),
+    const nextSubtasks = subtasks.map((subtask) =>
+      subtask.id === id ? { ...subtask, done } : subtask,
     );
+    setSubtasks(nextSubtasks);
+    syncBoardStore({
+      subtaskCount: nextSubtasks.length,
+      subtaskDoneCount: nextSubtasks.filter((subtask) => subtask.done).length,
+    });
   }
 
   async function onRemoveSubtask(id: string) {
@@ -238,7 +421,12 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    setSubtasks((prev) => prev.filter((s) => s.id !== id));
+    const nextSubtasks = subtasks.filter((subtask) => subtask.id !== id);
+    setSubtasks(nextSubtasks);
+    syncBoardStore({
+      subtaskCount: nextSubtasks.length,
+      subtaskDoneCount: nextSubtasks.filter((subtask) => subtask.done).length,
+    });
   }
 
   async function onAssigneeChange(next: string | null) {
@@ -255,6 +443,7 @@ export function TodoTaskView({
       return;
     }
     setAssignedUserId(next);
+    syncBoardStore({ assignedUserId: next });
   }
 
   async function uploadFiles(files: File[] | FileList | null) {
@@ -274,6 +463,7 @@ export function TodoTaskView({
 
     setUploadingAttachment(true);
     try {
+      let nextAttachmentsState = attachments;
       for (const file of list) {
         const fd = new FormData();
         fd.set("todoItemId", initialItem.id);
@@ -284,8 +474,8 @@ export function TodoTaskView({
           continue;
         }
         const blobUrl = URL.createObjectURL(file);
-        setAttachments((prev) => [
-          ...prev,
+        nextAttachmentsState = [
+          ...nextAttachmentsState,
           {
             id: r.id,
             todoItemId: initialItem.id,
@@ -297,7 +487,11 @@ export function TodoTaskView({
             signedUrl: blobUrl,
             createdAt: new Date().toISOString(),
           },
-        ]);
+        ];
+        setAttachments(nextAttachmentsState);
+        syncBoardStore({
+          attachmentCount: nextAttachmentsState.length,
+        });
       }
     } finally {
       setUploadingAttachment(false);
@@ -348,7 +542,11 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
+    const nextAttachments = attachments.filter((attachment) => attachment.id !== id);
+    setAttachments(nextAttachments);
+    syncBoardStore({
+      attachmentCount: nextAttachments.length,
+    });
   }
 
   async function onDeleteItem() {
@@ -364,6 +562,7 @@ export function TodoTaskView({
       toast.error(r.message);
       return;
     }
+    removeBoardItemFromStore();
     router.push(ROUTES.todo);
   }
 
@@ -395,7 +594,11 @@ export function TodoTaskView({
             onClick={() => void saveDetails()}
             disabled={saving}
           >
-            {saving ? "Saving…" : "Save changes"}
+            {saving
+              ? "Saving…"
+              : hasPendingChanges
+                ? "Save changes"
+                : "Back to board"}
           </Button>
         </div>
       </div>
@@ -409,6 +612,7 @@ export function TodoTaskView({
             id="task-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={handleSaveOnEnter}
             className={cn(
               "font-heading text-foreground text-2xl font-semibold leading-tight tracking-tight md:text-3xl",
               "h-auto rounded-lg border-transparent bg-transparent px-2 py-1.5 -mx-2",
@@ -446,6 +650,7 @@ export function TodoTaskView({
                 setStatus(nextStatus);
                 setProgressText(String(progressPercentForStatus(nextStatus)));
               }}
+              onKeyDown={handleSaveOnEnter}
             >
               {TODO_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -465,6 +670,7 @@ export function TodoTaskView({
               )}
               value={priority}
               onChange={(e) => setPriority(e.target.value as TodoPriority)}
+              onKeyDown={handleSaveOnEnter}
             >
               {TODO_PRIORITIES.map((p) => (
                 <option key={p} value={p}>
@@ -483,6 +689,7 @@ export function TodoTaskView({
               disabled={!persistence}
               onLabelChange={setCategory}
               onIconChange={setCategoryIcon}
+              onSubmit={() => void saveDetails()}
             />
           </div>
           <div className="space-y-2">
@@ -492,6 +699,7 @@ export function TodoTaskView({
               type="datetime-local"
               value={dueLocal}
               onChange={(e) => setDueLocal(e.target.value)}
+              onKeyDown={handleSaveOnEnter}
             />
           </div>
           <div className="space-y-2">
@@ -506,6 +714,7 @@ export function TodoTaskView({
               placeholder="—"
               value={progressText}
               onChange={(e) => setProgressText(e.target.value)}
+              onKeyDown={handleSaveOnEnter}
             />
           </div>
           <div className="space-y-2 sm:col-span-2 xl:col-span-1">
@@ -523,6 +732,7 @@ export function TodoTaskView({
                 const v = e.target.value;
                 void onAssigneeChange(v === "" ? null : v);
               }}
+              onKeyDown={handleSaveOnEnter}
               disabled={!persistence || assignableUsers.length === 0}
             >
               <option value="">Unassigned</option>
