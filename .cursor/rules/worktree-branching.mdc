@@ -1,0 +1,20 @@
+---
+alwaysApply: true
+---
+# Worktree branching rule
+
+For every new worktree, branch from the latest remote `main`, not from a stale local `main`.
+
+## Required steps before starting work
+
+1. Run `git fetch origin main`.
+2. Compare the current branch base with `origin/main`.
+3. If `origin/main` is ahead of local `main`, update local `main` from `origin/main` before creating the worktree branch.
+4. Create the worktree branch from the updated `main`.
+5. If the worktree already exists but was created from a stale `main`, stop and correct the branch base before continuing.
+
+## Safe behavior
+
+- Prefer `git pull --ff-only origin main` when updating `main`.
+- If the current worktree has uncommitted changes or unique commits, do not rewrite or discard them silently. Explain the situation and ask the user before recreating, rebasing, or moving the branch.
+- Do not begin implementation work on a branch that is behind `origin/main` when the task is supposed to start from a fresh worktree.
