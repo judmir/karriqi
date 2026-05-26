@@ -1,0 +1,32 @@
+---
+description: Manual-only rule to use the bundui shadcn admin dashboard template as a feature reference
+alwaysApply: false
+---
+
+# Shadcn Admin Dashboard Reference
+
+Use this rule only when the user explicitly asks for it or manually attaches it to the task.
+
+Reference template:
+
+- GitHub: `https://github.com/bundui/shadcn-admin-dashboard-free`
+
+## Intent
+
+When this rule is active, build new UI features by referencing the matching page, pattern, or component from the template before designing from scratch.
+
+## How to apply it
+
+1. Identify whether the requested feature already exists in the template, either as a full page or as a reusable section.
+2. Use the template as the primary visual and structural reference for layout, spacing, card composition, filters, tables, forms, tabs, drawers, and other shadcn-style patterns.
+3. Adapt that pattern to this codebase's routing, data model, naming, state, and shared components instead of copying large template files verbatim.
+4. Prefer existing local shadcn components first, then add missing pieces in the same style if the template uses something this app does not have yet.
+5. Keep the implementation mobile-first and consistent with the rest of the app.
+
+## Example
+
+If the user asks for a calendar section and explicitly references this rule, inspect the template's calendar example and use that as the design and interaction baseline for the local implementation.
+
+## Output expectation
+
+When this rule is used, mention which template area informed the implementation so the user can see the mapping between the request and the chosen reference.
