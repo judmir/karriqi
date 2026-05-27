@@ -1,10 +1,9 @@
 import { CalendarPageView } from "@/components/calendar/calendar-page-view";
-import { PageContainer } from "@/components/layout/page-container";
 
 export default function CalendarPage() {
   return (
-    <PageContainer width="wide">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       <CalendarPageView />
-    </PageContainer>
+    </div>
   );
 }

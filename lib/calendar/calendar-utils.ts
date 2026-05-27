@@ -120,6 +120,15 @@ export function formatEventTime(event: CalendarEvent): string {
   return `${format(start, "MMM d, h:mm a")} – ${format(end, "MMM d, h:mm a")}`;
 }
 
+/** Compact label for month grid chips, e.g. "10am Team Meeting". */
+export function formatEventChipLabel(event: CalendarEvent): string {
+  if (event.allDay) {
+    return event.title;
+  }
+  const start = parseEventDate(event.startAt);
+  return `${format(start, "ha").toLowerCase()} ${event.title}`;
+}
+
 export function eventColorClasses(color: CalendarEvent["color"]): string {
   switch (color) {
     case "blue":

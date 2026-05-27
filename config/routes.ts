@@ -33,3 +33,9 @@ export function isProtectedPath(pathname: string): boolean {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
+
+export function isCalendarRoute(pathname: string): boolean {
+  return (
+    pathname === ROUTES.calendar || pathname.startsWith(`${ROUTES.calendar}/`)
+  );
+}

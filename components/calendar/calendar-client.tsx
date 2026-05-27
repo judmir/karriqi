@@ -1,10 +1,11 @@
 "use client";
 
-import { startOfDay } from "date-fns";
+import { setHours, setMinutes, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
+import { CalendarDndProvider } from "@/components/calendar/calendar-dnd";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import {
@@ -12,13 +13,10 @@ import {
   CalendarWeekView,
 } from "@/components/calendar/calendar-time-views";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
-import { PageHeader } from "@/components/patterns/page-header";
+import { updateCalendarEvent } from "@/lib/calendar/calendar-actions";
 import { navigateDate } from "@/lib/calendar/calendar-utils";
 import { useCalendarStore } from "@/stores/calendar-store";
 import type { CalendarEvent, CalendarView } from "@/types/calendar";
-
-const NO_SYNC_TOAST =
-  "Events are not syncing. Configure Supabase and run db push before saving.";
 
 export function CalendarClient({
   initialEvents,
@@ -51,26 +49,17 @@ export function CalendarClient({
     useCalendarStore.getState().setEvents(events);
   }, [events]);
 
-  const openCreate = useCallback(
-    (start: Date) => {
-      if (!persistence) {
-        toast.message(NO_SYNC_TOAST);
-      }
-      setSelectedEvent(null);
-      setDraftStart(start);
-      setDialogOpen(true);
-    },
-    [persistence],
-  );
+  const openCreate = useCallback((start: Date) => {
+    setSelectedEvent(null);
+    setDraftStart(start);
+    setDialogOpen(true);
+  }, []);
 
-  const openEdit = useCallback(
-    (event: CalendarEvent) => {
-      setSelectedEvent(event);
-      setDraftStart(new Date(event.startAt));
-      setDialogOpen(true);
-    },
-    [],
-  );
+  const openEdit = useCallback((event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setDraftStart(new Date(event.startAt));
+    setDialogOpen(true);
+  }, []);
 
   const handleNavigate = useCallback(
     (direction: "prev" | "next" | "today") => {
@@ -131,70 +120,103 @@ export function CalendarClient({
     openCreate(start);
   }
 
+  function handleCreateOnDay(day: Date) {
+    openCreate(setMinutes(setHours(startOfDay(day), 9), 0));
+  }
+
+  const persistEventMove = useCallback(
+    async (event: CalendarEvent) => {
+      setEvents((prev) =>
+        prev.map((item) => (item.id === event.id ? event : item)),
+      );
+
+      if (!persistence) {
+        return;
+      }
+
+      const result = await updateCalendarEvent({
+        id: event.id,
+        startAt: event.startAt,
+        endAt: event.endAt,
+        allDay: event.allDay,
+      });
+
+      if (!result.ok) {
+        toast.error(result.message);
+        useCalendarStore.getState().invalidate();
+        void useCalendarStore.getState().ensureLoaded();
+      }
+    },
+    [persistence],
+  );
+
   return (
-    <div className="space-y-6">
-      <PageHeader segments={["Calendar"]} />
-
-      <CalendarHeader
-        date={currentDate}
-        view={view}
-        onToday={() => handleNavigate("today")}
-        onNavigate={(direction) => handleNavigate(direction)}
-        onViewChange={handleViewChange}
-        onNewEvent={() => {
-          const start = new Date(currentDate);
-          start.setHours(9, 0, 0, 0);
-          openCreate(start);
-        }}
-      />
-
-      {view === "month" ? (
-        <CalendarMonthView
+    <CalendarDndProvider events={sortedEvents} onEventMoved={persistEventMove}>
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 p-4 md:p-6">
+        <CalendarHeader
           date={currentDate}
-          events={sortedEvents}
-          onSelectDay={(day) => {
-            setCurrentDate(startOfDay(day));
-            setView("day");
+          view={view}
+          onToday={() => handleNavigate("today")}
+          onNavigate={(direction) => handleNavigate(direction)}
+          onViewChange={handleViewChange}
+          onNewEvent={() => {
+            const start = new Date(currentDate);
+            start.setHours(9, 0, 0, 0);
+            openCreate(start);
           }}
-          onSelectEvent={openEdit}
         />
-      ) : null}
 
-      {view === "week" ? (
-        <CalendarWeekView
-          date={currentDate}
-          events={sortedEvents}
-          onSelectEvent={openEdit}
-          onSelectSlot={handleSelectSlot}
+        <div className="min-h-0 flex-1">
+          {view === "month" ? (
+            <CalendarMonthView
+              date={currentDate}
+              events={sortedEvents}
+              onSelectDay={(day) => {
+                setCurrentDate(startOfDay(day));
+                setView("day");
+              }}
+              onSelectEvent={openEdit}
+              onCreateEvent={handleCreateOnDay}
+            />
+          ) : null}
+
+          {view === "week" ? (
+            <CalendarWeekView
+              date={currentDate}
+              events={sortedEvents}
+              onSelectEvent={openEdit}
+              onSelectSlot={handleSelectSlot}
+            />
+          ) : null}
+
+          {view === "day" ? (
+            <CalendarDayView
+              date={currentDate}
+              events={sortedEvents}
+              onSelectEvent={openEdit}
+              onSelectSlot={handleSelectSlot}
+            />
+          ) : null}
+
+          {view === "agenda" ? (
+            <CalendarAgendaView
+              date={currentDate}
+              events={sortedEvents}
+              onSelectEvent={openEdit}
+            />
+          ) : null}
+        </div>
+
+        <EventFormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          event={selectedEvent}
+          defaultStart={draftStart}
+          persistence={persistence}
+          onSaved={handleSaved}
+          onDeleted={handleDeleted}
         />
-      ) : null}
-
-      {view === "day" ? (
-        <CalendarDayView
-          date={currentDate}
-          events={sortedEvents}
-          onSelectEvent={openEdit}
-          onSelectSlot={handleSelectSlot}
-        />
-      ) : null}
-
-      {view === "agenda" ? (
-        <CalendarAgendaView
-          date={currentDate}
-          events={sortedEvents}
-          onSelectEvent={openEdit}
-        />
-      ) : null}
-
-      <EventFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        event={selectedEvent}
-        defaultStart={draftStart}
-        persistence={persistence}
-        onSaved={handleSaved}
-        onDeleted={handleDeleted}
-      />
-    </div>
+      </div>
+    </CalendarDndProvider>
   );
 }

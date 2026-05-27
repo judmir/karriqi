@@ -2,11 +2,15 @@
 
 import { isSameMonth, isToday } from "date-fns";
 
-import { EventChip } from "@/components/calendar/event-chip";
 import {
   CalendarDayNumber,
   CalendarWeekdayHeader,
 } from "@/components/calendar/calendar-header";
+import {
+  DraggableEventChip,
+  DroppableDayCell,
+} from "@/components/calendar/calendar-dnd";
+import { DayEventsOverflow } from "@/components/calendar/day-events-overflow";
 import { eventsForDay, monthGridDays } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
@@ -18,28 +22,32 @@ export function CalendarMonthView({
   events,
   onSelectDay,
   onSelectEvent,
+  onCreateEvent,
 }: {
   date: Date;
   events: CalendarEvent[];
   onSelectDay: (day: Date) => void;
   onSelectEvent: (event: CalendarEvent) => void;
+  onCreateEvent: (day: Date) => void;
 }) {
   const days = monthGridDays(date);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
       <CalendarWeekdayHeader />
-      <div className="grid grid-cols-7">
+      <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6">
         {days.map((day) => {
           const dayEvents = eventsForDay(events, day);
           const visible = dayEvents.slice(0, MAX_VISIBLE_EVENTS);
-          const hiddenCount = dayEvents.length - visible.length;
+          const hidden = dayEvents.slice(MAX_VISIBLE_EVENTS);
 
           return (
-            <div
+            <DroppableDayCell
               key={day.toISOString()}
+              day={day}
+              onClick={() => onCreateEvent(day)}
               className={cn(
-                "min-h-24 border-r border-b border-border p-1.5 sm:min-h-28 sm:p-2",
+                "flex min-h-0 cursor-pointer flex-col overflow-hidden border-r border-b border-border p-1 sm:p-1.5",
                 !isSameMonth(day, date) && "bg-muted/20",
               )}
             >
@@ -51,26 +59,23 @@ export function CalendarMonthView({
                   onClick={() => onSelectDay(day)}
                 />
               </div>
-              <div className="space-y-1">
+              <div className="min-h-0 flex-1 space-y-0.5 overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 {visible.map((event) => (
-                  <EventChip
+                  <DraggableEventChip
                     key={event.id}
                     event={event}
                     compact
                     onClick={() => onSelectEvent(event)}
                   />
                 ))}
-                {hiddenCount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => onSelectDay(day)}
-                    className="text-muted-foreground w-full px-1 text-left text-xs hover:text-foreground"
-                  >
-                    +{hiddenCount} more
-                  </button>
+                {hidden.length > 0 ? (
+                  <DayEventsOverflow
+                    events={hidden}
+                    onSelectEvent={onSelectEvent}
+                  />
                 ) : null}
               </div>
-            </div>
+            </DroppableDayCell>
           );
         })}
       </div>

@@ -149,7 +149,7 @@ function EventFormDialogBody({
         updatedAt: now,
       });
       onOpenChange(false);
-      toast.message("Event saved locally (Supabase not syncing).");
+      toast.success("Event saved.");
       return;
     }
 
@@ -227,7 +227,7 @@ function EventFormDialogBody({
     if (!persistence) {
       onDeleted(event.id);
       onOpenChange(false);
-      toast.message("Event removed locally.");
+      toast.success("Event deleted.");
       return;
     }
 

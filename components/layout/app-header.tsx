@@ -21,7 +21,7 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        "border-border bg-background/70 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 border-b backdrop-blur-md",
+        "border-border bg-background/70 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 shrink-0 border-b backdrop-blur-md",
       )}
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >

@@ -1,7 +1,10 @@
 "use client";
 
+import {
+  eventColorClasses,
+  formatEventChipLabel,
+} from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
-import { eventColorClasses } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent } from "@/types/calendar";
 
 export function EventChip({
@@ -15,6 +18,8 @@ export function EventChip({
   className?: string;
   onClick?: () => void;
 }) {
+  const label = compact ? formatEventChipLabel(event) : event.title;
+
   return (
     <button
       type="button"
@@ -29,7 +34,7 @@ export function EventChip({
         className,
       )}
     >
-      {event.title}
+      {label}
     </button>
   );
 }

@@ -37,7 +37,7 @@ export function CalendarAgendaView({
 
   if (grouped.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-8 text-center">
+      <div className="flex h-full min-h-0 items-center justify-center rounded-xl border border-border bg-card p-8 text-center">
         <p className="text-muted-foreground text-sm">
           No events scheduled for {format(date, "MMMM yyyy")}.
         </p>
@@ -46,7 +46,7 @@ export function CalendarAgendaView({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto rounded-xl border border-border bg-card">
       {grouped.map(({ day, events: dayEvents }) => (
         <section
           key={day.toISOString()}

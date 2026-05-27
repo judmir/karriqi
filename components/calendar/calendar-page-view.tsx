@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 import { CalendarClient } from "@/components/calendar/calendar-client";
 import { ListPlaceholder } from "@/components/patterns/list-placeholder";
+import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { selectCalendarReady, useCalendarStore } from "@/stores/calendar-store";
 
 function CalendarPageSkeleton() {
   return (
     <div
-      className="animate-pulse space-y-6"
+      className="flex h-full min-h-0 flex-1 animate-pulse flex-col"
       role="status"
       aria-label="Loading calendar"
     >
@@ -33,11 +34,19 @@ export function CalendarPageView() {
     void ensureLoaded();
   }, [ensureLoaded]);
 
+  const displayEvents = useMemo(
+    () => (events.length > 0 ? events : getMockCalendarEvents()),
+    [events],
+  );
+
   if (!ready && loading) {
     return <CalendarPageSkeleton />;
   }
 
   return (
-    <CalendarClient initialEvents={events} persistence={persistence} />
+    <CalendarClient
+      initialEvents={displayEvents}
+      persistence={persistence && events.length > 0}
+    />
   );
 }

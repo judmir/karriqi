@@ -2,7 +2,11 @@
 
 import { format, isToday } from "date-fns";
 
-import { EventChip } from "@/components/calendar/event-chip";
+import {
+  DraggableEventChip,
+  DroppableAllDayRow,
+  DroppableTimeSlot,
+} from "@/components/calendar/calendar-dnd";
 import {
   eventsForDay,
   formatEventTime,
@@ -13,6 +17,7 @@ import {
 } from "@/lib/calendar/calendar-utils";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
+import { eventColorClasses } from "@/lib/calendar/calendar-utils";
 
 function TimeGrid({
   day,
@@ -31,27 +36,36 @@ function TimeGrid({
 
   return (
     <div className="relative flex-1 border-r border-border last:border-r-0">
-      {allDayEvents.length > 0 ? (
-        <div className="space-y-1 border-b border-border p-1.5">
-          {allDayEvents.map((event) => (
-            <EventChip
-              key={event.id}
-              event={event}
-              compact
-              onClick={() => onSelectEvent(event)}
-            />
-          ))}
-        </div>
-      ) : null}
+      <DroppableAllDayRow
+        day={day}
+        className={cn(
+          "min-h-8 border-b border-border p-1.5",
+          allDayEvents.length === 0 && "min-h-0 border-b-0 p-0",
+        )}
+      >
+        {allDayEvents.length > 0 ? (
+          <div className="space-y-1">
+            {allDayEvents.map((event) => (
+              <DraggableEventChip
+                key={event.id}
+                event={event}
+                compact
+                onClick={() => onSelectEvent(event)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </DroppableAllDayRow>
 
       <div
         className="relative"
         style={{ height: VISIBLE_HOURS.length * HOUR_HEIGHT_PX }}
       >
         {VISIBLE_HOURS.map((hour) => (
-          <button
+          <DroppableTimeSlot
             key={hour}
-            type="button"
+            day={day}
+            hour={hour}
             aria-label={`Create event at ${format(new Date(2000, 0, 1, hour), "h a")}`}
             onClick={() => onSelectSlot(day, hour)}
             className="absolute w-full border-b border-border/60 hover:bg-muted/30"
@@ -69,23 +83,25 @@ function TimeGrid({
           }
 
           return (
-            <button
+            <DraggableEventChip
               key={event.id}
-              type="button"
-              onClick={() => onSelectEvent(event)}
+              event={event}
+              style={style}
               className={cn(
                 "absolute inset-x-1 overflow-hidden rounded-md border px-1.5 py-0.5 text-left text-xs",
-                event.color === "blue" && "border-blue-500/30 bg-blue-500/20 text-blue-200",
-                event.color === "green" && "border-green-500/30 bg-green-500/20 text-green-200",
-                event.color === "orange" && "border-orange-500/30 bg-orange-500/20 text-orange-200",
-                event.color === "purple" && "border-purple-500/30 bg-purple-500/20 text-purple-200",
-                event.color === "red" && "border-red-500/30 bg-red-500/20 text-red-200",
+                eventColorClasses(event.color),
               )}
-              style={style}
+              onClick={() => onSelectEvent(event)}
             >
-              <div className="truncate font-medium">{event.title}</div>
-              <div className="truncate opacity-80">{formatEventTime(event)}</div>
-            </button>
+              <button
+                type="button"
+                onClick={() => onSelectEvent(event)}
+                className="h-full w-full text-left"
+              >
+                <div className="truncate font-medium">{event.title}</div>
+                <div className="truncate opacity-80">{formatEventTime(event)}</div>
+              </button>
+            </DraggableEventChip>
           );
         })}
       </div>
@@ -107,7 +123,7 @@ export function CalendarWeekView({
   const days = weekDays(date);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
       <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-border">
         <div />
         {days.map((day) => (
@@ -128,7 +144,7 @@ export function CalendarWeekView({
         ))}
       </div>
 
-      <div className="grid max-h-[70vh] grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] overflow-y-auto">
+      <div className="grid min-h-0 flex-1 grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] overflow-y-auto">
         <div className="border-r border-border">
           {VISIBLE_HOURS.map((hour) => (
             <div
@@ -167,13 +183,13 @@ export function CalendarDayView({
   onSelectSlot: (day: Date, hour: number) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
         <div className="text-muted-foreground text-sm">{format(date, "EEEE")}</div>
         <div className="text-xl font-semibold">{format(date, "MMMM d, yyyy")}</div>
       </div>
 
-      <div className="grid max-h-[70vh] grid-cols-[3.5rem_minmax(0,1fr)] overflow-y-auto">
+      <div className="grid min-h-0 flex-1 grid-cols-[3.5rem_minmax(0,1fr)] overflow-y-auto">
         <div className="border-r border-border">
           {VISIBLE_HOURS.map((hour) => (
             <div

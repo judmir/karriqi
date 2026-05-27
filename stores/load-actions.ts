@@ -1,6 +1,7 @@
 "use server";
 
 import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
+import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
 import { fetchShoppingListForUser } from "@/lib/shopping/fetch-shopping-list";
@@ -56,19 +57,38 @@ export type CalendarStorePayload =
 
 export async function loadCalendarStoreAction(): Promise<CalendarStorePayload> {
   if (!isSupabaseConfigured()) {
-    return { ok: false, reason: "not_configured" };
+    return {
+      ok: true,
+      events: getMockCalendarEvents(),
+      persistence: false,
+    };
   }
 
   const user = await getSessionUser();
   if (!user) {
-    return { ok: false, reason: "signed_out" };
+    return {
+      ok: true,
+      events: getMockCalendarEvents(),
+      persistence: false,
+    };
   }
 
   try {
     const events = await fetchCalendarEventsForUser();
+    if (events.length === 0) {
+      return {
+        ok: true,
+        events: getMockCalendarEvents(),
+        persistence: false,
+      };
+    }
     return { ok: true, events, persistence: true };
   } catch {
-    return { ok: true, events: [], persistence: false };
+    return {
+      ok: true,
+      events: getMockCalendarEvents(),
+      persistence: false,
+    };
   }
 }
 

@@ -1,12 +1,19 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, type ReactNode } from "react";
 
 import { AppHeader } from "@/components/layout/app-header";
+import {
+  CALENDAR_CONTENT_SLOT_CLASS,
+  MAIN_CONTENT_SLOT_CLASS,
+} from "@/components/layout/main-content-slot";
 import { MainNavDesktop, MainNavMobile } from "@/components/layout/main-nav";
 import { useMainLayoutUser } from "@/components/layout/main-layout-user-context";
 import { useAppearance } from "@/components/providers/appearance-provider";
+import { isCalendarRoute } from "@/config/routes";
 import { useNotificationSubscription } from "@/hooks/use-notification-subscription";
+import { cn } from "@/lib/utils";
 
 export function AppShell({
   userMenu,
@@ -17,6 +24,8 @@ export function AppShell({
 }) {
   const { userId, includeDevNav } = useMainLayoutUser();
   const { setSidebarOpen, sidebarOpen } = useAppearance();
+  const pathname = usePathname();
+  const calendarRoute = isCalendarRoute(pathname);
   useNotificationSubscription(userId);
 
   const toggleSidebar = useCallback(
@@ -31,7 +40,13 @@ export function AppShell({
         <AppHeader sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar}>
           {userMenu}
         </AppHeader>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[max(5.5rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-0">
+        <div
+          className={cn(
+            calendarRoute
+              ? CALENDAR_CONTENT_SLOT_CLASS
+              : MAIN_CONTENT_SLOT_CLASS,
+          )}
+        >
           {children}
         </div>
       </div>
