@@ -10,6 +10,8 @@ export type StapleItem = {
   typicalIntervalDays?: number;
   /** Last time this staple was bought (mock in phase 1; persisted in phase 2). */
   lastPurchasedAt?: IsoDateString;
+  /** Swiped away from Suggested; persisted on staples when signed in. */
+  hiddenFromSuggestions?: boolean;
   createdAt: IsoDateString;
 };
 

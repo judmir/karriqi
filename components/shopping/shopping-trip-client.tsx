@@ -19,6 +19,7 @@ import {
   clearShoppingList,
   createStaple,
   deleteShoppingListItem,
+  dismissStapleFromSuggestions,
   recordPurchase,
   setAllShoppingListItemsChecked,
   upsertShoppingListItem,
@@ -123,7 +124,10 @@ export function ShoppingTripClient({
   });
   const [draft, setDraft] = useState("");
   const [dismissedSuggestedIds, setDismissedSuggestedIds] = useState(
-    () => new Set<string>(),
+    () =>
+      new Set(
+        staples.filter((s) => s.hiddenFromSuggestions).map((s) => s.id),
+      ),
   );
   // Items whose `position` we already assigned on insert; used to guess the next position.
   const positionsRef = useRef<Map<string, number>>(
@@ -139,6 +143,9 @@ export function ShoppingTripClient({
       items: sortShoppingListItems(initialItems),
       catalog: [...staples],
     });
+    setDismissedSuggestedIds(
+      new Set(staples.filter((s) => s.hiddenFromSuggestions).map((s) => s.id)),
+    );
     positionsRef.current = new Map(initialItems.map((i, idx) => [i.id, idx]));
   }, [initialItems, listPersistence, staples]);
 
@@ -209,12 +216,14 @@ export function ShoppingTripClient({
         (s) =>
           dueSoonStapleIds.has(s.id) &&
           !stapleIdsOnList.has(s.id) &&
+          !s.hiddenFromSuggestions &&
           !dismissedSuggestedIds.has(s.id),
       ),
       ...catalog.filter(
         (s) =>
           !dueSoonStapleIds.has(s.id) &&
           !stapleIdsOnList.has(s.id) &&
+          !s.hiddenFromSuggestions &&
           !dismissedSuggestedIds.has(s.id),
       ),
     ],
@@ -227,6 +236,28 @@ export function ShoppingTripClient({
       const next = new Set(prev);
       next.add(stapleId);
       return next;
+    });
+
+    if (!purchasePersistence || !listPersistence || !isUuid(stapleId)) return;
+
+    void dismissStapleFromSuggestions(stapleId).then((r) => {
+      if (r.ok) {
+        setTrip((t) => ({
+          ...t,
+          catalog: t.catalog.map((s) =>
+            s.id === stapleId ? { ...s, hiddenFromSuggestions: true } : s,
+          ),
+        }));
+        return;
+      }
+      setDismissedSuggestedIds((prev) => {
+        if (!prev.has(stapleId)) return prev;
+        const next = new Set(prev);
+        next.delete(stapleId);
+        return next;
+      });
+      const name = catalog.find((s) => s.id === stapleId)?.name ?? "item";
+      toast.error(`Couldn't remove "${name}": ${r.message}`);
     });
   }
 

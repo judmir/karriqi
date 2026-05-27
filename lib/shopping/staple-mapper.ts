@@ -11,6 +11,7 @@ export function stapleRowToItem(row: StapleRow): StapleItem {
     unit: row.unit ?? undefined,
     typicalIntervalDays: row.typical_interval_days ?? undefined,
     lastPurchasedAt: row.last_purchased_at ?? undefined,
+    hiddenFromSuggestions: row.hidden_from_suggestions,
     createdAt: row.created_at,
   };
 }

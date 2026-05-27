@@ -132,6 +132,41 @@ export async function createStaple(input: {
   return { ok: true, id: created.id };
 }
 
+/** Hide a staple from the Suggested chips (left swipe dismiss). */
+export async function dismissStapleFromSuggestions(
+  stapleId: string,
+): Promise<ShoppingListOpResult> {
+  if (!isUuid(stapleId)) {
+    return { ok: false, message: "Invalid staple id." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const { data, error } = await supabase
+    .from("staples")
+    .update({ hidden_from_suggestions: true })
+    .eq("id", stapleId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+  if (!data) {
+    return { ok: false, message: "Staple not found." };
+  }
+
+  revalidatePath(ROUTES.shopping);
+  revalidatePath(ROUTES.shoppingAdmin);
+  return { ok: true };
+}
+
 export type ShoppingListOpResult =
   | { ok: true }
   | { ok: false; message: string };
