@@ -94,6 +94,9 @@ patch_env_for_local() {
 
   set_env_var "NEXT_PUBLIC_SUPABASE_URL" "$API_URL"
   set_env_var "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$ANON_KEY"
+  if [[ -n "${SERVICE_ROLE_KEY:-}" ]]; then
+    set_env_var "SUPABASE_SERVICE_ROLE_KEY" "$SERVICE_ROLE_KEY"
+  fi
   echo "Patched .env.local for local Supabase ($API_URL)"
 }
 
@@ -122,6 +125,10 @@ cmd_start() {
   supabase db reset
 
   patch_env_for_local
+
+  echo "Seeding dev PIN credentials…"
+  node "$ROOT/scripts/seed-local-dev-pins.mjs"
+
   touch "$MARKER"
 
   echo ""
@@ -130,9 +137,11 @@ cmd_start() {
   echo "  API:     http://127.0.0.1:54321"
   echo "  Marker:  .worktree-local-supabase"
   echo ""
-  echo "Dev sign-in (email fallback on /auth/sign-in):"
-  echo "  dev@karriqi.local / devpassword123"
-  echo "  Fixtures: kanban tasks, shopping list, calendar events"
+  echo "Dev sign-in on /auth/sign-in (PIN is default):"
+  echo "  dev@karriqi.local     PIN 123456"
+  echo "  partner@karriqi.local PIN 654321"
+  echo "Email fallback: dev@karriqi.local / devpassword123"
+  echo "  Fixtures: kanban tasks, shopping list"
   echo ""
   echo "Cloud .env backup: .env.local.cloud (restored on stop/release)"
 }

@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  CalendarDays,
   Code2,
   LayoutDashboard,
   ShoppingCart,
@@ -35,12 +34,6 @@ export const mainNavItems: MainNavItem[] = [
     label: "Kanban",
     shortLabel: "Kanban",
     icon: SquareKanban,
-  },
-  {
-    href: ROUTES.calendar,
-    label: "Calendar",
-    shortLabel: "Cal",
-    icon: CalendarDays,
   },
 ];
 

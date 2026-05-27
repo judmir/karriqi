@@ -80,16 +80,6 @@ export const architectureNodes: ArchitectureNode[] = [
     },
   },
   {
-    id: "calendar",
-    type: "featureNode",
-    position: { x: 680, y: 400 },
-    data: {
-      area: "Feature",
-      title: "Calendar",
-      description: "Shared schedule surface for future event workflows.",
-    },
-  },
-  {
     id: "notifications",
     type: "featureNode",
     position: { x: 1040, y: 120 },
@@ -139,7 +129,6 @@ export const architectureEdges: Edge[] = [
   { id: "shell-dashboard", source: "shell", target: "dashboard" },
   { id: "shell-shopping", source: "shell", target: "shopping" },
   { id: "shell-todo", source: "shell", target: "todo" },
-  { id: "shell-calendar", source: "shell", target: "calendar" },
   { id: "shell-settings", source: "shell", target: "settings" },
   { id: "shell-dev", source: "shell", target: "dev", animated: true },
   { id: "shopping-data", source: "shopping", target: "supabase" },

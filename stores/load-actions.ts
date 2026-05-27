@@ -1,6 +1,5 @@
 "use server";
 
-import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
 import { fetchShoppingListForUser } from "@/lib/shopping/fetch-shopping-list";
@@ -11,7 +10,6 @@ import { medianGapDaysByStaple } from "@/lib/shopping/suggestions";
 import { getSessionUser } from "@/lib/supabase/server";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
 import { fetchTodosBoardSummary } from "@/lib/todo/fetch-todos";
-import type { CalendarEvent } from "@/types/calendar";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 import type { TodoAssignableMember, TodoBoardItem } from "@/types/todo";
 
@@ -48,28 +46,6 @@ export async function loadKanbanStoreAction(): Promise<KanbanStorePayload> {
       assignableResult.status === "fulfilled" ? assignableResult.value : [],
     persistence: todosResult.status === "fulfilled",
   };
-}
-
-export type CalendarStorePayload =
-  | SignedOut
-  | { ok: true; events: CalendarEvent[]; persistence: boolean };
-
-export async function loadCalendarStoreAction(): Promise<CalendarStorePayload> {
-  if (!isSupabaseConfigured()) {
-    return { ok: false, reason: "not_configured" };
-  }
-
-  const user = await getSessionUser();
-  if (!user) {
-    return { ok: false, reason: "signed_out" };
-  }
-
-  try {
-    const events = await fetchCalendarEventsForUser();
-    return { ok: true, events, persistence: true };
-  } catch {
-    return { ok: true, events: [], persistence: false };
-  }
 }
 
 export type ShoppingStorePayload =

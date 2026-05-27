@@ -17,6 +17,12 @@ const PIN_MAX = 8;
 // earlier to submit a shorter (still ≥ PIN_MIN) PIN.
 const AUTO_SUBMIT_LENGTH = 6;
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const localDevPinHint =
+  supabaseUrl.includes("127.0.0.1") || supabaseUrl.includes("localhost")
+    ? "Local dev PIN: 123456 (dev) or 654321 (partner)."
+    : null;
+
 function safeNext(next: string | null): string {
   return next && next.startsWith("/") && !next.startsWith("//")
     ? next
@@ -125,7 +131,9 @@ export function PinSignInForm({
         <p id="sign-in-pin-hint" className="text-muted-foreground text-xs">
           {retryAfter
             ? `Too many tries — wait ${retryAfter}s before trying again.`
-            : `Enter your ${PIN_MIN}-${PIN_MAX} digit PIN. Auto-submits at ${AUTO_SUBMIT_LENGTH} digits.`}
+            : localDevPinHint
+              ? `${localDevPinHint} Auto-submits at ${AUTO_SUBMIT_LENGTH} digits.`
+              : `Enter your ${PIN_MIN}-${PIN_MAX} digit PIN. Auto-submits at ${AUTO_SUBMIT_LENGTH} digits.`}
         </p>
       </div>
       <Button

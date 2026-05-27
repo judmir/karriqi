@@ -1,8 +1,11 @@
 -- Local dev fixtures for `supabase db reset` (worktree local Supabase only).
 --
--- Sign in: "Use email & password instead" on /auth/sign-in
---   dev@karriqi.local     / devpassword123   (primary — owns all data)
---   partner@karriqi.local / devpassword123   (household member / assignee)
+-- Sign in on /auth/sign-in (PIN is the default UI):
+--   dev@karriqi.local     PIN 123456           (primary — owns all data)
+--   partner@karriqi.local PIN 654321           (household member / assignee)
+-- PIN rows are inserted by scripts/seed-local-dev-pins.mjs after db reset
+-- (uses AUTH_PIN_PEPPER from .env.local).
+-- Email fallback: "Use email & password instead" → devpassword123 for both users.
 --
 -- Fixed UUIDs (stable across resets):
 --   dev user     11111111-1111-1111-1111-111111111111

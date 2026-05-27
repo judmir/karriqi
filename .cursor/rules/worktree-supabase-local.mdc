@@ -26,7 +26,7 @@ Set `USE_LOCAL_SUPABASE=0` to skip auto-start even when migrations differ (use s
 5. Backs up cloud keys to `.env.local.cloud`, patches `.env.local` with local URL/anon key
 6. Writes `.worktree-local-supabase` marker
 
-**Local dev sign-in:** on `/auth/sign-in` choose **Use email & password instead** → `dev@karriqi.local` / `devpassword123`
+**Local dev sign-in:** on `/auth/sign-in` enter PIN **123456** (dev user) or **654321** (partner). Email fallback: **Use email & password instead** → `dev@karriqi.local` / `devpassword123`. PIN rows are seeded by `scripts/seed-local-dev-pins.mjs` after each local `db reset` (requires `AUTH_PIN_PEPPER` in `.env.local`).
 
 ## During development (schema work)
 
