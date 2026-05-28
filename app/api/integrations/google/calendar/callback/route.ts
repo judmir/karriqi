@@ -10,7 +10,6 @@ import {
   exchangeGoogleAuthCode,
 } from "@/lib/google-calendar/oauth";
 import { verifyGoogleOAuthState } from "@/lib/google-calendar/oauth-state";
-import { syncGoogleCalendarForUser } from "@/lib/google-calendar/sync";
 import { getSessionUser } from "@/lib/supabase/server";
 
 function redirectWithError(request: Request, message: string): NextResponse {
@@ -73,9 +72,8 @@ export async function GET(request: Request) {
       accessTokenExpiresAt,
     });
 
-    await syncGoogleCalendarForUser(user.id);
-
     const successUrl = new URL(ROUTES.calendar, request.url);
+    successUrl.searchParams.set("google_connected", "1");
     const response = NextResponse.redirect(successUrl);
     response.cookies.delete(GOOGLE_OAUTH_STATE_COOKIE);
     return response;

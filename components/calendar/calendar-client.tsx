@@ -1,8 +1,9 @@
 "use client";
 
 import { setHours, setMinutes, startOfDay } from "date-fns";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import { CalendarDndProvider } from "@/components/calendar/calendar-dnd";
@@ -27,6 +28,7 @@ type GoogleSyncOptions = {
   lastSyncedAt: string | null;
   googleEmail: string | null;
   calendarSources?: GoogleCalendarSource[];
+  syncOnMount?: boolean;
 };
 
 export function CalendarClient({
@@ -38,6 +40,8 @@ export function CalendarClient({
   persistence: boolean;
   googleSync?: GoogleSyncOptions;
 }) {
+  const router = useRouter();
+  const didMountSync = useRef(false);
   const [events, setEvents] = useState(initialEvents);
   const [calendarSources, setCalendarSources] = useState<GoogleCalendarSource[]>(
     googleSync?.calendarSources ?? [],
@@ -110,6 +114,16 @@ export function CalendarClient({
     },
     [googleSync?.enabled],
   );
+
+  useEffect(() => {
+    if (!googleSync?.enabled || !googleSync.syncOnMount || didMountSync.current) {
+      return;
+    }
+    didMountSync.current = true;
+    router.replace("/calendar", { scroll: false });
+    toast.success("Google Calendar connected. Syncing events…");
+    void runSync();
+  }, [googleSync?.enabled, googleSync?.syncOnMount, router, runSync]);
 
   useEffect(() => {
     if (!googleSync?.enabled) {

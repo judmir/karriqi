@@ -11,7 +11,7 @@ import { fetchGoogleCalendarSourcesForUser } from "@/lib/google-calendar/calenda
 import { getSessionUser } from "@/lib/supabase/server";
 
 type CalendarPageProps = {
-  searchParams: Promise<{ google_error?: string }>;
+  searchParams: Promise<{ google_error?: string; google_connected?: string }>;
 };
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
@@ -55,6 +55,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         lastSyncedAt={refreshed.lastSyncedAt}
         googleEmail={refreshed.googleEmail}
         googleError={params.google_error ?? null}
+        syncOnMount={params.google_connected === "1"}
       />
     </div>
   );

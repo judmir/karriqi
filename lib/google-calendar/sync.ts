@@ -35,6 +35,57 @@ export type GoogleCalendarSyncResult = {
   deleted: number;
 };
 
+const DB_WRITE_CHUNK = 100;
+
+type GoogleEventInsert = Omit<KarriqiEventRow, "id" | "created_at" | "updated_at">;
+type GoogleEventUpdate = GoogleEventInsert & { id: string };
+
+async function chunkedDeleteByIds(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  ids: string[],
+): Promise<void> {
+  for (let i = 0; i < ids.length; i += DB_WRITE_CHUNK) {
+    const chunk = ids.slice(i, i + DB_WRITE_CHUNK);
+    await admin.from("calendar_events").delete().in("id", chunk);
+  }
+}
+
+async function chunkedInsertEvents(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  rows: GoogleEventInsert[],
+): Promise<number> {
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += DB_WRITE_CHUNK) {
+    const chunk = rows.slice(i, i + DB_WRITE_CHUNK);
+    const { error } = await admin.from("calendar_events").insert(chunk);
+    if (error) {
+      console.error("Google calendar batch insert failed:", error.message);
+      continue;
+    }
+    inserted += chunk.length;
+  }
+  return inserted;
+}
+
+async function chunkedUpsertEventsById(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  rows: GoogleEventUpdate[],
+): Promise<number> {
+  let updated = 0;
+  for (let i = 0; i < rows.length; i += DB_WRITE_CHUNK) {
+    const chunk = rows.slice(i, i + DB_WRITE_CHUNK);
+    const { error } = await admin
+      .from("calendar_events")
+      .upsert(chunk, { onConflict: "id" });
+    if (error) {
+      console.error("Google calendar batch update failed:", error.message);
+      continue;
+    }
+    updated += chunk.length;
+  }
+  return updated;
+}
+
 async function fetchLocalEvents(userId: string): Promise<KarriqiEventRow[]> {
   const admin = createAdminClient();
   if (!admin) {
@@ -71,13 +122,15 @@ async function upsertFromGoogle(input: {
 
   let pulled = 0;
   let deleted = 0;
+  const deleteIds: string[] = [];
+  const inserts: GoogleEventInsert[] = [];
+  const updates: GoogleEventUpdate[] = [];
 
   for (const item of input.items) {
     if (item.status === "cancelled" && item.id) {
       const local = byGoogleId.get(item.id);
       if (local) {
-        await admin.from("calendar_events").delete().eq("id", local.id);
-        deleted += 1;
+        deleteIds.push(local.id);
       }
       continue;
     }
@@ -100,34 +153,23 @@ async function upsertFromGoogle(input: {
         continue;
       }
 
-      const { error } = await admin
-        .from("calendar_events")
-        .update({
-          title: mapped.title,
-          description: mapped.description,
-          start_at: mapped.start_at,
-          end_at: mapped.end_at,
-          all_day: mapped.all_day,
-          color: mapped.color,
-          google_calendar_id: mapped.google_calendar_id,
-          google_etag: mapped.google_etag,
-          source: "google",
-        })
-        .eq("id", local.id);
-
-      if (!error) {
-        pulled += 1;
-      }
+      updates.push({
+        id: local.id,
+        ...mapped,
+      });
       continue;
     }
 
-    const { error } = await admin.from("calendar_events").insert(mapped);
-    if (error) {
-      console.error("Google calendar insert failed:", error.message, mapped.title);
-    } else {
-      pulled += 1;
-    }
+    inserts.push(mapped);
   }
+
+  if (deleteIds.length > 0) {
+    await chunkedDeleteByIds(admin, deleteIds);
+    deleted = deleteIds.length;
+  }
+
+  pulled += await chunkedInsertEvents(admin, inserts);
+  pulled += await chunkedUpsertEventsById(admin, updates);
 
   return { pulled, deleted };
 }

@@ -5,7 +5,6 @@ import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
 import { isGoogleCalendarConfigured } from "@/lib/env/google-calendar";
 import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
-import { syncGoogleCalendarForUser } from "@/lib/google-calendar/sync";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
 import { fetchShoppingListForUser } from "@/lib/shopping/fetch-shopping-list";
 import { fetchStaplesWithDefaults } from "@/lib/shopping/fetch-staples-with-defaults";
@@ -103,7 +102,6 @@ export async function loadCalendarStoreAction(): Promise<CalendarStorePayload> {
   }
 
   try {
-    await syncGoogleCalendarForUser(user.id);
     const events = await fetchCalendarEventsForUser();
     const refreshed = await getGoogleCalendarConnection(user.id);
     return {
