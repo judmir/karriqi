@@ -23,6 +23,7 @@ export type Database = {
           unit: string | null;
           typical_interval_days: number | null;
           last_purchased_at: string | null;
+          hidden_from_suggestions: boolean;
           created_at: string;
         };
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           unit?: string | null;
           typical_interval_days?: number | null;
           last_purchased_at?: string | null;
+          hidden_from_suggestions?: boolean;
           created_at?: string;
         };
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           unit?: string | null;
           typical_interval_days?: number | null;
           last_purchased_at?: string | null;
+          hidden_from_suggestions?: boolean;
           created_at?: string;
         };
         Relationships: [];

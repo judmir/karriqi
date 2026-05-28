@@ -4,6 +4,7 @@
 --   Local dev picker: one-click Judi or Savina
 --   PIN: judikarriqi@gmail.com → 123456 | savinakarriqi@gmail.com → 654321
 --   Email fallback: devpassword123 for either account
+-- PIN rows are inserted by scripts/seed-local-dev-pins.mjs after db reset.
 --
 -- Fixed UUIDs (stable across resets; match production accounts):
 --   judi    e18a4b29-ed05-4140-99af-9f6a8c906074

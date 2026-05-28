@@ -31,7 +31,7 @@ Set `USE_LOCAL_SUPABASE=0` to skip auto-start even when migrations differ (use s
 
 See also **`worktree-unpushed-migrations-schema.mdc`** for schema cache error triage.
 
-**Local dev sign-in:** on `/auth/sign-in` choose **Use email & password instead** → `dev@karriqi.local` / `devpassword123`
+**Local dev sign-in:** one-click Judi/Savina picker, PIN **123456** / **654321**, or email fallback **devpassword123**. PIN rows seeded by `scripts/seed-local-dev-pins.mjs` after local `db reset`.
 
 ## During development (schema work)
 

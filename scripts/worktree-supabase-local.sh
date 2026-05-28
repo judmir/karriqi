@@ -113,7 +113,9 @@ patch_env_for_local() {
 
   set_env_var "NEXT_PUBLIC_SUPABASE_URL" "$API_URL"
   set_env_var "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$ANON_KEY"
-  set_env_var "SUPABASE_SERVICE_ROLE_KEY" "$SERVICE_ROLE_KEY"
+  if [[ -n "${SERVICE_ROLE_KEY:-}" ]]; then
+    set_env_var "SUPABASE_SERVICE_ROLE_KEY" "$SERVICE_ROLE_KEY"
+  fi
   echo "Patched .env.local for local Supabase ($API_URL)"
 }
 
