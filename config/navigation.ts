@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   SquareKanban,
+  StickyNote,
 } from "lucide-react";
 
 import { ROUTES } from "@/config/routes";
@@ -41,6 +42,12 @@ export const mainNavItems: MainNavItem[] = [
     label: "Calendar",
     shortLabel: "Cal",
     icon: CalendarDays,
+  },
+  {
+    href: ROUTES.notes,
+    label: "Notes",
+    shortLabel: "Notes",
+    icon: StickyNote,
   },
 ];
 
