@@ -41,6 +41,7 @@ Execute in order. Do not skip. Do not stop until step 8 is complete.
 - Cloudflare deploy is now triggered by the tag push
 - Cloud Supabase migrations pushed (if any under `supabase/migrations/`)
 - Worktree dev server and local Supabase stopped (`pnpm worktree:cleanup`)
+- **Action plan for the user (required):** include a brief 3-5 item checklist of exactly what the user should do next (for example: verify deployment status, smoke-test key flows, monitor logs/errors, confirm migrations/DB state, and communicate release notes). The agent must always include this checklist after every successful release.
 
 ## ❌ Do not
 
