@@ -4,6 +4,7 @@ export const ROUTES = {
   shopping: "/shopping",
   shoppingAdmin: "/shopping/admin",
   todo: "/kanban",
+  notes: "/notes",
   settings: "/settings",
   dev: "/dev",
   devPush: "/dev/push",
@@ -22,6 +23,7 @@ export const PROTECTED_ROUTE_PREFIXES: string[] = [
   ROUTES.dashboard,
   ROUTES.shopping,
   ROUTES.todo,
+  ROUTES.notes,
   ROUTES.settings,
   ROUTES.dev,
 ];
