@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus, StickyNote } from "lucide-react";
 
 import { NoteCard } from "@/components/notes/note-card";
+import { EditLabelsDialog } from "@/components/notes/edit-labels-dialog";
 import { NoteEditorDialog } from "@/components/notes/note-editor-dialog";
 import { NotesSidebar } from "@/components/notes/notes-sidebar";
 import { NotesToolbar } from "@/components/notes/notes-toolbar";
@@ -41,6 +42,7 @@ export function NotesApp() {
 
   const [layoutMode, setLayoutMode] = useState<NotesLayoutMode>("grid");
   const [editorOpen, setEditorOpen] = useState(false);
+  const [labelsDialogOpen, setLabelsDialogOpen] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
   const activeNote = useMemo(
@@ -52,7 +54,7 @@ export function NotesApp() {
     () =>
       filterNotes({
         notes,
-        view: view === "labels" ? "notes" : view,
+        view,
         searchQuery,
         labelId: selectedLabelId,
       }),
@@ -154,31 +156,14 @@ export function NotesApp() {
           <NotesSidebar
             view={view}
             onViewChange={setView}
+            onOpenEditLabels={() => setLabelsDialogOpen(true)}
             labels={labels}
             selectedLabelId={selectedLabelId}
             onSelectLabel={setSelectedLabelId}
-            onCreateLabel={createLabel}
-            onUpdateLabel={updateLabel}
-            onDeleteLabel={deleteLabel}
           />
 
           <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            {view === "labels" ? (
-              <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 py-16 text-center">
-                <StickyNote className="size-10 opacity-40" />
-                <p className="max-w-sm text-sm">
-                  Manage labels in the sidebar, then open{" "}
-                  <button
-                    type="button"
-                    className="text-foreground font-medium underline underline-offset-2"
-                    onClick={() => setView("notes")}
-                  >
-                    Notes
-                  </button>{" "}
-                  to see your cards.
-                </p>
-              </div>
-            ) : filteredNotes.length === 0 ? (
+            {filteredNotes.length === 0 ? (
               <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <StickyNote className="size-10 opacity-40" />
                 <p className="text-sm">{emptyTitle}</p>
@@ -231,6 +216,16 @@ export function NotesApp() {
         onArchive={
           activeNote ? () => toggleArchive(activeNote.id) : undefined
         }
+      />
+
+      <EditLabelsDialog
+        open={labelsDialogOpen}
+        onOpenChange={setLabelsDialogOpen}
+        labels={labels}
+        notes={notes}
+        onCreate={createLabel}
+        onUpdate={updateLabel}
+        onDelete={deleteLabel}
       />
     </div>
   );

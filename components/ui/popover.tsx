@@ -28,7 +28,7 @@ function PopoverContent({
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
-        className="isolate z-50 outline-none"
+        className="isolate z-[100] outline-none"
         align={align}
         alignOffset={alignOffset}
         side={side}
