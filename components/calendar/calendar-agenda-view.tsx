@@ -3,12 +3,13 @@
 import { format, startOfDay } from "date-fns";
 
 import {
-  eventDotClass,
+  eventPastClass,
   eventsForDay,
   eventsInRange,
   formatEventTime,
   monthGridDays,
 } from "@/lib/calendar/calendar-utils";
+import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -27,6 +28,7 @@ export function CalendarAgendaView({
   const rangeStart = monthDays[0] ?? startOfDay(date);
   const rangeEnd = monthDays[monthDays.length - 1] ?? startOfDay(date);
   const monthEvents = eventsInRange(events, rangeStart, rangeEnd);
+  const { appearanceForEvent } = useCalendarSources();
 
   const grouped = monthDays
     .map((day) => ({
@@ -56,18 +58,24 @@ export function CalendarAgendaView({
             {format(day, "EEEE, MMMM d")}
           </div>
           <ul className="divide-y divide-border">
-            {dayEvents.map((event) => (
+            {dayEvents.map((event) => {
+              const appearance = appearanceForEvent(event);
+              return (
               <li key={event.id}>
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event)}
-                  className="hover:bg-muted/20 flex w-full items-start gap-3 px-4 py-3 text-left transition-colors"
+                  className={cn(
+                    "hover:bg-muted/20 flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors",
+                    eventPastClass(event),
+                  )}
                 >
                   <span
                     className={cn(
                       "mt-1.5 size-2 shrink-0 rounded-full",
-                      eventDotClass(event.color),
+                      appearance.dotClassName,
                     )}
+                    style={appearance.dotStyle}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{event.title}</div>
@@ -82,7 +90,8 @@ export function CalendarAgendaView({
                   </div>
                 </button>
               </li>
-            ))}
+            );
+            })}
           </ul>
         </section>
       ))}

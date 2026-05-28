@@ -1,12 +1,13 @@
 -- Local dev fixtures for `supabase db reset` (worktree local Supabase only).
 --
--- Sign in: "Use email & password instead" on /auth/sign-in
---   dev@karriqi.local     / devpassword123   (primary — owns all data)
---   partner@karriqi.local / devpassword123   (household member / assignee)
+-- Sign in: /auth/sign-in
+--   Local dev picker: one-click Judi or Savina
+--   PIN: judikarriqi@gmail.com → 123456 | savinakarriqi@gmail.com → 654321
+--   Email fallback: devpassword123 for either account
 --
--- Fixed UUIDs (stable across resets):
---   dev user     11111111-1111-1111-1111-111111111111
---   partner user 22222222-2222-2222-2222-222222222222
+-- Fixed UUIDs (stable across resets; match production accounts):
+--   judi    e18a4b29-ed05-4140-99af-9f6a8c906074
+--   savina  fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398
 
 create extension if not exists pgcrypto;
 
@@ -35,33 +36,33 @@ insert into auth.users (
 )
 values
   (
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'dev@karriqi.local',
+    'judikarriqi@gmail.com',
     crypt('devpassword123', gen_salt('bf')),
     now(),
     now(),
     now(),
     '{"provider":"email","providers":["email"]}',
-    '{"display_name":"Dev User","avatar_preset":"preset-1"}',
+    '{"display_name":"Judi","avatar_preset":"preset-1"}',
     now(),
     now(),
     '', '', '', ''
   ),
   (
-    '22222222-2222-2222-2222-222222222222',
+    'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'partner@karriqi.local',
+    'savinakarriqi@gmail.com',
     crypt('devpassword123', gen_salt('bf')),
     now(),
     now(),
     now(),
     '{"provider":"email","providers":["email"]}',
-    '{"display_name":"Partner","avatar_preset":"preset-2"}',
+    '{"display_name":"Savina","avatar_preset":"preset-2"}',
     now(),
     now(),
     '', '', '', ''
@@ -80,21 +81,21 @@ insert into auth.identities (
 )
 values
   (
-    '11111111-1111-1111-1111-111111111111',
-    '11111111-1111-1111-1111-111111111111',
-    '{"sub":"11111111-1111-1111-1111-111111111111","email":"dev@karriqi.local"}'::jsonb,
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
+    '{"sub":"e18a4b29-ed05-4140-99af-9f6a8c906074","email":"judikarriqi@gmail.com"}'::jsonb,
     'email',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     now(),
     now(),
     now()
   ),
   (
-    '22222222-2222-2222-2222-222222222222',
-    '22222222-2222-2222-2222-222222222222',
-    '{"sub":"22222222-2222-2222-2222-222222222222","email":"partner@karriqi.local"}'::jsonb,
+    'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
+    'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
+    '{"sub":"fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398","email":"savinakarriqi@gmail.com"}'::jsonb,
     'email',
-    '22222222-2222-2222-2222-222222222222',
+    'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
     now(),
     now(),
     now()
@@ -107,9 +108,9 @@ on conflict (id) do nothing;
 
 insert into public.household_members (owner_user_id, member_user_id, display_name)
 values (
-  '11111111-1111-1111-1111-111111111111',
-  '22222222-2222-2222-2222-222222222222',
-  'Partner'
+  'e18a4b29-ed05-4140-99af-9f6a8c906074',
+  'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
+  'Savina'
 )
 on conflict (owner_user_id, member_user_id) do nothing;
 
@@ -134,8 +135,8 @@ insert into public.todo_items (
 values
   (
     'a1000001-0000-0000-0000-000000000001',
-    '11111111-1111-1111-1111-111111111111',
-    '22222222-2222-2222-2222-222222222222',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
+    'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
     'Renew car insurance',
     'Admin',
     'Compare quotes before the policy expires.',
@@ -148,7 +149,7 @@ values
   ),
   (
     'a1000001-0000-0000-0000-000000000002',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     null,
     'Buy birthday gift',
     'Family',
@@ -162,8 +163,8 @@ values
   ),
   (
     'a1000001-0000-0000-0000-000000000003',
-    '11111111-1111-1111-1111-111111111111',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Fix kitchen tap',
     'Home',
     'Dripping under the sink — washer likely worn.',
@@ -176,8 +177,8 @@ values
   ),
   (
     'a1000001-0000-0000-0000-000000000004',
-    '11111111-1111-1111-1111-111111111111',
-    '22222222-2222-2222-2222-222222222222',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
+    'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
     'Prepare school lunches',
     'Family',
     'Meal prep for Mon–Wed.',
@@ -190,7 +191,7 @@ values
   ),
   (
     'a1000001-0000-0000-0000-000000000005',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     null,
     'Sort recycling',
     'Home',
@@ -204,8 +205,8 @@ values
   ),
   (
     'a1000001-0000-0000-0000-000000000006',
-    '11111111-1111-1111-1111-111111111111',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Pay electricity bill',
     'Admin',
     'Uploaded receipt to email.',
@@ -218,7 +219,7 @@ values
   ),
   (
     'a1000001-0000-0000-0000-000000000007',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     null,
     'Vacuum living room',
     'Home',
@@ -262,13 +263,13 @@ values
   (
     'a3000001-0000-0000-0000-000000000001',
     'a1000001-0000-0000-0000-000000000004',
-    '22222222-2222-2222-2222-222222222222',
+    'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
     'I can handle Tuesday and Wednesday.'
   ),
   (
     'a3000001-0000-0000-0000-000000000002',
     'a1000001-0000-0000-0000-000000000001',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Deadline is end of month — don''t wait too long.'
   )
 on conflict (id) do nothing;
@@ -281,19 +282,19 @@ insert into public.staples (id, user_id, name, typical_interval_days)
 values
   (
     'b2000001-0000-0000-0000-000000000001',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Qumësht',
     5
   ),
   (
     'b2000001-0000-0000-0000-000000000002',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Vezë',
     7
   ),
   (
     'b2000001-0000-0000-0000-000000000003',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Bukë',
     4
   )
@@ -311,7 +312,7 @@ insert into public.shopping_list_items (
 values
   (
     'b1000001-0000-0000-0000-000000000001',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'b2000001-0000-0000-0000-000000000001',
     'Qumësht',
     '2 L',
@@ -320,7 +321,7 @@ values
   ),
   (
     'b1000001-0000-0000-0000-000000000002',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'b2000001-0000-0000-0000-000000000002',
     'Vezë',
     '12',
@@ -329,7 +330,7 @@ values
   ),
   (
     'b1000001-0000-0000-0000-000000000003',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'b2000001-0000-0000-0000-000000000003',
     'Bukë',
     '1',
@@ -338,7 +339,7 @@ values
   ),
   (
     'b1000001-0000-0000-0000-000000000004',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     null,
     'Banane',
     '1 kg',
@@ -347,7 +348,7 @@ values
   ),
   (
     'b1000001-0000-0000-0000-000000000005',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     null,
     'Detergent',
     null,
@@ -356,7 +357,7 @@ values
   ),
   (
     'b1000001-0000-0000-0000-000000000006',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     null,
     'Kafe',
     '250 g',
@@ -382,7 +383,7 @@ insert into public.calendar_events (
 values
   (
     'c1000001-0000-0000-0000-000000000001',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Dentist appointment',
     'Annual check-up',
     date_trunc('day', now()) + interval '1 day' + interval '10 hours',
@@ -392,7 +393,7 @@ values
   ),
   (
     'c1000001-0000-0000-0000-000000000002',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Parents evening',
     'School hall — arrive 10 min early',
     date_trunc('day', now()) + interval '3 days' + interval '18 hours',
@@ -402,7 +403,7 @@ values
   ),
   (
     'c1000001-0000-0000-0000-000000000003',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Weekend trip',
     'Pack bags Friday night',
     date_trunc('day', now()) + interval '5 days',
@@ -412,7 +413,7 @@ values
   ),
   (
     'c1000001-0000-0000-0000-000000000004',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Bin collection',
     null,
     date_trunc('day', now()) + interval '2 days' + interval '7 hours',
@@ -422,7 +423,7 @@ values
   ),
   (
     'c1000001-0000-0000-0000-000000000005',
-    '11111111-1111-1111-1111-111111111111',
+    'e18a4b29-ed05-4140-99af-9f6a8c906074',
     'Pay rent',
     'Standing order should have gone out',
     date_trunc('day', now()) - interval '1 day' + interval '9 hours',

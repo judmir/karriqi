@@ -1,8 +1,15 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
+import type { MouseEvent } from "react";
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+} from "lucide-react";
 
+import { CalendarGoogleActions } from "@/components/calendar/calendar-google-actions";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,6 +32,10 @@ export function CalendarHeader({
   onNavigate,
   onViewChange,
   onNewEvent,
+  onSync,
+  syncing,
+  lastSyncedAt,
+  googleEmail,
 }: {
   date: Date;
   view: CalendarView;
@@ -32,6 +43,10 @@ export function CalendarHeader({
   onNavigate: (direction: "prev" | "next") => void;
   onViewChange: (view: CalendarView) => void;
   onNewEvent: () => void;
+  onSync?: () => void;
+  syncing?: boolean;
+  lastSyncedAt?: string | null;
+  googleEmail?: string | null;
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -62,7 +77,16 @@ export function CalendarHeader({
         </h2>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {onSync ? (
+          <CalendarGoogleActions
+            googleEmail={googleEmail}
+            lastSyncedAt={lastSyncedAt}
+            syncing={syncing}
+            onSync={onSync}
+          />
+        ) : null}
+
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -118,11 +142,13 @@ export function CalendarDayNumber({
   currentMonth,
   isToday,
   onClick,
+  className,
 }: {
   day: Date;
   currentMonth: Date;
   isToday: boolean;
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  className?: string;
 }) {
   const inMonth = day.getMonth() === currentMonth.getMonth();
 
@@ -131,9 +157,10 @@ export function CalendarDayNumber({
       type="button"
       onClick={onClick}
       className={[
-        "inline-flex size-7 items-center justify-center rounded-full text-sm",
+        "inline-flex size-7 cursor-default items-center justify-center rounded-full text-sm",
         isToday ? "bg-primary font-medium text-primary-foreground" : "",
         !inMonth ? "text-muted-foreground/60" : "",
+        className,
       ]
         .filter(Boolean)
         .join(" ")}

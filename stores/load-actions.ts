@@ -3,6 +3,9 @@
 import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
 import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
+import { isGoogleCalendarConfigured } from "@/lib/env/google-calendar";
+import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
+import { syncGoogleCalendarForUser } from "@/lib/google-calendar/sync";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
 import { fetchShoppingListForUser } from "@/lib/shopping/fetch-shopping-list";
 import { fetchStaplesWithDefaults } from "@/lib/shopping/fetch-staples-with-defaults";
@@ -53,41 +56,77 @@ export async function loadKanbanStoreAction(): Promise<KanbanStorePayload> {
 
 export type CalendarStorePayload =
   | SignedOut
-  | { ok: true; events: CalendarEvent[]; persistence: boolean };
+  | {
+      ok: true;
+      events: CalendarEvent[];
+      persistence: boolean;
+      googleConfigured: boolean;
+      googleConnected: boolean;
+      requiresGoogleConnection: boolean;
+      googleEmail: string | null;
+      lastSyncedAt: string | null;
+    };
 
 export async function loadCalendarStoreAction(): Promise<CalendarStorePayload> {
+  const googleConfigured = isGoogleCalendarConfigured();
+
   if (!isSupabaseConfigured()) {
     return {
       ok: true,
       events: getMockCalendarEvents(),
       persistence: false,
+      googleConfigured: false,
+      googleConnected: false,
+      requiresGoogleConnection: false,
+      googleEmail: null,
+      lastSyncedAt: null,
     };
   }
 
   const user = await getSessionUser();
   if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const connection = await getGoogleCalendarConnection(user.id);
+  if (!connection) {
     return {
       ok: true,
-      events: getMockCalendarEvents(),
+      events: [],
       persistence: false,
+      googleConfigured,
+      googleConnected: false,
+      requiresGoogleConnection: true,
+      googleEmail: null,
+      lastSyncedAt: null,
     };
   }
 
   try {
+    await syncGoogleCalendarForUser(user.id);
     const events = await fetchCalendarEventsForUser();
-    if (events.length === 0) {
-      return {
-        ok: true,
-        events: getMockCalendarEvents(),
-        persistence: false,
-      };
-    }
-    return { ok: true, events, persistence: true };
-  } catch {
+    const refreshed = await getGoogleCalendarConnection(user.id);
     return {
       ok: true,
-      events: getMockCalendarEvents(),
-      persistence: false,
+      events,
+      persistence: true,
+      googleConfigured,
+      googleConnected: true,
+      requiresGoogleConnection: false,
+      googleEmail: refreshed?.googleEmail ?? connection.googleEmail,
+      lastSyncedAt: refreshed?.lastSyncedAt ?? connection.lastSyncedAt,
+    };
+  } catch {
+    const events = await fetchCalendarEventsForUser().catch(() => []);
+    return {
+      ok: true,
+      events,
+      persistence: true,
+      googleConfigured,
+      googleConnected: true,
+      requiresGoogleConnection: false,
+      googleEmail: connection.googleEmail,
+      lastSyncedAt: connection.lastSyncedAt,
     };
   }
 }

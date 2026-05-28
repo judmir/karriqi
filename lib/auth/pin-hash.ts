@@ -9,6 +9,9 @@ import { promisify } from "node:util";
 // Slow hash for verification. Small key space (4-8 digit PINs) means
 // per-user/per-IP lockouts do the heavy lifting; scrypt still makes a leaked
 // DB row much harder to crack offline than a plain HMAC or unsalted SHA.
+import { isLocalSupabaseUrl } from "@/lib/auth/local-dev-auth";
+import { LOCAL_DEV_PIN_PEPPER } from "@/lib/auth/dev-test-users";
+
 const scrypt = promisify(scryptCb) as (
   password: string | Buffer,
   salt: string | Buffer,
@@ -27,6 +30,10 @@ export function isValidPin(pin: string): boolean {
 }
 
 function getPepper(): string {
+  if (isLocalSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL)) {
+    return LOCAL_DEV_PIN_PEPPER;
+  }
+
   const pepper = process.env.AUTH_PIN_PEPPER?.trim();
   if (!pepper || pepper.length < 16) {
     throw new Error(

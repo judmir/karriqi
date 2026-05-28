@@ -36,10 +36,10 @@ fi
 
 if bash scripts/worktree-supabase-local.sh needs; then
   echo ""
-  echo "Schema changes detected vs origin/main — starting local Supabase…"
+  echo "Schema changes detected vs origin/main — ensuring local Supabase + migrations…"
   echo "(Set USE_LOCAL_SUPABASE=0 to skip, or USE_LOCAL_SUPABASE=1 to force.)"
   echo ""
-  bash scripts/worktree-supabase-local.sh start
+  bash scripts/worktree-supabase-local.sh ensure
 fi
 
 PORT="$(pick_port)"

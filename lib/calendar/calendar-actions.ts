@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
+import {
+  deleteCalendarEventFromGoogle,
+  pushCalendarEventToGoogle,
+} from "@/lib/google-calendar/sync";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { CalendarEventColor } from "@/types/calendar";
@@ -75,6 +79,12 @@ export async function createCalendarEvent(input: {
 
   if (error || !created) {
     return { ok: false, message: error?.message ?? "Insert failed." };
+  }
+
+  try {
+    await pushCalendarEventToGoogle({ userId: user.id, eventId: created.id });
+  } catch (pushErr) {
+    console.error("Google Calendar push after create failed:", pushErr);
   }
 
   return ok({ ok: true, id: created.id });
@@ -152,6 +162,12 @@ export async function updateCalendarEvent(input: {
     return { ok: false, message: error.message };
   }
 
+  try {
+    await pushCalendarEventToGoogle({ userId: user.id, eventId: input.id });
+  } catch (pushErr) {
+    console.error("Google Calendar push after update failed:", pushErr);
+  }
+
   return ok({ ok: true });
 }
 
@@ -169,6 +185,13 @@ export async function deleteCalendarEvent(
     return { ok: false, message: "Not signed in." };
   }
 
+  const { data: existing } = await supabase
+    .from("calendar_events")
+    .select("google_event_id, google_calendar_id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("calendar_events")
     .delete()
@@ -177,6 +200,18 @@ export async function deleteCalendarEvent(
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  if (existing?.google_event_id) {
+    try {
+      await deleteCalendarEventFromGoogle({
+        userId: user.id,
+        googleEventId: existing.google_event_id,
+        calendarId: existing.google_calendar_id,
+      });
+    } catch (pushErr) {
+      console.error("Google Calendar delete failed:", pushErr);
+    }
   }
 
   return ok({ ok: true });

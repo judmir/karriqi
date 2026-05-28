@@ -11,6 +11,8 @@ type EventRow = {
   end_at: string;
   all_day: boolean;
   color: string;
+  google_calendar_id: string | null;
+  source: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -29,6 +31,9 @@ function mapEvent(row: EventRow): CalendarEvent {
     endAt: row.end_at,
     allDay: row.all_day,
     color: isEventColor(row.color) ? row.color : "blue",
+    googleCalendarId: row.google_calendar_id,
+    source:
+      row.source === "google" || row.source === "local" ? row.source : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -39,7 +44,7 @@ export async function fetchCalendarEventsForUser(): Promise<CalendarEvent[]> {
   const { data, error } = await supabase
     .from("calendar_events")
     .select(
-      "id, user_id, title, description, start_at, end_at, all_day, color, created_at, updated_at",
+      "id, user_id, title, description, start_at, end_at, all_day, color, google_calendar_id, source, created_at, updated_at",
     )
     .order("start_at", { ascending: true });
 

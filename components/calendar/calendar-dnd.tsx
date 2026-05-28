@@ -149,7 +149,7 @@ function DraggableEventChipStatic({
   children,
 }: DraggableEventChipProps) {
   return (
-    <div className={cn("touch-none", className)} style={style}>
+    <div className={cn("touch-none cursor-pointer", className)} style={style}>
       {children ?? (
         <EventChip event={event} compact={compact} onClick={onClick} />
       )}
@@ -171,7 +171,7 @@ function DraggableEventChipActive(props: DraggableEventChipProps) {
       {...listeners}
       {...attributes}
       className={cn(
-        "touch-none",
+        "touch-none cursor-pointer",
         isDragging && "opacity-40",
         className,
       )}

@@ -1,0 +1,50 @@
+---
+description: Prevent "Could not find table in schema cache" in worktrees — local Supabase + ensure before schema-dependent features
+alwaysApply: true
+---
+
+# Worktree unpushed migrations (schema cache errors)
+
+## What the error means
+
+`Could not find the table 'public.<name>' in the schema cache` almost always means:
+
+- The **running Next.js server** is using **cloud Supabase** (`https://*.supabase.co`), but
+- This **branch has migrations** under `supabase/migrations/` that are **not on `origin/main`** yet (not pushed to cloud).
+
+Cloud dev DB only gets new tables after **merge to `main` + `pnpm worktree:supabase:cloud-push`** (release). Until cloud push, even **`main`-merged migrations** (e.g. Google Calendar) are **local-only** — check with `supabase migration list` (Local set, Remote empty).
+
+Common tables on feature branches: `google_calendar_connections`, `google_calendar_sources`.
+
+## Mandatory for agents (worktrees)
+
+When the workspace path contains `/.cursor/worktrees/`:
+
+1. **`pnpm worktree:dev` is the only dev entrypoint** — it runs `worktree-supabase-local.sh ensure` when migrations differ from `origin/main`.
+2. **Before** debugging Google Calendar, new tables, RLS, or any code that queries branch-only schema: run **`pnpm worktree:supabase:ensure`** if unsure.
+3. **Never** point this worktree at cloud Supabase while `git diff origin/main -- supabase/migrations/` is non-empty — unless the user explicitly set `USE_LOCAL_SUPABASE=0` and accepts cloud missing tables.
+4. If the user reports a **schema cache / missing table** error:
+   - Run **`pnpm worktree:supabase:ensure`**
+   - Confirm `.env.local` has `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321`
+   - **Restart** the Next.js dev server (env is read at startup)
+   - Do **not** treat it as an application bug until local schema is verified.
+
+## What `ensure` does
+
+`scripts/worktree-supabase-local.sh ensure` (also `pnpm worktree:supabase:ensure`):
+
+1. Detects unpushed migration files vs `origin/main`
+2. Starts local Supabase (Docker) if needed
+3. **Checks required tables exist** (e.g. Google Calendar tables when those migrations are in the diff)
+4. Runs **`supabase db reset`** only when tables are missing
+5. Patches `.env.local` to local keys and sets `.worktree-local-supabase`
+
+## Do not
+
+- **`supabase db push`** to shared cloud from a parallel agent branch (see `worktree-supabase-local.mdc`).
+- Run **`pnpm worktree:cleanup`** mid-feature unless releasing — it restores **cloud** `.env.local` and stops local Supabase.
+- Start **`next dev` manually** on a worktree with unpushed migrations without running **`ensure`** first.
+
+## After release
+
+When migrations are merged to `main`: `pnpm worktree:supabase:cloud-push` on release, then cloud has the tables. Until then, **local Supabase only** for this worktree.

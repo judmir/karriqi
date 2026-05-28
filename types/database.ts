@@ -459,6 +459,10 @@ export type Database = {
           end_at: string;
           all_day: boolean;
           color: string;
+          google_event_id: string | null;
+          google_calendar_id: string | null;
+          google_etag: string | null;
+          source: string;
           created_at: string;
           updated_at: string;
         };
@@ -471,6 +475,10 @@ export type Database = {
           end_at: string;
           all_day?: boolean;
           color?: string;
+          google_event_id?: string | null;
+          google_calendar_id?: string | null;
+          google_etag?: string | null;
+          source?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -483,6 +491,94 @@ export type Database = {
           end_at?: string;
           all_day?: boolean;
           color?: string;
+          google_event_id?: string | null;
+          google_calendar_id?: string | null;
+          google_etag?: string | null;
+          source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      google_calendar_connections: {
+        Row: {
+          user_id: string;
+          google_email: string | null;
+          calendar_id: string;
+          refresh_token: string;
+          access_token: string | null;
+          access_token_expires_at: string | null;
+          sync_token: string | null;
+          last_synced_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          google_email?: string | null;
+          calendar_id?: string;
+          refresh_token: string;
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          sync_token?: string | null;
+          last_synced_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          google_email?: string | null;
+          calendar_id?: string;
+          refresh_token?: string;
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          sync_token?: string | null;
+          last_synced_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      google_calendar_sources: {
+        Row: {
+          user_id: string;
+          google_calendar_id: string;
+          summary: string;
+          background_color: string;
+          foreground_color: string | null;
+          selected: boolean;
+          primary_calendar: boolean;
+          access_role: string | null;
+          sync_token: string | null;
+          last_synced_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          google_calendar_id: string;
+          summary: string;
+          background_color?: string;
+          foreground_color?: string | null;
+          selected?: boolean;
+          primary_calendar?: boolean;
+          access_role?: string | null;
+          sync_token?: string | null;
+          last_synced_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          google_calendar_id?: string;
+          summary?: string;
+          background_color?: string;
+          foreground_color?: string | null;
+          selected?: boolean;
+          primary_calendar?: boolean;
+          access_role?: string | null;
+          sync_token?: string | null;
+          last_synced_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

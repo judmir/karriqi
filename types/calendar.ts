@@ -21,8 +21,20 @@ export type CalendarEvent = {
   endAt: string;
   allDay: boolean;
   color: CalendarEventColor;
+  googleCalendarId?: string | null;
+  source?: "local" | "google";
   createdAt: string;
   updatedAt: string;
+};
+
+export type GoogleCalendarSource = {
+  googleCalendarId: string;
+  summary: string;
+  backgroundColor: string;
+  foregroundColor: string | null;
+  selected: boolean;
+  primary: boolean;
+  accessRole: string | null;
 };
 
 export type CalendarEventInput = {

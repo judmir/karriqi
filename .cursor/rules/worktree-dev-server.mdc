@@ -38,7 +38,7 @@ pnpm worktree:dev
 
 1. Bootstrap **`.env.local`** via `scripts/worktree-env-bootstrap.sh` — copy from another worktree or the prime checkout when possible, otherwise from `.env.example`, and generate **`AUTH_PIN_PEPPER`** (`openssl rand -hex 32`) when missing (see `worktree-env-bootstrap.mdc`)
 2. Run `pnpm install` if `node_modules` is missing
-3. **If this branch has schema/migration changes vs `origin/main`** (see `worktree-supabase-local.mdc`): start **local Supabase** (Docker), reset DB, patch `.env.local` for local keys
+3. **If this branch has schema/migration changes vs `origin/main`** (see `worktree-supabase-local.mdc`): **`ensure` local Supabase** (Docker), verify tables, reset if needed, patch `.env.local` for local keys
 4. **Link cloud Supabase** (idempotent, non-interactive): `scripts/worktree-supabase-link.sh` using `supabase/cloud-project-ref`
 5. Pick the first free port in **3010–3019**
 6. Start `ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>`

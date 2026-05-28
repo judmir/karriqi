@@ -1,5 +1,6 @@
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
 import { DevMenuSettings } from "@/components/settings/dev-menu-settings";
+import { GoogleCalendarSettings } from "@/components/settings/google-calendar-settings";
 import { HouseholdSettingsForm } from "@/components/settings/household-settings-form";
 import { PinSettingsForm } from "@/components/settings/pin-settings-form";
 import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/dev/dev-access";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchHouseholdOverview } from "@/lib/household/household-actions";
+import { getGoogleCalendarConnectionStatus } from "@/lib/google-calendar/connection-actions";
 import { getSessionUser } from "@/lib/supabase/server";
 import { displayNameFromUserMeta } from "@/lib/todo/assignable-members";
 
@@ -54,10 +56,12 @@ export default async function SettingsPage() {
 
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
-  const [pinStatus, householdOverview] = await Promise.all([
-    getOwnPinStatus(),
-    fetchHouseholdOverview(),
-  ]);
+  const [pinStatus, householdOverview, googleCalendarStatus] =
+    await Promise.all([
+      getOwnPinStatus(),
+      fetchHouseholdOverview(),
+      getGoogleCalendarConnectionStatus(user.id),
+    ]);
 
   return (
     <PageContainer>
@@ -124,6 +128,17 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
         ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle>Google Calendar</CardTitle>
+            <CardDescription>
+              Connect Gmail Calendar for two-way sync with Karriqi.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <GoogleCalendarSettings initialStatus={googleCalendarStatus} />
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Notifications</CardTitle>

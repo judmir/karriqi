@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isDevQuickSignInEnabled } from "@/lib/auth/local-dev-auth";
 import { isSupabaseConfigured } from "@/lib/env";
 
 export default function SignInPage() {
@@ -21,13 +22,14 @@ export default function SignInPage() {
       <CardHeader className="space-y-1">
         <CardTitle className="text-xl">Sign in</CardTitle>
         <CardDescription>
-          Type your PIN, or fall back to your email and password. There is no
-          public registration.
+          {isDevQuickSignInEnabled()
+            ? "Pick a test user below, use a PIN, or fall back to email and password."
+            : "Type your PIN, or fall back to your email and password. There is no public registration."}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<p className="text-muted-foreground text-sm">Loading…</p>}>
-          <SignInSwitcher />
+          <SignInSwitcher devQuickSignIn={isDevQuickSignInEnabled()} />
         </Suspense>
       </CardContent>
     </Card>

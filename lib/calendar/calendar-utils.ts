@@ -9,7 +9,6 @@ import {
   format,
   isSameDay,
   isSameMonth,
-  parseISO,
   startOfDay,
   startOfMonth,
   startOfWeek,
@@ -18,6 +17,12 @@ import {
   subWeeks,
 } from "date-fns";
 
+import {
+  allDayFirstDay,
+  allDayLastInclusiveDay,
+  eventSpansDay,
+  parseEventDate,
+} from "@/lib/calendar/all-day-events";
 import type { CalendarEvent, CalendarView } from "@/types/calendar";
 
 export const WEEK_STARTS_ON = 0 as const;
@@ -26,8 +31,18 @@ export const HOUR_HEIGHT_PX = 48;
 
 export const VISIBLE_HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-export function parseEventDate(iso: string): Date {
-  return parseISO(iso);
+export { parseEventDate } from "@/lib/calendar/all-day-events";
+
+/** True once the event has fully ended (matches Google Calendar past styling). */
+export function isEventPast(event: CalendarEvent, now = new Date()): boolean {
+  if (event.allDay) {
+    return allDayLastInclusiveDay(event) < startOfDay(now);
+  }
+  return parseEventDate(event.endAt) < now;
+}
+
+export function eventPastClass(event: CalendarEvent, now = new Date()): string {
+  return isEventPast(event, now) ? "opacity-45 saturate-[0.65] hover:opacity-55" : "";
 }
 
 export function navigateDate(
@@ -85,9 +100,13 @@ export function weekDays(date: Date): Date[] {
 }
 
 export function eventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
-  const dayStart = startOfDay(day);
-  const dayEnd = endOfDay(day);
-  return eventsInRange(events, dayStart, dayEnd);
+  return events
+    .filter((event) => eventSpansDay(event, day))
+    .sort(
+      (a, b) =>
+        parseEventDate(a.startAt).getTime() -
+        parseEventDate(b.startAt).getTime(),
+    );
 }
 
 export function eventsInRange(
@@ -97,6 +116,11 @@ export function eventsInRange(
 ): CalendarEvent[] {
   return events
     .filter((event) => {
+      if (event.allDay) {
+        const first = allDayFirstDay(event);
+        const last = allDayLastInclusiveDay(event);
+        return first <= rangeEnd && last >= rangeStart;
+      }
       const start = parseEventDate(event.startAt);
       const end = parseEventDate(event.endAt);
       return start <= rangeEnd && end >= rangeStart;
@@ -120,13 +144,9 @@ export function formatEventTime(event: CalendarEvent): string {
   return `${format(start, "MMM d, h:mm a")} – ${format(end, "MMM d, h:mm a")}`;
 }
 
-/** Compact label for month grid chips, e.g. "10am Team Meeting". */
+/** Compact label for month/week chips — title only (Google Calendar style). */
 export function formatEventChipLabel(event: CalendarEvent): string {
-  if (event.allDay) {
-    return event.title;
-  }
-  const start = parseEventDate(event.startAt);
-  return `${format(start, "ha").toLowerCase()} ${event.title}`;
+  return event.title;
 }
 
 export function eventColorClasses(color: CalendarEvent["color"]): string {

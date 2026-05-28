@@ -2,15 +2,21 @@
 
 import { useState } from "react";
 
+import { DevSignInPicker } from "@/components/auth/dev-sign-in-picker";
 import { PinSignInForm } from "@/components/auth/pin-sign-in-form";
 import { SignInForm } from "@/components/auth/sign-in-form";
 
-export function SignInSwitcher() {
+export function SignInSwitcher({
+  devQuickSignIn = false,
+}: {
+  devQuickSignIn?: boolean;
+}) {
   const [mode, setMode] = useState<"pin" | "email">("pin");
 
   if (mode === "email") {
     return (
       <div className="space-y-4">
+        {devQuickSignIn ? <DevSignInPicker /> : null}
         <SignInForm />
         <button
           type="button"
@@ -23,5 +29,10 @@ export function SignInSwitcher() {
     );
   }
 
-  return <PinSignInForm onUseEmail={() => setMode("email")} />;
+  return (
+    <div className="space-y-4">
+      {devQuickSignIn ? <DevSignInPicker /> : null}
+      <PinSignInForm onUseEmail={() => setMode("email")} />
+    </div>
+  );
 }

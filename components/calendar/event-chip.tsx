@@ -1,9 +1,11 @@
 "use client";
 
 import {
-  eventColorClasses,
+  eventPastClass,
   formatEventChipLabel,
+  isEventPast,
 } from "@/lib/calendar/calendar-utils";
+import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -19,6 +21,9 @@ export function EventChip({
   onClick?: () => void;
 }) {
   const label = compact ? formatEventChipLabel(event) : event.title;
+  const past = isEventPast(event);
+  const { appearanceForEvent } = useCalendarSources();
+  const appearance = appearanceForEvent(event);
 
   return (
     <button
@@ -28,11 +33,14 @@ export function EventChip({
         onClick?.();
       }}
       className={cn(
-        "w-full truncate rounded-md border px-1.5 text-left text-xs transition-opacity hover:opacity-90",
+        "w-full cursor-pointer truncate rounded-md border px-1.5 text-left text-xs transition-opacity",
         compact ? "py-0.5" : "py-1",
-        eventColorClasses(event.color),
+        appearance.className,
+        eventPastClass(event),
+        !past && "hover:opacity-90",
         className,
       )}
+      style={appearance.style}
     >
       {label}
     </button>

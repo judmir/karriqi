@@ -7,6 +7,11 @@ import type { CalendarEvent } from "@/types/calendar";
 type CalendarStoreState = {
   events: CalendarEvent[];
   persistence: boolean;
+  googleConfigured: boolean;
+  googleConnected: boolean;
+  requiresGoogleConnection: boolean;
+  googleEmail: string | null;
+  lastSyncedAt: string | null;
   loadedAt: number | null;
   loading: boolean;
   error: string | null;
@@ -24,6 +29,11 @@ export type CalendarStore = CalendarStoreState & CalendarStoreActions;
 const initialState: CalendarStoreState = {
   events: [],
   persistence: false,
+  googleConfigured: false,
+  googleConnected: false,
+  requiresGoogleConnection: false,
+  googleEmail: null,
+  lastSyncedAt: null,
   loadedAt: null,
   loading: false,
   error: null,
@@ -66,6 +76,11 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
         set({
           events: result.events,
           persistence: result.persistence,
+          googleConfigured: result.googleConfigured,
+          googleConnected: result.googleConnected,
+          requiresGoogleConnection: result.requiresGoogleConnection,
+          googleEmail: result.googleEmail,
+          lastSyncedAt: result.lastSyncedAt,
           loadedAt: Date.now(),
           loading: false,
           error: null,

@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { addDays, format, startOfDay } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { allDayInclusiveEndForForm, calendarDateToStorage } from "@/lib/calendar/all-day-events";
 import {
   combineDateAndTime,
   defaultEventEnd,
@@ -86,7 +87,11 @@ function EventFormDialogBody({
 }: Omit<EventFormDialogProps, "open">) {
   const isEditing = event !== null;
   const initialStart = event ? new Date(event.startAt) : defaultStart;
-  const initialEnd = event ? new Date(event.endAt) : defaultEventEnd(defaultStart);
+  const initialEnd = event
+    ? event.allDay
+      ? allDayInclusiveEndForForm(event)
+      : new Date(event.endAt)
+    : defaultEventEnd(defaultStart);
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
@@ -101,13 +106,17 @@ function EventFormDialogBody({
 
   function buildIsoRange(): { startAt: string; endAt: string } | null {
     if (allDay) {
-      const start = combineDateAndTime(toDateInputValue(startDate), "00:00");
-      const end = combineDateAndTime(toDateInputValue(endDate), "23:59");
-      if (end < start) {
+      const start = startOfDay(startDate);
+      const endInclusive = startOfDay(endDate);
+      if (endInclusive < start) {
         toast.error("End date must be on or after start date.");
         return null;
       }
-      return { startAt: start.toISOString(), endAt: end.toISOString() };
+      const endExclusive = addDays(endInclusive, 1);
+      return {
+        startAt: calendarDateToStorage(start),
+        endAt: calendarDateToStorage(endExclusive),
+      };
     }
 
     const start = combineDateAndTime(

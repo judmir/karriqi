@@ -35,7 +35,7 @@ export function DayEventsOverflow({
               <button
                 type="button"
                 onClick={() => onSelectEvent(event)}
-                className="hover:bg-muted/50 w-full rounded-md p-1.5 text-left"
+                className="hover:bg-muted/50 w-full cursor-pointer rounded-md p-1.5 text-left"
               >
                 <EventChip event={event} compact className="pointer-events-none" />
                 <div className="text-muted-foreground mt-0.5 px-1.5 text-[0.65rem]">

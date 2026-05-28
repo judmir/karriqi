@@ -8,42 +8,124 @@ import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import { CalendarDndProvider } from "@/components/calendar/calendar-dnd";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
+import { CalendarSourcesProvider } from "@/components/calendar/calendar-sources-context";
+import { CalendarSourcesSidebar } from "@/components/calendar/calendar-sources-sidebar";
 import {
   CalendarDayView,
   CalendarWeekView,
 } from "@/components/calendar/calendar-time-views";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
 import { updateCalendarEvent } from "@/lib/calendar/calendar-actions";
+import { filterEventsBySelectedCalendars } from "@/lib/calendar/google-event-colors";
 import { navigateDate } from "@/lib/calendar/calendar-utils";
+import { syncGoogleCalendarAction } from "@/lib/google-calendar/sync-actions";
 import { useCalendarStore } from "@/stores/calendar-store";
-import type { CalendarEvent, CalendarView } from "@/types/calendar";
+import type { CalendarEvent, CalendarView, GoogleCalendarSource } from "@/types/calendar";
+
+type GoogleSyncOptions = {
+  enabled: boolean;
+  lastSyncedAt: string | null;
+  googleEmail: string | null;
+  calendarSources?: GoogleCalendarSource[];
+};
 
 export function CalendarClient({
   initialEvents,
   persistence,
+  googleSync,
 }: {
   initialEvents: CalendarEvent[];
   persistence: boolean;
+  googleSync?: GoogleSyncOptions;
 }) {
   const [events, setEvents] = useState(initialEvents);
+  const [calendarSources, setCalendarSources] = useState<GoogleCalendarSource[]>(
+    googleSync?.calendarSources ?? [],
+  );
   const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
-
-  const sortedEvents = useMemo(
-    () =>
-      [...events].sort(
-        (a, b) =>
-          new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
-      ),
-    [events],
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(
+    googleSync?.lastSyncedAt ?? null,
   );
 
   useEffect(() => {
     setEvents(initialEvents);
   }, [initialEvents]);
+
+  useEffect(() => {
+    setCalendarSources(googleSync?.calendarSources ?? []);
+  }, [googleSync?.calendarSources]);
+
+  const visibleEvents = useMemo(
+    () => filterEventsBySelectedCalendars(events, calendarSources),
+    [events, calendarSources],
+  );
+
+  const sortedEvents = useMemo(
+    () =>
+      [...visibleEvents].sort(
+        (a, b) =>
+          new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
+      ),
+    [visibleEvents],
+  );
+
+  const runSync = useCallback(
+    async (options?: { quiet?: boolean }) => {
+      if (!googleSync?.enabled) {
+        return;
+      }
+
+      setSyncing(true);
+      try {
+        const result = await syncGoogleCalendarAction();
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+
+        setEvents(result.events);
+        setLastSyncedAt(result.lastSyncedAt);
+        if (result.calendarSources) {
+          setCalendarSources(result.calendarSources);
+        }
+        useCalendarStore.getState().setEvents(result.events);
+
+        if (!options?.quiet && (result.pulled > 0 || result.pushed > 0 || result.deleted > 0)) {
+          toast.success(
+            `Synced — ${result.pulled} pulled, ${result.pushed} pushed.`,
+          );
+        }
+      } catch {
+        if (!options?.quiet) {
+          toast.error("Sync failed.");
+        }
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [googleSync?.enabled],
+  );
+
+  useEffect(() => {
+    if (!googleSync?.enabled) {
+      return;
+    }
+
+    function onFocus() {
+      if (document.visibilityState !== "visible" || syncing) {
+        return;
+      }
+      void runSync({ quiet: true });
+    }
+
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [googleSync?.enabled, syncing, runSync]);
 
   useEffect(() => {
     useCalendarStore.getState().setEvents(events);
@@ -151,22 +233,36 @@ export function CalendarClient({
   );
 
   return (
-    <CalendarDndProvider events={sortedEvents} onEventMoved={persistEventMove}>
-      <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 p-4 md:p-6">
-        <CalendarHeader
-          date={currentDate}
-          view={view}
-          onToday={() => handleNavigate("today")}
-          onNavigate={(direction) => handleNavigate(direction)}
-          onViewChange={handleViewChange}
-          onNewEvent={() => {
-            const start = new Date(currentDate);
-            start.setHours(9, 0, 0, 0);
-            openCreate(start);
-          }}
-        />
+    <CalendarSourcesProvider sources={calendarSources}>
+      <CalendarDndProvider events={sortedEvents} onEventMoved={persistEventMove}>
+        <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 p-4 md:p-6">
+          <CalendarHeader
+            date={currentDate}
+            view={view}
+            onToday={() => handleNavigate("today")}
+            onNavigate={(direction) => handleNavigate(direction)}
+            onViewChange={handleViewChange}
+            onNewEvent={() => {
+              const start = new Date(currentDate);
+              start.setHours(9, 0, 0, 0);
+              openCreate(start);
+            }}
+            onSync={googleSync?.enabled ? () => void runSync() : undefined}
+            syncing={syncing}
+            lastSyncedAt={lastSyncedAt}
+            googleEmail={googleSync?.googleEmail}
+          />
 
-        <div className="min-h-0 flex-1">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+            {googleSync?.enabled && calendarSources.length > 0 ? (
+              <CalendarSourcesSidebar
+                sources={calendarSources}
+                onSourcesChange={setCalendarSources}
+                className="lg:self-start"
+              />
+            ) : null}
+
+            <div className="min-h-0 flex-1">
           {view === "month" ? (
             <CalendarMonthView
               date={currentDate}
@@ -205,9 +301,10 @@ export function CalendarClient({
               onSelectEvent={openEdit}
             />
           ) : null}
-        </div>
+            </div>
+          </div>
 
-        <EventFormDialog
+          <EventFormDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           event={selectedEvent}
@@ -216,7 +313,8 @@ export function CalendarClient({
           onSaved={handleSaved}
           onDeleted={handleDeleted}
         />
-      </div>
-    </CalendarDndProvider>
+        </div>
+      </CalendarDndProvider>
+    </CalendarSourcesProvider>
   );
 }

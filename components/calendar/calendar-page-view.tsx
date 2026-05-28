@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 import { CalendarClient } from "@/components/calendar/calendar-client";
 import { ListPlaceholder } from "@/components/patterns/list-placeholder";
-import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { selectCalendarReady, useCalendarStore } from "@/stores/calendar-store";
+import type { CalendarEvent, GoogleCalendarSource } from "@/types/calendar";
 
 function CalendarPageSkeleton() {
   return (
@@ -23,7 +24,7 @@ function CalendarPageSkeleton() {
   );
 }
 
-export function CalendarPageView() {
+function CalendarPageDemo() {
   const events = useCalendarStore((s) => s.events);
   const persistence = useCalendarStore((s) => s.persistence);
   const loading = useCalendarStore((s) => s.loading);
@@ -34,19 +35,75 @@ export function CalendarPageView() {
     void ensureLoaded();
   }, [ensureLoaded]);
 
-  const displayEvents = useMemo(
-    () => (events.length > 0 ? events : getMockCalendarEvents()),
-    [events],
-  );
-
   if (!ready && loading) {
     return <CalendarPageSkeleton />;
   }
 
   return (
-    <CalendarClient
-      initialEvents={displayEvents}
-      persistence={persistence && events.length > 0}
+    <CalendarClient initialEvents={events} persistence={persistence} />
+  );
+}
+
+type CalendarPageViewProps = {
+  initialEvents?: CalendarEvent[];
+  calendarSources?: GoogleCalendarSource[];
+  lastSyncedAt?: string | null;
+  googleEmail?: string | null;
+  googleError?: string | null;
+};
+
+/** Demo mode omits props; connected Google mode passes server-fetched events. */
+export function CalendarPageView(props: CalendarPageViewProps = {}) {
+  if (props.initialEvents === undefined) {
+    return <CalendarPageDemo />;
+  }
+
+  return (
+    <CalendarConnectedCalendar
+      initialEvents={props.initialEvents}
+      calendarSources={props.calendarSources ?? []}
+      lastSyncedAt={props.lastSyncedAt ?? null}
+      googleEmail={props.googleEmail ?? null}
+      googleError={props.googleError ?? null}
     />
   );
 }
+
+function CalendarConnectedCalendar({
+  initialEvents,
+  calendarSources,
+  lastSyncedAt,
+  googleEmail,
+  googleError,
+}: {
+  initialEvents: CalendarEvent[];
+  calendarSources: GoogleCalendarSource[];
+  lastSyncedAt: string | null;
+  googleEmail: string | null;
+  googleError: string | null;
+}) {
+  const shownError = useRef(false);
+
+  useEffect(() => {
+    if (!googleError || shownError.current) {
+      return;
+    }
+    shownError.current = true;
+    toast.error(decodeURIComponent(googleError));
+  }, [googleError]);
+
+  return (
+    <CalendarClient
+      initialEvents={initialEvents}
+      persistence
+      googleSync={{
+        enabled: true,
+        lastSyncedAt,
+        googleEmail,
+        calendarSources,
+      }}
+    />
+  );
+}
+
+export type { CalendarPageViewProps };

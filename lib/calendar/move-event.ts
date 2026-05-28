@@ -5,6 +5,7 @@ import {
   startOfDay,
 } from "date-fns";
 
+import { allDayDayCount, calendarDateToStorage } from "@/lib/calendar/all-day-events";
 import { parseEventDate } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -23,8 +24,8 @@ function withUpdatedRange(
 ): CalendarEvent {
   return {
     ...event,
-    startAt: start.toISOString(),
-    endAt: end.toISOString(),
+    startAt: allDay ? calendarDateToStorage(start) : start.toISOString(),
+    endAt: allDay ? calendarDateToStorage(end) : end.toISOString(),
     allDay,
     updatedAt: new Date().toISOString(),
   };
@@ -41,16 +42,9 @@ export function moveEventToDay(
 
   if (event.allDay) {
     const dayStart = startOfDay(targetDay);
-    const daySpan = Math.max(
-      1,
-      Math.round(
-        (startOfDay(end).getTime() - startOfDay(start).getTime()) /
-          (24 * 60 * 60 * 1000),
-      ) + 1,
-    );
-    const newEnd = addDays(dayStart, daySpan - 1);
-    newEnd.setHours(23, 59, 59, 999);
-    return withUpdatedRange(event, dayStart, newEnd, true);
+    const daySpan = allDayDayCount(event);
+    const newEndExclusive = addDays(dayStart, daySpan);
+    return withUpdatedRange(event, dayStart, newEndExclusive, true);
   }
 
   const nextStart = setMinutes(
@@ -74,9 +68,8 @@ export function moveEventToTimeSlot(
 ): CalendarEvent {
   if (allDay) {
     const dayStart = startOfDay(targetDay);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setHours(23, 59, 59, 999);
-    return withUpdatedRange(event, dayStart, dayEnd, true);
+    const dayEndExclusive = addDays(dayStart, 1);
+    return withUpdatedRange(event, dayStart, dayEndExclusive, true);
   }
 
   const durationMs = Math.max(eventDurationMs(event), 15 * 60 * 1000);
