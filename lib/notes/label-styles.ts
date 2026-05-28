@@ -5,6 +5,7 @@ export const labelColorClass: Record<NoteLabelColor, string> = {
   blue: "border-sky-200/80 bg-sky-100 text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/80 dark:text-sky-200",
   green:
     "border-emerald-200/80 bg-emerald-100 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/80 dark:text-emerald-200",
+  teal: "border-teal-200/80 bg-teal-100 text-teal-900 dark:border-teal-900/60 dark:bg-teal-950/80 dark:text-teal-200",
   orange:
     "border-amber-200/80 bg-amber-100 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/80 dark:text-amber-200",
   purple:
@@ -19,6 +20,7 @@ export const labelColorClass: Record<NoteLabelColor, string> = {
 export const labelDotClass: Record<NoteLabelColor, string> = {
   blue: "bg-sky-500",
   green: "bg-emerald-500",
+  teal: "bg-teal-500",
   orange: "bg-amber-500",
   purple: "bg-violet-500",
   pink: "bg-pink-500",

@@ -1,6 +1,7 @@
 export const NOTE_LABEL_COLORS = [
   "blue",
   "green",
+  "teal",
   "orange",
   "purple",
   "pink",
@@ -21,6 +22,7 @@ export type Note = {
   id: string;
   title: string;
   content: string;
+  imageUrl?: string | null;
   labelIds: string[];
   archived: boolean;
   pinned: boolean;
@@ -33,5 +35,8 @@ export type NotesView = "notes" | "archive" | "labels";
 export type NoteDraft = {
   title: string;
   content: string;
+  imageUrl?: string | null;
   labelIds: string[];
 };
+
+export type NotesLayoutMode = "grid" | "list";
