@@ -132,10 +132,9 @@ function NoteEditorForm({
       textarea.selectionStart,
       textarea.selectionEnd,
     );
-    const label = selected || "link";
-    applyFormat((el) =>
-      wrapTextareaSelection(el, `[${label}](`, `${url.trim()})`),
-    );
+    const label = selected || "link text";
+    const markdownLink = `[${label}](${url.trim()})`;
+    applyFormat((el) => wrapTextareaSelection(el, markdownLink, ""));
   }
 
   return (
@@ -145,7 +144,7 @@ function NoteEditorForm({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Title"
-          className="border-0 bg-transparent px-0 text-lg font-semibold shadow-none focus-visible:ring-0"
+          className="border-0 !bg-transparent px-0 text-lg font-semibold shadow-none focus-visible:ring-0 dark:!bg-transparent"
         />
       </div>
 
@@ -194,7 +193,7 @@ function NoteEditorForm({
         </div>
       </div>
 
-      <div className="bg-muted/20 px-4 py-3 sm:px-6">
+      <div className="px-4 py-3 sm:px-6">
         {imageUrl ? (
           <p className="text-muted-foreground mb-2 truncate text-xs">
             Image: {imageUrl}
@@ -205,7 +204,7 @@ function NoteEditorForm({
           value={content}
           onChange={(event) => setContent(event.target.value)}
           placeholder="Enter note description..."
-          className="min-h-52 resize-y border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+          className="min-h-52 resize-y border-0 !bg-transparent px-0 shadow-none focus-visible:ring-0 dark:!bg-transparent"
         />
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, List, Plus, Search } from "lucide-react";
+import { LayoutGrid, List, Search, SquarePen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,11 @@ export function NotesToolbar({
     <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:gap-4 md:px-6">
       <Button
         type="button"
-        className="h-10 shrink-0 gap-2 rounded-lg px-4 shadow-sm sm:min-w-[140px]"
+        className="h-11 shrink-0 gap-2 rounded-md border border-black/10 bg-white px-5 text-sm font-semibold text-black shadow-sm hover:bg-white/90 sm:min-w-[260px] sm:justify-center"
         onClick={onAddNote}
       >
-        <span className="bg-primary-foreground/15 flex size-6 items-center justify-center rounded-md">
-          <Plus className="size-4" />
+        <span className="flex size-5 items-center justify-center">
+          <SquarePen className="size-3.5" />
         </span>
         Add Note
       </Button>

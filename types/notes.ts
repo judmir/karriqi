@@ -30,7 +30,7 @@ export type Note = {
   updatedAt: string;
 };
 
-export type NotesView = "notes" | "archive" | "labels";
+export type NotesView = "notes" | "archive";
 
 export type NoteDraft = {
   title: string;

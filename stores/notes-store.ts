@@ -60,10 +60,7 @@ export const useNotesStore = create<NotesStore>()(
       },
 
       setView(view) {
-        set({
-          view,
-          selectedLabelId: view === "labels" ? get().selectedLabelId : get().selectedLabelId,
-        });
+        set({ view });
       },
 
       setSelectedLabelId(labelId) {
