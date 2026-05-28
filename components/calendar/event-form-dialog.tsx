@@ -405,7 +405,7 @@ function DateField({
           <Calendar
             mode="single"
             selected={date}
-            onSelect={(next) => {
+            onSelect={(next: Date | undefined) => {
               if (next) {
                 onChange(next);
                 setOpen(false);

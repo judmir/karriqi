@@ -145,7 +145,7 @@ export function CalendarClient({
 
   const handleNavigate = useCallback(
     (direction: "prev" | "next" | "today") => {
-      setCurrentDate((prev) => navigateDate(prev, view, direction));
+      setCurrentDate((prev: Date) => navigateDate(prev, view, direction));
     },
     [view],
   );
