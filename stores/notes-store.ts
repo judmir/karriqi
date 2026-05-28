@@ -25,6 +25,7 @@ type NotesStoreActions = {
   deleteNote: (id: string) => void;
   toggleArchive: (id: string) => void;
   togglePin: (id: string) => void;
+  updateNoteContent: (id: string, content: string) => void;
   createLabel: (name: string, color: NoteLabelColor) => string;
   updateLabel: (id: string, patch: Partial<Pick<NoteLabel, "name" | "color">>) => void;
   deleteLabel: (id: string) => void;
@@ -80,6 +81,7 @@ export const useNotesStore = create<NotesStore>()(
           id,
           title: draft.title.trim() || "Untitled",
           content: draft.content,
+          imageUrl: draft.imageUrl ?? null,
           labelIds: draft.labelIds,
           archived: false,
           pinned: false,
@@ -99,6 +101,7 @@ export const useNotesStore = create<NotesStore>()(
                   ...note,
                   title: draft.title.trim() || "Untitled",
                   content: draft.content,
+                  imageUrl: draft.imageUrl ?? null,
                   labelIds: draft.labelIds,
                   updatedAt: timestamp,
                 }
@@ -136,6 +139,15 @@ export const useNotesStore = create<NotesStore>()(
         }));
       },
 
+      updateNoteContent(id, content) {
+        const timestamp = new Date().toISOString();
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === id ? { ...note, content, updatedAt: timestamp } : note,
+          ),
+        }));
+      },
+
       createLabel(name, color) {
         const id = newId("label");
         const label: NoteLabel = { id, name: name.trim() || "Label", color };
@@ -168,7 +180,7 @@ export const useNotesStore = create<NotesStore>()(
       },
     }),
     {
-      name: "karriqi-notes-v1",
+      name: "karriqi-notes-v2",
       partialize: (state) => ({
         notes: state.notes,
         labels: state.labels,
