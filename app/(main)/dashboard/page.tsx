@@ -29,14 +29,9 @@ export default async function DashboardPage() {
   return (
     <PageContainer width="wide">
       <div className="mx-auto flex max-w-2xl flex-col gap-8">
-        <header className="space-y-1">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            What&apos;s next for your family this week.
-          </p>
-        </header>
+        <p className="text-sm text-muted-foreground">
+          What&apos;s next for your family this week.
+        </p>
         <WeekendOptionsCard {...weekendCard} />
       </div>
     </PageContainer>

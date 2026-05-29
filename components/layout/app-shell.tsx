@@ -8,6 +8,7 @@ import {
   CALENDAR_CONTENT_SLOT_CLASS,
   MAIN_CONTENT_SLOT_CLASS,
 } from "@/components/layout/main-content-slot";
+import { MainSectionTitle } from "@/components/layout/main-section-title";
 import { MainNavDesktop, MainNavMobile } from "@/components/layout/main-nav";
 import { useMainLayoutUser } from "@/components/layout/main-layout-user-context";
 import { useAppearance } from "@/components/providers/appearance-provider";
@@ -47,9 +48,11 @@ export function AppShell({
             calendarRoute
               ? CALENDAR_CONTENT_SLOT_CLASS
               : MAIN_CONTENT_SLOT_CLASS,
+            "flex min-h-0 flex-1 flex-col",
           )}
         >
-          {children}
+          <MainSectionTitle />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
         </div>
       </div>
       <MainNavMobile includeDevNav={includeDevNav} />

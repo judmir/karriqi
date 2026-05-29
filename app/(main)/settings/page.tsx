@@ -5,7 +5,6 @@ import { HouseholdSettingsForm } from "@/components/settings/household-settings-
 import { PinSettingsForm } from "@/components/settings/pin-settings-form";
 import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
 import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/patterns/page-header";
 import { PlaceholderPage } from "@/components/patterns/placeholder-page";
 import {
   Card,
@@ -66,7 +65,6 @@ export default async function SettingsPage() {
   return (
     <PageContainer>
       <div className="space-y-8">
-        <PageHeader segments={["Settings"]} />
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>

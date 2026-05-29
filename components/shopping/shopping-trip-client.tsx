@@ -4,7 +4,6 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 
-import { PageHeader } from "@/components/patterns/page-header";
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { SwipeRevealRow } from "@/components/shopping/swipe-reveal-row";
 import { Button } from "@/components/ui/button";
@@ -499,8 +498,6 @@ export function ShoppingTripClient({
 
   return (
     <div className="space-y-6">
-      <PageHeader segments={["Shopping"]} />
-
       <div className="space-y-2">
         <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           Suggested

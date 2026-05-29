@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 
 import { DevPushTest } from "@/components/dev/push/dev-push-test";
 import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/patterns/page-header";
 import { PlaceholderPage } from "@/components/patterns/placeholder-page";
 import {
   Card,
@@ -35,7 +34,6 @@ export default async function DevPushPage() {
   return (
     <PageContainer>
       <div className="space-y-8">
-        <PageHeader segments={["Dev", "Push notifications"]} />
         <Card>
           <CardHeader>
             <CardTitle>Push notification test</CardTitle>

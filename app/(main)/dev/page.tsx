@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowRight, BellRing, Workflow } from "lucide-react";
 
 import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/patterns/page-header";
 import { PlaceholderPage } from "@/components/patterns/placeholder-page";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -56,11 +55,7 @@ export default async function DevPage() {
   return (
     <PageContainer>
       <div className="space-y-8">
-        <PageHeader segments={["Dev"]} />
         <div className="space-y-3">
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight">
-            Dev tools
-          </h1>
           <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
             Maintainer-only tools for validating app behavior and keeping the
             product architecture visible as Karriqi grows.

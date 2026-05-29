@@ -31,7 +31,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { PageHeader } from "@/components/patterns/page-header";
 import { KanbanCard } from "@/components/todo/kanban-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -484,8 +483,6 @@ export function KanbanBoardClient({
 
   return (
     <div className="space-y-6">
-      <PageHeader segments={["To-do", "Kanban"]} />
-
       {!persistence ? (
         <p className="text-muted-foreground border-border rounded-lg border border-dashed p-4 text-sm">
           Saved tasks could not be loaded. If you just added the latest todo

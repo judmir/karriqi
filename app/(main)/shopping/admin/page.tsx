@@ -1,5 +1,4 @@
 import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/patterns/page-header";
 import { Section } from "@/components/patterns/section";
 import { StapleCatalogSection } from "@/components/shopping/staple-catalog-section";
 import {
@@ -36,8 +35,6 @@ export default async function ShoppingAdminPage() {
   return (
     <PageContainer width="wide">
       <div className="space-y-6">
-        <PageHeader segments={["Shopping", "Admin"]} />
-
         <StapleCatalogSection
           key={catalogKey}
           initialStaples={initialStaples}

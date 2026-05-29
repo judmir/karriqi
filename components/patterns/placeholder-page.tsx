@@ -7,21 +7,19 @@ import {
 } from "@/components/ui/card";
 
 import { ListPlaceholder } from "@/components/patterns/list-placeholder";
-import { PageHeader } from "@/components/patterns/page-header";
 import { Section } from "@/components/patterns/section";
 
 export function PlaceholderPage({
-  segments,
   note,
 }: {
-  segments: string[];
-  /** Muted line below the breadcrumb (e.g. unconfigured or signed-out hints). */
+  /** @deprecated Kept for call-site compatibility; the shell renders the page title. */
+  segments?: string[];
+  /** Muted line below the page title (e.g. unconfigured or signed-out hints). */
   note?: string;
 }) {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <PageHeader segments={segments} />
         {note ? (
           <p className="text-muted-foreground text-sm leading-relaxed">
             {note}

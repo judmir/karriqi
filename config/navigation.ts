@@ -57,3 +57,38 @@ export const devNavItem: MainNavItem = {
   shortLabel: "Dev",
   icon: Code2,
 };
+
+/** Routes with a page title but no sidebar item (e.g. user menu). */
+const extraPageTitleRoutes: { href: string; label: string }[] = [
+  { href: ROUTES.settings, label: "Settings" },
+  { href: "/goals", label: "Goals" },
+];
+
+function matchesNavHref(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Resolve the main section title for the current pathname (longest prefix wins). */
+export function resolvePageTitle(pathname: string): string | null {
+  const navCandidates = [...mainNavItems, devNavItem].sort(
+    (a, b) => b.href.length - a.href.length,
+  );
+
+  for (const item of navCandidates) {
+    if (matchesNavHref(pathname, item.href)) {
+      return item.label;
+    }
+  }
+
+  const extraCandidates = [...extraPageTitleRoutes].sort(
+    (a, b) => b.href.length - a.href.length,
+  );
+
+  for (const route of extraCandidates) {
+    if (matchesNavHref(pathname, route.href)) {
+      return route.label;
+    }
+  }
+
+  return null;
+}
