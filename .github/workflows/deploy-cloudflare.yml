@@ -9,9 +9,10 @@ on:
 permissions:
   contents: read
 
+# One deploy per tag/ref; do not cancel an in-progress release when another tag queues.
 concurrency:
-  group: deploy-cloudflare-release
-  cancel-in-progress: true
+  group: deploy-cloudflare-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -20,6 +21,7 @@ jobs:
     timeout-minutes: 20
 
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       NEXT_TELEMETRY_DISABLED: "1"
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
