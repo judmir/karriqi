@@ -13,9 +13,16 @@ import { cn } from "@/lib/utils";
 // Mirrors PIN_MIN_LENGTH / PIN_MAX_LENGTH on the server.
 const PIN_MIN = 4;
 const PIN_MAX = 8;
-// Auto-submit when the user reaches this length; they can still hit Enter
-// earlier to submit a shorter (still ≥ PIN_MIN) PIN.
-const AUTO_SUBMIT_LENGTH = 6;
+// Auto-submit when the user reaches one of these lengths; they can still hit
+// Enter earlier to submit a shorter (still ≥ PIN_MIN) PIN.
+const AUTO_SUBMIT_LENGTHS = new Set([PIN_MIN, 6]);
+
+function autoSubmitHint(): string {
+  const lengths = [...AUTO_SUBMIT_LENGTHS].sort((a, b) => a - b);
+  if (lengths.length === 1) return `${lengths[0]} digits`;
+  const last = lengths.pop();
+  return `${lengths.join(", ")} or ${last} digits`;
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const localDevPinHint =
@@ -99,7 +106,7 @@ export function PinSignInForm({
   function handleChange(raw: string) {
     const digits = raw.replace(/\D+/g, "").slice(0, PIN_MAX);
     setPin(digits);
-    if (digits.length === AUTO_SUBMIT_LENGTH && !submitting) {
+    if (AUTO_SUBMIT_LENGTHS.has(digits.length) && !submitting) {
       void submit(digits);
     }
   }
@@ -132,8 +139,8 @@ export function PinSignInForm({
           {retryAfter
             ? `Too many tries — wait ${retryAfter}s before trying again.`
             : localDevPinHint
-              ? `${localDevPinHint} Auto-submits at ${AUTO_SUBMIT_LENGTH} digits.`
-              : `Enter your ${PIN_MIN}-${PIN_MAX} digit PIN. Auto-submits at ${AUTO_SUBMIT_LENGTH} digits.`}
+              ? `${localDevPinHint} Auto-submits at ${autoSubmitHint()}.`
+              : `Enter your ${PIN_MIN}-${PIN_MAX} digit PIN. Auto-submits at ${autoSubmitHint()}.`}
         </p>
       </div>
       <Button
