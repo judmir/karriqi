@@ -35,10 +35,13 @@ const CalendarDndEnabledContext = createContext(false);
 export function CalendarDndProvider({
   events,
   onEventMoved,
+  enabled = true,
   children,
 }: {
   events: CalendarEvent[];
   onEventMoved: (event: CalendarEvent) => void;
+  /** When false, events cannot be dragged to reschedule. */
+  enabled?: boolean;
   children: ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -100,7 +103,7 @@ export function CalendarDndProvider({
     }
   }
 
-  if (!mounted) {
+  if (!enabled || !mounted) {
     return (
       <CalendarDndEnabledContext.Provider value={false}>
         {children}
@@ -109,7 +112,7 @@ export function CalendarDndProvider({
   }
 
   return (
-    <CalendarDndEnabledContext.Provider value={true}>
+    <CalendarDndEnabledContext.Provider value={enabled}>
       <DndContext
         id={CALENDAR_DND_ID}
         sensors={sensors}

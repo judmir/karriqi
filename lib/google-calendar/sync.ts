@@ -27,6 +27,7 @@ import {
   rowUpdatedMs,
   type KarriqiEventRow,
 } from "@/lib/google-calendar/map-events";
+import { isCalendarReadOnly } from "@/lib/calendar/calendar-readonly";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type GoogleCalendarSyncResult = {
@@ -322,11 +323,13 @@ export async function syncGoogleCalendarForUser(
     readableSources.find((source) => source.primary)?.googleCalendarId ??
     connection.calendarId;
 
-  const pushed = await pushUnsyncedLocalEvents({
-    connection,
-    accessToken,
-    targetCalendarId: pushTarget,
-  });
+  const pushed = isCalendarReadOnly()
+    ? 0
+    : await pushUnsyncedLocalEvents({
+        connection,
+        accessToken,
+        targetCalendarId: pushTarget,
+      });
 
   await updateGoogleCalendarSyncState({
     userId,
@@ -340,6 +343,10 @@ export async function pushCalendarEventToGoogle(input: {
   userId: string;
   eventId: string;
 }): Promise<void> {
+  if (isCalendarReadOnly()) {
+    return;
+  }
+
   const connection = await getGoogleCalendarConnection(input.userId);
   if (!connection) {
     return;
@@ -409,6 +416,10 @@ export async function deleteCalendarEventFromGoogle(input: {
   googleEventId: string;
   calendarId?: string | null;
 }): Promise<void> {
+  if (isCalendarReadOnly()) {
+    return;
+  }
+
   const connection = await getGoogleCalendarConnection(input.userId);
   if (!connection) {
     return;

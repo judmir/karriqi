@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/patterns/page-header";
 import { ShoppingList } from "@/components/shopping/shopping-list";
@@ -49,7 +49,7 @@ function SuggestedItemChip({
 }) {
   return (
     <SwipeRevealRow
-      className="max-w-full rounded-full"
+      className="inline-flex max-w-full rounded-full align-top"
       contentClassName="rounded-full"
       deleteLabel="Remove"
       onSwipeDelete={onDismiss}
@@ -65,9 +65,9 @@ function SuggestedItemChip({
             onAdd();
           }
         }}
-        className="text-foreground hover:bg-muted/80 inline-flex w-full cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-sm transition-colors"
+        className="text-foreground hover:bg-muted/80 inline-flex max-w-full cursor-pointer items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors"
       >
-        <span>{staple.name}</span>
+        <span className="truncate">{staple.name}</span>
         <Plus className="text-muted-foreground size-3 shrink-0" aria-hidden />
       </div>
     </SwipeRevealRow>
@@ -122,6 +122,8 @@ export function ShoppingTripClient({
     items: sortShoppingListItems(initialItems),
     catalog: [...staples],
   });
+  const [showAllSuggestionsOnMobile, setShowAllSuggestionsOnMobile] =
+    useState(true);
   const [draft, setDraft] = useState("");
   const [dismissedSuggestedIds, setDismissedSuggestedIds] = useState(
     () =>
@@ -228,6 +230,15 @@ export function ShoppingTripClient({
       ),
     ],
     [catalog, dueSoonStapleIds, stapleIdsOnList, dismissedSuggestedIds],
+  );
+  const MOBILE_SUGGESTION_LIMIT = 8;
+  const quickSuggestedCatalog = useMemo(
+    () => suggestedCatalog.slice(0, MOBILE_SUGGESTION_LIMIT),
+    [suggestedCatalog],
+  );
+  const visibleSuggestedCatalog = useMemo(
+    () => (showAllSuggestionsOnMobile ? suggestedCatalog : quickSuggestedCatalog),
+    [quickSuggestedCatalog, showAllSuggestionsOnMobile, suggestedCatalog],
   );
 
   function dismissSuggested(stapleId: string) {
@@ -497,16 +508,49 @@ export function ShoppingTripClient({
         {suggestedCatalog.length === 0 ? (
           <p className="text-muted-foreground text-sm">—</p>
         ) : (
-          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-2">
-            {suggestedCatalog.map((staple) => (
-              <SuggestedItemChip
-                key={staple.id}
-                staple={staple}
-                onAdd={() => addFromStaple(staple)}
-                onDismiss={() => dismissSuggested(staple.id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="flex flex-wrap gap-2 sm:hidden">
+              {visibleSuggestedCatalog.map((staple) => (
+                <SuggestedItemChip
+                  key={staple.id}
+                  staple={staple}
+                  onAdd={() => addFromStaple(staple)}
+                  onDismiss={() => dismissSuggested(staple.id)}
+                />
+              ))}
+            </div>
+            <div className="hidden flex-wrap gap-2 sm:flex">
+              {suggestedCatalog.map((staple) => (
+                <SuggestedItemChip
+                  key={staple.id}
+                  staple={staple}
+                  onAdd={() => addFromStaple(staple)}
+                  onDismiss={() => dismissSuggested(staple.id)}
+                />
+              ))}
+            </div>
+            {suggestedCatalog.length > MOBILE_SUGGESTION_LIMIT ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground mt-1 inline-flex h-8 w-fit items-center gap-1 px-2 text-xs sm:hidden"
+                onClick={() => setShowAllSuggestionsOnMobile((current) => !current)}
+              >
+                {showAllSuggestionsOnMobile ? (
+                  <>
+                    Show fewer <ChevronUp className="size-3" aria-hidden />
+                  </>
+                ) : (
+                  <>
+                    Show{" "}
+                    {suggestedCatalog.length - quickSuggestedCatalog.length} more{" "}
+                    <ChevronDown className="size-3" aria-hidden />
+                  </>
+                )}
+              </Button>
+            ) : null}
+          </>
         )}
       </div>
 

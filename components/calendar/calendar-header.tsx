@@ -42,7 +42,7 @@ export function CalendarHeader({
   onToday: () => void;
   onNavigate: (direction: "prev" | "next") => void;
   onViewChange: (view: CalendarView) => void;
-  onNewEvent: () => void;
+  onNewEvent?: () => void;
   onSync?: () => void;
   syncing?: boolean;
   lastSyncedAt?: string | null;
@@ -112,10 +112,12 @@ export function CalendarHeader({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button size="sm" onClick={onNewEvent}>
-          <PlusIcon />
-          New event
-        </Button>
+        {onNewEvent ? (
+          <Button size="sm" onClick={onNewEvent}>
+            <PlusIcon />
+            New event
+          </Button>
+        ) : null}
       </div>
     </div>
   );

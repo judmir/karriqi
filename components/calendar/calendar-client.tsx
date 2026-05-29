@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import { CalendarDndProvider } from "@/components/calendar/calendar-dnd";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
+import { CalendarReadOnlyBanner } from "@/components/calendar/calendar-readonly-banner";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarSourcesProvider } from "@/components/calendar/calendar-sources-context";
 import { CalendarSourcesSidebar } from "@/components/calendar/calendar-sources-sidebar";
@@ -35,10 +36,13 @@ export function CalendarClient({
   initialEvents,
   persistence,
   googleSync,
+  readOnly = false,
 }: {
   initialEvents: CalendarEvent[];
   persistence: boolean;
   googleSync?: GoogleSyncOptions;
+  /** View-only mode: no create/edit/delete; Google is source of truth. */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const didMountSync = useRef(false);
@@ -101,7 +105,9 @@ export function CalendarClient({
 
         if (!options?.quiet && (result.pulled > 0 || result.pushed > 0 || result.deleted > 0)) {
           toast.success(
-            `Synced — ${result.pulled} pulled, ${result.pushed} pushed.`,
+            readOnly
+              ? `Synced — ${result.pulled} updated from Google.`
+              : `Synced — ${result.pulled} pulled, ${result.pushed} pushed.`,
           );
         }
       } catch {
@@ -112,7 +118,7 @@ export function CalendarClient({
         setSyncing(false);
       }
     },
-    [googleSync?.enabled],
+    [googleSync?.enabled, readOnly],
   );
 
   useEffect(() => {
@@ -211,17 +217,27 @@ export function CalendarClient({
   }
 
   function handleSelectSlot(day: Date, hour: number) {
+    if (readOnly) {
+      return;
+    }
     const start = new Date(day);
     start.setHours(hour, 0, 0, 0);
     openCreate(start);
   }
 
   function handleCreateOnDay(day: Date) {
+    if (readOnly) {
+      return;
+    }
     openCreate(setMinutes(setHours(startOfDay(day), 9), 0));
   }
 
   const persistEventMove = useCallback(
     async (event: CalendarEvent) => {
+      if (readOnly) {
+        return;
+      }
+
       setEvents((prev) =>
         prev.map((item) => (item.id === event.id ? event : item)),
       );
@@ -243,24 +259,34 @@ export function CalendarClient({
         void useCalendarStore.getState().ensureLoaded();
       }
     },
-    [persistence],
+    [persistence, readOnly],
   );
 
   return (
     <CalendarSourcesProvider sources={calendarSources}>
-      <CalendarDndProvider events={sortedEvents} onEventMoved={persistEventMove}>
+      <CalendarDndProvider
+        events={sortedEvents}
+        onEventMoved={persistEventMove}
+        enabled={!readOnly}
+      >
         <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 p-4 md:p-6">
+          {readOnly ? <CalendarReadOnlyBanner /> : null}
+
           <CalendarHeader
             date={currentDate}
             view={view}
             onToday={() => handleNavigate("today")}
             onNavigate={(direction) => handleNavigate(direction)}
             onViewChange={handleViewChange}
-            onNewEvent={() => {
-              const start = new Date(currentDate);
-              start.setHours(9, 0, 0, 0);
-              openCreate(start);
-            }}
+            onNewEvent={
+              readOnly
+                ? undefined
+                : () => {
+                    const start = new Date(currentDate);
+                    start.setHours(9, 0, 0, 0);
+                    openCreate(start);
+                  }
+            }
             onSync={googleSync?.enabled ? () => void runSync() : undefined}
             syncing={syncing}
             lastSyncedAt={lastSyncedAt}
@@ -286,7 +312,7 @@ export function CalendarClient({
                 setView("day");
               }}
               onSelectEvent={openEdit}
-              onCreateEvent={handleCreateOnDay}
+              onCreateEvent={readOnly ? undefined : handleCreateOnDay}
             />
           ) : null}
 
@@ -295,7 +321,7 @@ export function CalendarClient({
               date={currentDate}
               events={sortedEvents}
               onSelectEvent={openEdit}
-              onSelectSlot={handleSelectSlot}
+              onSelectSlot={readOnly ? undefined : handleSelectSlot}
             />
           ) : null}
 
@@ -304,7 +330,7 @@ export function CalendarClient({
               date={currentDate}
               events={sortedEvents}
               onSelectEvent={openEdit}
-              onSelectSlot={handleSelectSlot}
+              onSelectSlot={readOnly ? undefined : handleSelectSlot}
             />
           ) : null}
 
@@ -319,14 +345,15 @@ export function CalendarClient({
           </div>
 
           <EventFormDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          event={selectedEvent}
-          defaultStart={draftStart}
-          persistence={persistence}
-          onSaved={handleSaved}
-          onDeleted={handleDeleted}
-        />
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            event={selectedEvent}
+            defaultStart={draftStart}
+            persistence={persistence}
+            readOnly={readOnly}
+            onSaved={handleSaved}
+            onDeleted={handleDeleted}
+          />
         </div>
       </CalendarDndProvider>
     </CalendarSourcesProvider>

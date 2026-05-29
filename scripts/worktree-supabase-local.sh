@@ -103,20 +103,31 @@ patch_env_for_local() {
     exit 1
   fi
 
-  # shellcheck disable=SC2046
-  eval "$(supabase status -o env 2>/dev/null)"
+  local env_dump
+  env_dump="$(supabase status -o env 2>/dev/null || true)"
+  if [[ -z "$env_dump" ]]; then
+    echo "Could not read local Supabase status env." >&2
+    exit 1
+  fi
 
-  if [[ -z "${API_URL:-}" || -z "${ANON_KEY:-}" || -z "${SERVICE_ROLE_KEY:-}" ]]; then
+  local api_url anon_key service_role_key secret_key
+  api_url="$(printf '%s\n' "$env_dump" | awk -F'=' '$1=="API_URL"{print $2}' | tr -d '"' | tail -1)"
+  anon_key="$(printf '%s\n' "$env_dump" | awk -F'=' '$1=="ANON_KEY"{print $2}' | tr -d '"' | tail -1)"
+  service_role_key="$(printf '%s\n' "$env_dump" | awk -F'=' '$1=="SERVICE_ROLE_KEY"{print $2}' | tr -d '"' | tail -1)"
+  secret_key="$(printf '%s\n' "$env_dump" | awk -F'=' '$1=="SECRET_KEY"{print $2}' | tr -d '"' | tail -1)"
+
+  if [[ -z "$api_url" || -z "$anon_key" || -z "$service_role_key" ]]; then
     echo "Could not read local Supabase keys from 'supabase status'." >&2
     exit 1
   fi
 
-  set_env_var "NEXT_PUBLIC_SUPABASE_URL" "$API_URL"
-  set_env_var "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$ANON_KEY"
-  if [[ -n "${SERVICE_ROLE_KEY:-}" ]]; then
-    set_env_var "SUPABASE_SERVICE_ROLE_KEY" "$SERVICE_ROLE_KEY"
+  set_env_var "NEXT_PUBLIC_SUPABASE_URL" "$api_url"
+  set_env_var "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$anon_key"
+  set_env_var "SUPABASE_SERVICE_ROLE_KEY" "$service_role_key"
+  if [[ -n "$secret_key" ]]; then
+    set_env_var "SUPABASE_SECRET_KEY" "$secret_key"
   fi
-  echo "Patched .env.local for local Supabase ($API_URL)"
+  echo "Patched .env.local for local Supabase ($api_url)"
 }
 
 env_points_at_local_supabase() {

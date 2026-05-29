@@ -51,6 +51,7 @@ type CalendarPageViewProps = {
   googleEmail?: string | null;
   googleError?: string | null;
   syncOnMount?: boolean;
+  readOnly?: boolean;
 };
 
 /** Demo mode omits props; connected Google mode passes server-fetched events. */
@@ -67,6 +68,7 @@ export function CalendarPageView(props: CalendarPageViewProps = {}) {
       googleEmail={props.googleEmail ?? null}
       googleError={props.googleError ?? null}
       syncOnMount={props.syncOnMount ?? false}
+      readOnly={props.readOnly ?? false}
     />
   );
 }
@@ -78,6 +80,7 @@ function CalendarConnectedCalendar({
   googleEmail,
   googleError,
   syncOnMount,
+  readOnly,
 }: {
   initialEvents: CalendarEvent[];
   calendarSources: GoogleCalendarSource[];
@@ -85,6 +88,7 @@ function CalendarConnectedCalendar({
   googleEmail: string | null;
   googleError: string | null;
   syncOnMount: boolean;
+  readOnly: boolean;
 }) {
   const shownError = useRef(false);
 
@@ -100,6 +104,7 @@ function CalendarConnectedCalendar({
     <CalendarClient
       initialEvents={initialEvents}
       persistence
+      readOnly={readOnly}
       googleSync={{
         enabled: true,
         lastSyncedAt,

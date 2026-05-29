@@ -117,7 +117,7 @@ function TimeGrid({
   day: Date;
   events: CalendarEvent[];
   onSelectEvent: (event: CalendarEvent) => void;
-  onSelectSlot: (day: Date, hour: number) => void;
+  onSelectSlot?: (day: Date, hour: number) => void;
   includeAllDayRow?: boolean;
 }) {
   const dayEvents = eventsForDay(events, day);
@@ -159,9 +159,20 @@ function TimeGrid({
             key={hour}
             day={day}
             hour={hour}
-            aria-label={`Create event at ${format(new Date(2000, 0, 1, hour), "h a")}`}
-            onClick={() => onSelectSlot(day, hour)}
-            className="absolute w-full cursor-default border-b border-border/60 hover:bg-muted/30"
+            aria-label={
+              onSelectSlot
+                ? `Create event at ${format(new Date(2000, 0, 1, hour), "h a")}`
+                : undefined
+            }
+            onClick={
+              onSelectSlot ? () => onSelectSlot(day, hour) : undefined
+            }
+            className={cn(
+              "absolute w-full border-b border-border/60",
+              onSelectSlot
+                ? "cursor-default hover:bg-muted/30"
+                : "pointer-events-none",
+            )}
             style={{
               top: hour * HOUR_HEIGHT_PX,
               height: HOUR_HEIGHT_PX,
@@ -214,7 +225,7 @@ export function CalendarWeekView({
   date: Date;
   events: CalendarEvent[];
   onSelectEvent: (event: CalendarEvent) => void;
-  onSelectSlot: (day: Date, hour: number) => void;
+  onSelectSlot?: (day: Date, hour: number) => void;
 }) {
   const days = weekDays(date);
 
@@ -283,7 +294,7 @@ export function CalendarDayView({
   date: Date;
   events: CalendarEvent[];
   onSelectEvent: (event: CalendarEvent) => void;
-  onSelectSlot: (day: Date, hour: number) => void;
+  onSelectSlot?: (day: Date, hour: number) => void;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">

@@ -1,0 +1,22 @@
+---
+description: Ensure one-click local dev sign-in works automatically in every worktree
+alwaysApply: true
+---
+
+# Worktree dev auth bootstrap
+
+In any `/.cursor/worktrees/` checkout, local one-click dev sign-in (`/api/auth/dev-login`) must work without manual setup.
+
+## Required setup
+
+1. Run `pnpm worktree:dev` first in every new worktree session.
+2. If local Supabase is used, ensure `.env.local` is patched from live local status so:
+   - `NEXT_PUBLIC_SUPABASE_URL` points to `127.0.0.1`/`localhost`
+   - `SUPABASE_SERVICE_ROLE_KEY` is the local `SERVICE_ROLE_KEY` JWT (not `sb_secret_*`)
+3. Keep `AUTH_PIN_PEPPER` set for local PIN flow.
+4. Seed local dev PIN rows (`scripts/seed-local-dev-pins.mjs`) after local reset/ensure.
+
+## Validation
+
+- If the user reports `Could not create dev session.`, treat it as a bootstrap/config regression.
+- Re-run local ensure (`bash scripts/worktree-supabase-local.sh ensure`), restart dev server, and verify dev sign-in endpoint health.

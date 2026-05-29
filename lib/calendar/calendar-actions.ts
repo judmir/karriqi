@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
 import {
+  CALENDAR_READONLY_MESSAGE,
+  isCalendarReadOnly,
+} from "@/lib/calendar/calendar-readonly";
+import {
   deleteCalendarEventFromGoogle,
   pushCalendarEventToGoogle,
 } from "@/lib/google-calendar/sync";
@@ -40,6 +44,10 @@ export async function createCalendarEvent(input: {
   allDay?: boolean;
   color?: CalendarEventColor;
 }): Promise<CreateCalendarEventResult> {
+  if (isCalendarReadOnly()) {
+    return { ok: false, message: CALENDAR_READONLY_MESSAGE };
+  }
+
   const title = input.title.trim();
   if (!title) {
     return { ok: false, message: "Title is required." };
@@ -101,6 +109,10 @@ export async function updateCalendarEvent(input: {
   allDay?: boolean;
   color?: CalendarEventColor;
 }): Promise<UpdateCalendarEventResult> {
+  if (isCalendarReadOnly()) {
+    return { ok: false, message: CALENDAR_READONLY_MESSAGE };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -176,6 +188,10 @@ export type DeleteCalendarEventResult = { ok: true } | Err;
 export async function deleteCalendarEvent(
   id: string,
 ): Promise<DeleteCalendarEventResult> {
+  if (isCalendarReadOnly()) {
+    return { ok: false, message: CALENDAR_READONLY_MESSAGE };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

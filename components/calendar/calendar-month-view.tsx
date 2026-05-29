@@ -36,7 +36,7 @@ export function CalendarMonthView({
   events: CalendarEvent[];
   onSelectDay: (day: Date) => void;
   onSelectEvent: (event: CalendarEvent) => void;
-  onCreateEvent: (day: Date) => void;
+  onCreateEvent?: (day: Date) => void;
 }) {
   const gridDays = monthGridDays(date);
   const weeks = monthGridWeeks(gridDays);
@@ -76,12 +76,14 @@ export function CalendarMonthView({
                       !isSameMonth(day, date) && "bg-muted/20",
                     )}
                   >
-                    <button
-                      type="button"
-                      aria-label={`Create event on ${format(day, "MMMM d")}`}
-                      className="absolute inset-0 z-0 cursor-default"
-                      onClick={() => onCreateEvent(day)}
-                    />
+                    {onCreateEvent ? (
+                      <button
+                        type="button"
+                        aria-label={`Create event on ${format(day, "MMMM d")}`}
+                        className="absolute inset-0 z-0 cursor-default"
+                        onClick={() => onCreateEvent(day)}
+                      />
+                    ) : null}
                     <div className="pointer-events-none relative z-[1] mb-1 flex justify-end">
                       <CalendarDayNumber
                         day={day}

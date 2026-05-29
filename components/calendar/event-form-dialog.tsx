@@ -47,6 +47,7 @@ type EventFormDialogProps = {
   event: CalendarEvent | null;
   defaultStart: Date;
   persistence: boolean;
+  readOnly?: boolean;
   onSaved: (event: CalendarEvent) => void;
   onDeleted: (id: string) => void;
 };
@@ -57,6 +58,7 @@ export function EventFormDialog({
   event,
   defaultStart,
   persistence,
+  readOnly = false,
   onSaved,
   onDeleted,
 }: EventFormDialogProps) {
@@ -68,6 +70,7 @@ export function EventFormDialog({
           event={event}
           defaultStart={defaultStart}
           persistence={persistence}
+          readOnly={readOnly}
           onOpenChange={onOpenChange}
           onSaved={onSaved}
           onDeleted={onDeleted}
@@ -81,11 +84,13 @@ function EventFormDialogBody({
   event,
   defaultStart,
   persistence,
+  readOnly = false,
   onOpenChange,
   onSaved,
   onDeleted,
 }: Omit<EventFormDialogProps, "open">) {
   const isEditing = event !== null;
+  const viewOnly = readOnly;
   const initialStart = event ? new Date(event.startAt) : defaultStart;
   const initialEnd = event
     ? event.allDay
@@ -258,11 +263,15 @@ function EventFormDialogBody({
   return (
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>{isEditing ? "Edit event" : "New event"}</DialogTitle>
+        <DialogTitle>
+          {viewOnly ? "Event details" : isEditing ? "Edit event" : "New event"}
+        </DialogTitle>
         <DialogDescription>
-          {isEditing
-            ? "Update the details below or delete this event."
-            : "Add a title, time, and optional notes."}
+          {viewOnly
+            ? "This calendar is view-only. Change this event in Google Calendar, then sync."
+            : isEditing
+              ? "Update the details below or delete this event."
+              : "Add a title, time, and optional notes."}
         </DialogDescription>
       </DialogHeader>
 
@@ -274,7 +283,9 @@ function EventFormDialogBody({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Team meeting"
-            autoFocus
+            autoFocus={!viewOnly}
+            readOnly={viewOnly}
+            disabled={viewOnly}
           />
         </div>
 
@@ -286,17 +297,33 @@ function EventFormDialogBody({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional details"
             rows={3}
+            readOnly={viewOnly}
+            disabled={viewOnly}
           />
         </div>
 
         <label className="flex items-center gap-2 text-sm">
-          <Checkbox checked={allDay} onCheckedChange={(v) => setAllDay(Boolean(v))} />
+          <Checkbox
+            checked={allDay}
+            onCheckedChange={(v) => setAllDay(Boolean(v))}
+            disabled={viewOnly}
+          />
           All day
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <DateField label="Start date" date={startDate} onChange={setStartDate} />
-          <DateField label="End date" date={endDate} onChange={setEndDate} />
+          <DateField
+            label="Start date"
+            date={startDate}
+            onChange={setStartDate}
+            disabled={viewOnly}
+          />
+          <DateField
+            label="End date"
+            date={endDate}
+            onChange={setEndDate}
+            disabled={viewOnly}
+          />
         </div>
 
         {!allDay ? (
@@ -308,6 +335,8 @@ function EventFormDialogBody({
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
+                readOnly={viewOnly}
+                disabled={viewOnly}
               />
             </div>
             <div className="space-y-2">
@@ -317,6 +346,8 @@ function EventFormDialogBody({
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
+                readOnly={viewOnly}
+                disabled={viewOnly}
               />
             </div>
           </div>
@@ -331,10 +362,12 @@ function EventFormDialogBody({
                 type="button"
                 aria-label={`Color ${item}`}
                 onClick={() => setColor(item)}
+                disabled={viewOnly}
                 className={cn(
                   "rounded-md border px-3 py-1.5 text-xs capitalize transition-opacity",
                   eventColorClasses(item),
                   color === item ? "ring-2 ring-ring" : "opacity-70 hover:opacity-100",
+                  viewOnly && "pointer-events-none",
                 )}
               >
                 {item}
@@ -345,31 +378,39 @@ function EventFormDialogBody({
       </div>
 
       <DialogFooter className="gap-2 sm:justify-between">
-        {isEditing ? (
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={pending}
-          >
-            {confirmDelete ? "Confirm delete" : "Delete"}
+        {viewOnly ? (
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            Close
           </Button>
         ) : (
-          <span />
+          <>
+            {isEditing ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={pending}
+              >
+                {confirmDelete ? "Confirm delete" : "Delete"}
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={pending}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSubmit} disabled={pending}>
+                {pending ? "Saving…" : isEditing ? "Save changes" : "Create event"}
+              </Button>
+            </div>
+          </>
         )}
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={pending}
-          >
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSubmit} disabled={pending}>
-            {pending ? "Saving…" : isEditing ? "Save changes" : "Create event"}
-          </Button>
-        </div>
       </DialogFooter>
     </DialogContent>
   );
@@ -379,22 +420,25 @@ function DateField({
   label,
   date,
   onChange,
+  disabled = false,
 }: {
   label: string;
   date: Date;
   onChange: (date: Date) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
         <PopoverTrigger
           render={
             <Button
               variant="outline"
               className="w-full justify-start font-normal"
+              disabled={disabled}
             />
           }
         >

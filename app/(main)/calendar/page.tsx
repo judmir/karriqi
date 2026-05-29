@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { CalendarConnectPrompt } from "@/components/calendar/calendar-connect-prompt";
 import { CalendarPageView } from "@/components/calendar/calendar-page-view";
 import { ROUTES } from "@/config/routes";
+import { isCalendarReadOnly } from "@/lib/calendar/calendar-readonly";
 import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getGoogleCalendarConnectionStatus } from "@/lib/google-calendar/connection-actions";
@@ -56,6 +57,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         googleEmail={refreshed.googleEmail}
         googleError={params.google_error ?? null}
         syncOnMount={params.google_connected === "1"}
+        readOnly={isCalendarReadOnly()}
       />
     </div>
   );
