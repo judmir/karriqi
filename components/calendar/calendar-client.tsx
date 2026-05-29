@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import { CalendarDndProvider } from "@/components/calendar/calendar-dnd";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
-import { CalendarReadOnlyBanner } from "@/components/calendar/calendar-readonly-banner";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarSourcesProvider } from "@/components/calendar/calendar-sources-context";
 import {
@@ -269,8 +268,6 @@ export function CalendarClient({
         enabled={!readOnly}
       >
         <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 p-4 md:p-6">
-          {readOnly ? <CalendarReadOnlyBanner /> : null}
-
           <CalendarHeader
             date={currentDate}
             view={view}
@@ -290,6 +287,7 @@ export function CalendarClient({
             syncing={syncing}
             lastSyncedAt={lastSyncedAt}
             googleEmail={googleSync?.googleEmail}
+            readOnly={readOnly}
           />
 
           <div className="min-h-0 flex-1">

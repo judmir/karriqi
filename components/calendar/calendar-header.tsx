@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { CalendarGoogleActions } from "@/components/calendar/calendar-google-actions";
+import { CalendarReadOnlyInfo } from "@/components/calendar/calendar-readonly-banner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ export function CalendarHeader({
   syncing,
   lastSyncedAt,
   googleEmail,
+  readOnly = false,
 }: {
   date: Date;
   view: CalendarView;
@@ -47,6 +49,7 @@ export function CalendarHeader({
   syncing?: boolean;
   lastSyncedAt?: string | null;
   googleEmail?: string | null;
+  readOnly?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -111,6 +114,8 @@ export function CalendarHeader({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {readOnly ? <CalendarReadOnlyInfo /> : null}
 
         {onNewEvent ? (
           <Button size="sm" onClick={onNewEvent}>

@@ -1,17 +1,34 @@
+"use client";
+
 import { InfoIcon } from "lucide-react";
 
-export function CalendarReadOnlyBanner() {
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const READ_ONLY_MESSAGE =
+  "View-only calendar. Add or change events in Google Calendar, then tap Sync.";
+
+export function CalendarReadOnlyInfo() {
   return (
-    <div
-      role="status"
-      className="border-border bg-muted/40 text-muted-foreground flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
-    >
-      <InfoIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <p>
-        View-only calendar. Add or change events in{" "}
-        <span className="text-foreground font-medium">Google Calendar</span>, then
-        tap <span className="text-foreground font-medium">Sync</span>.
-      </p>
-    </div>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={READ_ONLY_MESSAGE}
+          />
+        }
+      >
+        <InfoIcon className="text-muted-foreground size-4" aria-hidden />
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="end" className="max-w-[16rem]">
+        {READ_ONLY_MESSAGE}
+      </TooltipContent>
+    </Tooltip>
   );
 }
