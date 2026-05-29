@@ -8,6 +8,7 @@ export const NOTE_LABEL_COLORS = [
   "yellow",
   "red",
   "gray",
+  "white",
 ] as const;
 
 export type NoteLabelColor = (typeof NOTE_LABEL_COLORS)[number];

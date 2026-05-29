@@ -15,6 +15,8 @@ export const labelColorClass: Record<NoteLabelColor, string> = {
     "border-yellow-200/80 bg-yellow-100 text-yellow-900 dark:border-yellow-900/60 dark:bg-yellow-950/80 dark:text-yellow-200",
   red: "border-red-200/80 bg-red-100 text-red-900 dark:border-red-900/60 dark:bg-red-950/80 dark:text-red-200",
   gray: "border-border bg-muted text-muted-foreground",
+  white:
+    "border-neutral-200/80 bg-white text-neutral-900 dark:border-neutral-600 dark:bg-neutral-100 dark:text-neutral-900",
 };
 
 export const labelDotClass: Record<NoteLabelColor, string> = {
@@ -27,4 +29,5 @@ export const labelDotClass: Record<NoteLabelColor, string> = {
   yellow: "bg-yellow-500",
   red: "bg-red-500",
   gray: "bg-muted-foreground",
+  white: "border border-border/80 bg-white dark:border-neutral-500",
 };
