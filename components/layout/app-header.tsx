@@ -1,6 +1,5 @@
 "use client";
 
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -8,16 +7,7 @@ import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
-export function AppHeader({
-  sidebarOpen,
-  onToggleSidebar,
-  children,
-}: {
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
-  children: ReactNode;
-}) {
-  const ToggleIcon = sidebarOpen ? PanelLeftClose : PanelLeftOpen;
+export function AppHeader({ children }: { children: ReactNode }) {
   return (
     <header
       className={cn(
@@ -26,18 +16,6 @@ export function AppHeader({
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="flex h-16 items-center justify-between gap-2 px-4 md:px-6">
-        <button
-          type="button"
-          className={cn(
-            "border-border text-muted-foreground hover:text-foreground hidden size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-transparent transition-colors md:inline-flex",
-            "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
-          )}
-          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-          aria-expanded={sidebarOpen}
-          onClick={onToggleSidebar}
-        >
-          <ToggleIcon className="size-4" aria-hidden />
-        </button>
         <Link
           href={ROUTES.dashboard}
           aria-label="Karriqi home"

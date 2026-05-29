@@ -35,11 +35,13 @@ export function AppShell({
 
   return (
     <div className="bg-sidebar flex min-h-[100dvh] flex-1 flex-col md:flex-row md:pt-2">
-      <MainNavDesktop includeDevNav={includeDevNav} open={sidebarOpen} />
+      <MainNavDesktop
+        includeDevNav={includeDevNav}
+        open={sidebarOpen}
+        onToggleSidebar={toggleSidebar}
+      />
       <div className="bg-background flex min-h-0 min-h-[100dvh] flex-1 flex-col md:min-h-0 md:overflow-hidden md:rounded-t-2xl">
-        <AppHeader sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar}>
-          {userMenu}
-        </AppHeader>
+        <AppHeader>{userMenu}</AppHeader>
         <div
           className={cn(
             calendarRoute

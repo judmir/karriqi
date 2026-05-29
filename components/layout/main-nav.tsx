@@ -1,5 +1,6 @@
 "use client";
 
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef } from "react";
@@ -121,6 +122,71 @@ function navItemsFor(includeDev: boolean) {
   return includeDev ? [...mainNavItems, devNavItem] : mainNavItems;
 }
 
+const sidebarToggleButtonClass =
+  "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-transparent transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2";
+
+function SidebarBrandHeader({
+  open,
+  onToggleSidebar,
+}: {
+  open: boolean;
+  onToggleSidebar: () => void;
+}) {
+  if (open) {
+    return (
+      <div className="text-foreground flex h-10 w-full items-center gap-2 rounded-md px-2">
+        <KarriqiLogoMark className="size-8 shrink-0" />
+        <span className="text-base font-semibold tracking-tight">Karriqi</span>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                className={cn(sidebarToggleButtonClass, "ml-auto")}
+                aria-label="Close sidebar"
+                aria-expanded
+                onClick={onToggleSidebar}
+              >
+                <PanelLeftClose className="size-4" aria-hidden />
+              </button>
+            }
+          />
+          <TooltipContent side="bottom" sideOffset={6}>
+            Close sidebar
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-10 items-center justify-center px-2">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              className={cn(sidebarToggleButtonClass, "group/logo-toggle")}
+              aria-label="Open sidebar"
+              aria-expanded={false}
+              onClick={onToggleSidebar}
+            >
+              <KarriqiLogoMark className="size-8 group-hover/logo-toggle:hidden" />
+              <PanelLeftOpen
+                className="hidden size-4 group-hover/logo-toggle:block"
+                aria-hidden
+              />
+            </button>
+          }
+        />
+        <TooltipContent side="right" sideOffset={6}>
+          Open sidebar
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
 export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
   const items = navItemsFor(includeDevNav ?? false);
   return (
@@ -150,9 +216,11 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
 export function MainNavDesktop({
   includeDevNav,
   open = true,
+  onToggleSidebar,
 }: {
   includeDevNav?: boolean;
   open?: boolean;
+  onToggleSidebar?: () => void;
 }) {
   const items = navItemsFor(includeDevNav ?? false);
   return (
@@ -164,18 +232,27 @@ export function MainNavDesktop({
       aria-label="Main navigation"
       data-state={open ? "expanded" : "collapsed"}
     >
-      <div className="flex w-64 flex-col gap-2 p-2">
-        <div className="text-foreground flex h-10 items-center gap-2 rounded-md p-2">
-          <KarriqiLogoMark className="size-8" />
-          <span
-            className={cn(
-              "text-base font-semibold tracking-tight transition-opacity duration-200",
-              open ? "opacity-100" : "opacity-0",
-            )}
-          >
-            Karriqi
-          </span>
-        </div>
+      <div
+        className={cn(
+          "flex flex-col gap-2 p-2",
+          open ? "w-64" : "w-14",
+        )}
+      >
+        {onToggleSidebar ? (
+          <SidebarBrandHeader open={open} onToggleSidebar={onToggleSidebar} />
+        ) : (
+          <div className="text-foreground flex h-10 items-center gap-2 rounded-md px-2">
+            <KarriqiLogoMark className="size-8 shrink-0" />
+            <span
+              className={cn(
+                "text-base font-semibold tracking-tight transition-opacity duration-200",
+                open ? "opacity-100" : "opacity-0",
+              )}
+            >
+              Karriqi
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="relative flex w-64 min-w-0 flex-col p-2">
