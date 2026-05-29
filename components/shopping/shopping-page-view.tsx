@@ -23,15 +23,6 @@ function ShoppingPageSkeleton() {
 }
 
 export function ShoppingPageView() {
-  const staples = useShoppingStore((s) => s.staples);
-  const listItems = useShoppingStore((s) => s.listItems);
-  const purchasePersistence = useShoppingStore((s) => s.purchasePersistence);
-  const listPersistence = useShoppingStore((s) => s.listPersistence);
-  const medianIntervalByStapleId = useShoppingStore(
-    (s) => s.medianIntervalByStapleId,
-  );
-  const householdOwnerId = useShoppingStore((s) => s.householdOwnerId);
-  const loading = useShoppingStore((s) => s.loading);
   const ready = useShoppingStore(selectShoppingReady);
   const ensureLoaded = useShoppingStore((s) => s.ensureLoaded);
 
@@ -39,18 +30,9 @@ export function ShoppingPageView() {
     void ensureLoaded();
   }, [ensureLoaded]);
 
-  if (!ready && loading) {
+  if (!ready) {
     return <ShoppingPageSkeleton />;
   }
 
-  return (
-    <ShoppingTripClient
-      initialItems={listItems}
-      staples={staples}
-      purchasePersistence={purchasePersistence}
-      listPersistence={listPersistence}
-      medianIntervalByStapleId={medianIntervalByStapleId}
-      householdOwnerId={householdOwnerId}
-    />
-  );
+  return <ShoppingTripClient />;
 }

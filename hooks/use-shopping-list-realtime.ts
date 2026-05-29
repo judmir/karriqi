@@ -1,57 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
-import { listRowToItem } from "@/lib/shopping/list-item-mapper";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
-import type { ShoppingListItem } from "@/types/shopping";
+import { useShoppingStore } from "@/stores/shopping-store";
 
 type ListRow = Database["public"]["Tables"]["shopping_list_items"]["Row"];
 
-function sortByPosition(
-  items: ShoppingListItem[],
-  positions: Map<string, number>,
-): ShoppingListItem[] {
-  return [...items].sort((a, b) => {
-    const pa = positions.get(a.id) ?? 0;
-    const pb = positions.get(b.id) ?? 0;
-    return pa - pb;
-  });
-}
-
-function rowsEqual(a: ShoppingListItem, b: ShoppingListItem): boolean {
-  return (
-    a.name === b.name &&
-    a.checked === b.checked &&
-    (a.quantity ?? null) === (b.quantity ?? null) &&
-    (a.stapleId ?? null) === (b.stapleId ?? null)
-  );
-}
-
 /**
  * Live-sync shopping list rows via Supabase Realtime (postgres_changes).
- *
- * Subscribes once after auth is ready (`INITIAL_SESSION` / `getSession`). Avoids
- * tearing down a connecting WebSocket by guarding against overlapping subscribe
- * calls (a common cause of "WebSocket is closed before the connection is established").
+ * Updates flow through the Zustand store; pending local writes are ignored.
  */
 export function useShoppingListRealtime({
   enabled,
   householdOwnerId,
-  positionsRef,
-  patchItems,
 }: {
   enabled: boolean;
   householdOwnerId: string | null;
-  positionsRef: React.MutableRefObject<Map<string, number>>;
-  /** Receives an updater over the current items array (mirrors setState). */
-  patchItems: (updater: (items: ShoppingListItem[]) => ShoppingListItem[]) => void;
 }) {
-  const patchItemsRef = useRef(patchItems);
-  useEffect(() => {
-    patchItemsRef.current = patchItems;
-  });
+  const applyRemoteUpsert = useShoppingStore((s) => s.applyRemoteUpsert);
+  const applyRemoteDelete = useShoppingStore((s) => s.applyRemoteDelete);
 
   useEffect(() => {
     if (!enabled || !householdOwnerId) return;
@@ -68,26 +37,6 @@ export function useShoppingListRealtime({
         clearTimeout(retryTimer);
         retryTimer = null;
       }
-    }
-
-    function mergeUpsert(items: ShoppingListItem[], row: ListRow): ShoppingListItem[] {
-      const incoming = listRowToItem(row);
-      positionsRef.current.set(row.id, row.position);
-      const idx = items.findIndex((i) => i.id === incoming.id);
-      if (idx >= 0) {
-        const existing = items[idx];
-        if (rowsEqual(existing, incoming)) return items;
-        const next = items.slice();
-        next[idx] = { ...existing, ...incoming };
-        return sortByPosition(next, positionsRef.current);
-      }
-      return sortByPosition([...items, incoming], positionsRef.current);
-    }
-
-    function mergeDelete(items: ShoppingListItem[], id: string): ShoppingListItem[] {
-      if (!items.some((i) => i.id === id)) return items;
-      positionsRef.current.delete(id);
-      return items.filter((i) => i.id !== id);
     }
 
     async function teardownChannel() {
@@ -134,19 +83,15 @@ export function useShoppingListRealtime({
         channel = supabase
           .channel(`shopping_list:household=${householdOwnerId}`)
           .on("postgres_changes", { event: "INSERT", ...base }, (payload) => {
-            patchItemsRef.current((items) =>
-              mergeUpsert(items, payload.new as ListRow),
-            );
+            applyRemoteUpsert(payload.new as ListRow);
           })
           .on("postgres_changes", { event: "UPDATE", ...base }, (payload) => {
-            patchItemsRef.current((items) =>
-              mergeUpsert(items, payload.new as ListRow),
-            );
+            applyRemoteUpsert(payload.new as ListRow);
           })
           .on("postgres_changes", { event: "DELETE", ...base }, (payload) => {
             const id = (payload.old as Pick<ListRow, "id">).id;
             if (!id) return;
-            patchItemsRef.current((items) => mergeDelete(items, id));
+            applyRemoteDelete(id);
           })
           .subscribe((status) => {
             if (cancelled) return;
@@ -185,7 +130,6 @@ export function useShoppingListRealtime({
       }
     });
 
-    // Bootstrap when the listener is registered after INITIAL_SESSION already fired.
     void supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.access_token) {
         onAuthReady(session.access_token);
@@ -198,5 +142,5 @@ export function useShoppingListRealtime({
       authSub.unsubscribe();
       void teardownChannel();
     };
-  }, [enabled, householdOwnerId, positionsRef]);
+  }, [enabled, householdOwnerId, applyRemoteUpsert, applyRemoteDelete]);
 }

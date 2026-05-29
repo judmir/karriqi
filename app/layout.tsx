@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Outfit } from "next/font/google";
 
 import { AppProviders } from "@/components/providers/app-providers";
+import { ColorModeInit } from "@/components/theme/color-mode-init";
 
 import "./globals.css";
 
@@ -64,9 +65,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfitSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${outfitSans.variable} ${geistMono.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <ColorModeInit />
+      </head>
       <body className="bg-background text-foreground flex min-h-full flex-col">
         <AppProviders>{children}</AppProviders>
       </body>

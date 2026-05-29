@@ -69,9 +69,21 @@ export function sanitizeAppearanceState(
       APPEARANCE_RADII,
       DEFAULT_APPEARANCE.radius,
     ),
-    colorMode: DEFAULT_APPEARANCE.colorMode,
-    contentLayout: DEFAULT_APPEARANCE.contentLayout,
-    sidebarMode: DEFAULT_APPEARANCE.sidebarMode,
+    colorMode: pickAppearanceValue(
+      value?.colorMode,
+      APPEARANCE_COLOR_MODES,
+      DEFAULT_APPEARANCE.colorMode,
+    ),
+    contentLayout: pickAppearanceValue(
+      value?.contentLayout,
+      APPEARANCE_CONTENT_LAYOUTS,
+      DEFAULT_APPEARANCE.contentLayout,
+    ),
+    sidebarMode: pickAppearanceValue(
+      value?.sidebarMode,
+      APPEARANCE_SIDEBAR_MODES,
+      DEFAULT_APPEARANCE.sidebarMode,
+    ),
   };
 }
 

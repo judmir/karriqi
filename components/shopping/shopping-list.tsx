@@ -1,12 +1,9 @@
 "use client";
 
 import { ListPlus, X } from "lucide-react";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
-import {
-  reorderShoppingListAfterToggle,
-  sortShoppingListItems,
-} from "@/lib/shopping/list-order";
+import { reorderShoppingListAfterToggle } from "@/lib/shopping/list-order";
 import { cn } from "@/lib/utils";
 import type { ShoppingListItem } from "@/types/shopping";
 
@@ -183,7 +180,11 @@ function ShoppingListRow({
         <input
           type="checkbox"
           checked={item.checked}
-          onChange={onToggle}
+          readOnly
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
           className="border-input text-primary focus-visible:ring-ring mt-0.5 size-4 shrink-0 cursor-pointer rounded border bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label={`Got ${item.name}`}
         />
@@ -226,16 +227,21 @@ function ShoppingListRow({
 export function ShoppingList({
   items,
   onItemsChange,
+  onToggleItem,
   onPromoteToSuggested,
 }: {
   items: ShoppingListItem[];
   onItemsChange: (next: ShoppingListItem[]) => void;
+  onToggleItem?: (id: string) => void;
   onPromoteToSuggested?: (itemId: string) => void;
 }) {
-  const displayItems = useMemo(() => sortShoppingListItems(items), [items]);
-  const listRef = useShoppingListFlip(displayItems.map((i) => i.id));
+  const listRef = useShoppingListFlip(items.map((i) => `${i.id}:${i.checked ? 1 : 0}`));
 
   function toggleChecked(id: string) {
+    if (onToggleItem) {
+      onToggleItem(id);
+      return;
+    }
     const toggled = items.map((i) =>
       i.id === id ? { ...i, checked: !i.checked } : i,
     );
@@ -246,7 +252,7 @@ export function ShoppingList({
     onItemsChange(items.filter((i) => i.id !== id));
   }
 
-  if (displayItems.length === 0) {
+  if (items.length === 0) {
     return (
       <p className="text-muted-foreground py-2 text-sm">Nothing here yet.</p>
     );
@@ -257,7 +263,7 @@ export function ShoppingList({
       ref={listRef}
       className="flex flex-col divide-y divide-border/80"
     >
-      {displayItems.map((item) => (
+      {items.map((item) => (
         <ShoppingListRow
           key={item.id}
           item={item}

@@ -46,7 +46,7 @@ function isSameAppearance(a: AppearanceState, b: AppearanceState) {
 export function AppearanceProvider({ children }: { children: ReactNode }) {
   const [appearance, setAppearanceState] = useState(DEFAULT_APPEARANCE);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -57,8 +57,10 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     root.dataset.sidebarMode = appearance.sidebarMode;
     root.style.setProperty("--radius", APPEARANCE_RADIUS_VALUES[appearance.radius]);
 
-    setTheme(appearance.colorMode);
-  }, [appearance, setTheme]);
+    if (resolvedTheme !== appearance.colorMode) {
+      setTheme(appearance.colorMode);
+    }
+  }, [appearance, resolvedTheme, setTheme]);
 
   const hydrateAppearance = useCallback((next: AppearanceState) => {
     const sanitizedAppearance = sanitizeAppearanceState(next);
