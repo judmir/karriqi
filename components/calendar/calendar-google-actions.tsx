@@ -11,12 +11,10 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 type CalendarGoogleActionsProps = {
   googleEmail?: string | null;
@@ -35,11 +33,11 @@ export function CalendarGoogleActions({
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  const syncLabel = lastSyncedAt
+  const syncHint = lastSyncedAt
     ? `Last synced ${format(new Date(lastSyncedAt), "HH:mm")}`
     : googleEmail
-      ? `Synced with ${googleEmail}`
-      : "Sync Google Calendar";
+      ? `Connected as ${googleEmail}`
+      : "Sync calendar events";
 
   async function handleDisconnect() {
     setDisconnecting(true);
@@ -53,7 +51,7 @@ export function CalendarGoogleActions({
         return;
       }
 
-      toast.success("Google Calendar disconnected.");
+      toast.success("Calendar disconnected.");
       setDisconnectOpen(false);
       router.refresh();
     } catch {
@@ -63,66 +61,50 @@ export function CalendarGoogleActions({
     }
   }
 
+  const busy = syncing || disconnecting;
+
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onSync}
-        disabled={syncing || disconnecting}
-        title={syncLabel}
-        aria-label={syncing ? "Syncing Google Calendar" : syncLabel}
-      >
-        <RefreshCwIcon className={syncing ? "animate-spin" : undefined} />
-        {syncing ? "Syncing…" : "Sync"}
-      </Button>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="outline"
-              size="sm"
-              className="max-w-[11rem] justify-between gap-1.5"
-              disabled={disconnecting}
-              aria-label="Google Calendar options"
-            />
-          }
+      <div className="inline-flex items-center">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onSync}
+          disabled={busy}
+          title={syncHint}
+          aria-label={syncing ? "Syncing calendar" : syncHint}
+          className="rounded-r-none border-r-0"
         >
-          <span className="truncate">
-            {googleEmail ? googleEmail.split("@")[0] : "Google"}
-          </span>
-          <ChevronDownIcon className="size-4 shrink-0 opacity-60" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[12rem]">
-          {googleEmail ? (
-            <>
-              <DropdownMenuGroup>
-                <DropdownMenuLabel className="max-w-[14rem] truncate font-normal">
-                  {googleEmail}
-                </DropdownMenuLabel>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-            </>
-          ) : null}
-          <DropdownMenuItem
-            onClick={onSync}
-            disabled={syncing || disconnecting}
+          <RefreshCwIcon className={cn("size-4", syncing && "animate-spin")} />
+          {syncing ? "Syncing…" : "Sync"}
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-l-none px-2"
+                disabled={busy}
+                aria-label="Calendar sync options"
+              />
+            }
           >
-            <RefreshCwIcon />
-            Sync now
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setDisconnectOpen(true)}
-            disabled={disconnecting}
-          >
-            <UnplugIcon />
-            Disconnect…
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <ChevronDownIcon className="size-4 opacity-60" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[10rem]">
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setDisconnectOpen(true)}
+              disabled={busy}
+            >
+              <UnplugIcon />
+              Disconnect
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <GoogleCalendarDisconnectDialog
         open={disconnectOpen}

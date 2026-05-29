@@ -8,12 +8,15 @@ import {
   type ReactNode,
 } from "react";
 
-import { eventAppearance } from "@/lib/calendar/google-event-colors";
+import { eventAppearance, type EventAppearanceDisplay } from "@/lib/calendar/google-event-colors";
 import type { CalendarEvent, GoogleCalendarSource } from "@/types/calendar";
 
 type CalendarSourcesContextValue = {
   sources: GoogleCalendarSource[];
-  appearanceForEvent: (event: CalendarEvent) => ReturnType<typeof eventAppearance>;
+  appearanceForEvent: (
+    event: CalendarEvent,
+    display?: EventAppearanceDisplay,
+  ) => ReturnType<typeof eventAppearance>;
 };
 
 const CalendarSourcesContext = createContext<CalendarSourcesContextValue>({
@@ -29,7 +32,8 @@ export function CalendarSourcesProvider({
   children: ReactNode;
 }) {
   const appearanceForEvent = useCallback(
-    (event: CalendarEvent) => eventAppearance(event, sources),
+    (event: CalendarEvent, display?: EventAppearanceDisplay) =>
+      eventAppearance(event, sources, display),
     [sources],
   );
 

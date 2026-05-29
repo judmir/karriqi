@@ -4,6 +4,7 @@ import {
   eventAppearance,
   filterEventsBySelectedCalendars,
   hexToRgba,
+  resolveDefaultCalendarColor,
 } from "@/lib/calendar/google-event-colors";
 import { mapGoogleCalendarColorToKarriqi } from "@/lib/google-calendar/map-events";
 import type { CalendarEvent, GoogleCalendarSource } from "@/types/calendar";
@@ -29,7 +30,10 @@ const sources: GoogleCalendarSource[] = [
   },
 ];
 
-function event(id: string, calendarId?: string): CalendarEvent {
+function event(
+  id: string,
+  options?: { calendarId?: string; allDay?: boolean },
+): CalendarEvent {
   return {
     id,
     userId: "u",
@@ -37,10 +41,10 @@ function event(id: string, calendarId?: string): CalendarEvent {
     description: null,
     startAt: "2026-06-02T10:00:00.000Z",
     endAt: "2026-06-02T11:00:00.000Z",
-    allDay: false,
+    allDay: options?.allDay ?? false,
     color: "blue",
-    googleCalendarId: calendarId,
-    source: calendarId ? "google" : "local",
+    googleCalendarId: options?.calendarId,
+    source: options?.calendarId ? "google" : "local",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
@@ -52,15 +56,22 @@ describe("google calendar colors", () => {
     expect(mapGoogleCalendarColorToKarriqi("#0b8043")).toBe("green");
   });
 
-  it("uses calendar source colors for synced events", () => {
-    const appearance = eventAppearance(event("1", "primary"), sources);
-    expect(appearance.style?.backgroundColor).toBe(hexToRgba("#d50000", 0.18));
-    expect(appearance.style?.color).toBe("#ffffff");
+  it("uses the primary calendar color for all events", () => {
+    expect(resolveDefaultCalendarColor(sources)).toBe("#d50000");
+
+    const allDay = eventAppearance(event("1", { calendarId: "tasks", allDay: true }), sources);
+    expect(allDay.style?.backgroundColor).toBe(hexToRgba("#d50000", 0.85));
+    expect(allDay.style?.color).toBe("#ffffff");
+
+    const timed = eventAppearance(event("2", { calendarId: "tasks" }), sources);
+    expect(timed.style?.backgroundColor).toBeUndefined();
+    expect(timed.style?.color).toBe("#ffffff");
+    expect(timed.dotStyle?.backgroundColor).toBe("#d50000");
   });
 
-  it("hides events from deselected calendars", () => {
-    const events = [event("1", "primary"), event("2", "tasks"), event("3")];
+  it("shows all events regardless of calendar selection", () => {
+    const events = [event("1", { calendarId: "primary" }), event("2", { calendarId: "tasks" }), event("3")];
     const visible = filterEventsBySelectedCalendars(events, sources);
-    expect(visible.map((item) => item.id)).toEqual(["1", "3"]);
+    expect(visible.map((item) => item.id)).toEqual(["1", "2", "3"]);
   });
 });

@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 
-import { eventColorClasses, eventDotClass } from "@/lib/calendar/calendar-utils";
 import type { CalendarEvent, GoogleCalendarSource } from "@/types/calendar";
 
 function normalizeHex(hex: string): string {
@@ -29,16 +28,19 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function resolveGoogleCalendarSource(
-  event: CalendarEvent,
+const DEFAULT_CALENDAR_COLOR = "#039be5";
+
+export function resolveDefaultCalendarColor(
   sources: GoogleCalendarSource[],
-): GoogleCalendarSource | undefined {
-  if (!event.googleCalendarId) {
-    return undefined;
+): string {
+  const primary = sources.find((source) => source.primary);
+  if (primary) {
+    return normalizeHex(primary.backgroundColor);
   }
-  return sources.find(
-    (source) => source.googleCalendarId === event.googleCalendarId,
-  );
+  if (sources.length > 0) {
+    return normalizeHex(sources[0]!.backgroundColor);
+  }
+  return DEFAULT_CALENDAR_COLOR;
 }
 
 export type EventAppearance = {
@@ -46,50 +48,41 @@ export type EventAppearance = {
   style?: CSSProperties;
   dotClassName?: string;
   dotStyle?: CSSProperties;
+  accentColor: string;
 };
+
+export type EventAppearanceDisplay = "list" | "block";
 
 export function eventAppearance(
   event: CalendarEvent,
   sources: GoogleCalendarSource[],
+  display: EventAppearanceDisplay = "list",
 ): EventAppearance {
-  const source = resolveGoogleCalendarSource(event, sources);
-  if (source) {
-    const bg = normalizeHex(source.backgroundColor);
-    const fg = source.foregroundColor
-      ? normalizeHex(source.foregroundColor)
-      : bg;
+  const accentColor = resolveDefaultCalendarColor(sources);
 
+  if (event.allDay || display === "block") {
     return {
-      className: "border",
+      accentColor,
+      className: "border-0 text-white",
       style: {
-        backgroundColor: hexToRgba(bg, 0.18),
-        borderColor: hexToRgba(bg, 0.42),
-        color: fg,
+        backgroundColor: hexToRgba(accentColor, 0.85),
+        color: "#ffffff",
       },
-      dotStyle: { backgroundColor: bg },
+      dotStyle: { backgroundColor: accentColor },
     };
   }
 
   return {
-    className: eventColorClasses(event.color),
-    dotClassName: eventDotClass(event.color),
+    accentColor,
+    className: "border-0 bg-transparent text-white",
+    style: { color: "#ffffff" },
+    dotStyle: { backgroundColor: accentColor },
   };
 }
 
 export function filterEventsBySelectedCalendars(
   events: CalendarEvent[],
-  sources: GoogleCalendarSource[],
+  _sources: GoogleCalendarSource[],
 ): CalendarEvent[] {
-  if (sources.length === 0) {
-    return events;
-  }
-
-  const hidden = new Set(
-    sources.filter((source) => !source.selected).map((s) => s.googleCalendarId),
-  );
-
-  return events.filter(
-    (event) =>
-      !event.googleCalendarId || !hidden.has(event.googleCalendarId),
-  );
+  return events;
 }

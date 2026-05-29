@@ -144,9 +144,13 @@ export function formatEventTime(event: CalendarEvent): string {
   return `${format(start, "MMM d, h:mm a")} – ${format(end, "MMM d, h:mm a")}`;
 }
 
-/** Compact label for month/week chips — title only (Google Calendar style). */
+/** Compact label for month/week chips — time prefix for timed events (Google Calendar style). */
 export function formatEventChipLabel(event: CalendarEvent): string {
-  return event.title;
+  if (event.allDay) {
+    return event.title;
+  }
+  const start = parseEventDate(event.startAt);
+  return `${format(start, "HH:mm")} ${event.title}`;
 }
 
 export function eventColorClasses(color: CalendarEvent["color"]): string {

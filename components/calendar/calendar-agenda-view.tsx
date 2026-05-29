@@ -66,20 +66,18 @@ export function CalendarAgendaView({
                   type="button"
                   onClick={() => onSelectEvent(event)}
                   className={cn(
-                    "hover:bg-muted/20 flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors",
+                    "hover:bg-muted/20 flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left text-white transition-colors",
                     eventPastClass(event),
                   )}
                 >
                   <span
-                    className={cn(
-                      "mt-1.5 size-2 shrink-0 rounded-full",
-                      appearance.dotClassName,
-                    )}
+                    aria-hidden
+                    className="mt-1.5 size-2 shrink-0 rounded-full"
                     style={appearance.dotStyle}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{event.title}</div>
-                    <div className="text-muted-foreground text-sm">
+                    <div className="truncate font-medium text-white">{event.title}</div>
+                    <div className="text-sm text-white/70">
                       {formatEventTime(event)}
                     </div>
                     {event.description ? (

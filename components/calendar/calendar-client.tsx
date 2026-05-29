@@ -11,7 +11,6 @@ import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarReadOnlyBanner } from "@/components/calendar/calendar-readonly-banner";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarSourcesProvider } from "@/components/calendar/calendar-sources-context";
-import { CalendarSourcesSidebar } from "@/components/calendar/calendar-sources-sidebar";
 import {
   CalendarDayView,
   CalendarWeekView,
@@ -293,16 +292,7 @@ export function CalendarClient({
             googleEmail={googleSync?.googleEmail}
           />
 
-          <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-            {googleSync?.enabled && calendarSources.length > 0 ? (
-              <CalendarSourcesSidebar
-                sources={calendarSources}
-                onSourcesChange={setCalendarSources}
-                className="lg:self-start"
-              />
-            ) : null}
-
-            <div className="min-h-0 flex-1">
+          <div className="min-h-0 flex-1">
           {view === "month" ? (
             <CalendarMonthView
               date={currentDate}
@@ -341,7 +331,6 @@ export function CalendarClient({
               onSelectEvent={openEdit}
             />
           ) : null}
-            </div>
           </div>
 
           <EventFormDialog

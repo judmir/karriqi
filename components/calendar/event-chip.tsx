@@ -33,7 +33,8 @@ export function EventChip({
         onClick?.();
       }}
       className={cn(
-        "w-full cursor-pointer truncate rounded-md border px-1.5 text-left text-xs transition-opacity",
+        "w-full cursor-pointer truncate rounded-md text-left text-xs text-white transition-opacity",
+        event.allDay ? "border px-1.5" : "flex items-center gap-1.5 px-0",
         compact ? "py-0.5" : "py-1",
         appearance.className,
         eventPastClass(event),
@@ -42,7 +43,14 @@ export function EventChip({
       )}
       style={appearance.style}
     >
-      {label}
+      {!event.allDay ? (
+        <span
+          aria-hidden
+          className="size-1.5 shrink-0 rounded-full"
+          style={appearance.dotStyle}
+        />
+      ) : null}
+      <span className="min-w-0 truncate">{label}</span>
     </button>
   );
 }

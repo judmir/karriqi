@@ -32,7 +32,7 @@ export function MonthMultiDayEventBar({
         onSelectEvent(event);
       }}
       className={cn(
-        "pointer-events-auto absolute box-border h-[18px] cursor-pointer truncate border px-1.5 text-left text-[11px] leading-[16px] transition-opacity sm:text-xs",
+        "pointer-events-auto absolute box-border h-[18px] cursor-pointer truncate border-0 px-1.5 text-left text-[11px] leading-[16px] text-white transition-opacity sm:text-xs",
         appearance.className,
         eventPastClass(event),
         !past && "hover:opacity-90",

@@ -186,7 +186,7 @@ function TimeGrid({
             return null;
           }
 
-          const appearance = appearanceForEvent(event);
+          const appearance = appearanceForEvent(event, "block");
 
           return (
             <DraggableEventChip
@@ -194,7 +194,7 @@ function TimeGrid({
               event={event}
               style={{ ...style, ...appearance.style }}
               className={cn(
-                "absolute inset-x-1 cursor-pointer overflow-hidden rounded-md border px-1.5 py-0.5 text-left text-xs",
+                "absolute inset-x-1 cursor-pointer overflow-hidden rounded-md border-0 px-1.5 py-0.5 text-left text-xs text-white",
                 appearance.className,
                 eventPastClass(event),
               )}
@@ -203,10 +203,10 @@ function TimeGrid({
               <button
                 type="button"
                 onClick={() => onSelectEvent(event)}
-                className="h-full w-full cursor-pointer text-left"
+                className="h-full w-full cursor-pointer text-left text-white"
               >
                 <div className="truncate font-medium">{event.title}</div>
-                <div className="truncate opacity-80">{formatEventTime(event)}</div>
+                <div className="truncate text-white/80">{formatEventTime(event)}</div>
               </button>
             </DraggableEventChip>
           );

@@ -27,11 +27,11 @@ export function GoogleCalendarDisconnectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={!busy}>
         <DialogHeader>
-          <DialogTitle>Disconnect Google Calendar?</DialogTitle>
+          <DialogTitle>Disconnect calendar?</DialogTitle>
           <DialogDescription>
-            Sync will stop and Google events will no longer appear in Karriqi.
-            Events already saved here stay in your account. You can connect
-            Google again anytime from this page or Settings.
+            Sync will stop and synced events will no longer appear here. Events
+            already saved in your account stay put. You can connect again anytime
+            from this page or Settings.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
