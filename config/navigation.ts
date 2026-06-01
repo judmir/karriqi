@@ -6,7 +6,6 @@ import {
   Code2,
   LayoutDashboard,
   List,
-  NotebookPen,
   ShoppingCart,
   SquareKanban,
   Stethoscope,
@@ -42,12 +41,6 @@ export const rehabNavItems: MainNavItem[] = [
     label: "Clinical",
     shortLabel: "Clinical",
     icon: Stethoscope,
-  },
-  {
-    href: ROUTES.rehabJournal,
-    label: "Journal",
-    shortLabel: "Journal",
-    icon: NotebookPen,
   },
   {
     href: ROUTES.rehabWiki,

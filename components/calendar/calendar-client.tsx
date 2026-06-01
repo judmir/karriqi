@@ -1,6 +1,16 @@
 "use client";
 
-import { setHours, setMinutes, startOfDay } from "date-fns";
+import {
+  addDays,
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
+  setHours,
+  setMinutes,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -15,12 +25,14 @@ import {
   CalendarWeekView,
 } from "@/components/calendar/calendar-time-views";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
+import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import {
   calendarEventActionsFor,
   type CalendarClientVariant,
 } from "@/lib/calendar/calendar-event-actions";
 import { filterEventsBySelectedCalendars } from "@/lib/calendar/google-event-colors";
 import { navigateDate } from "@/lib/calendar/calendar-utils";
+import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import { syncGoogleCalendarAction } from "@/lib/google-calendar/sync-actions";
 import { useCalendarStore } from "@/stores/calendar-store";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
@@ -34,6 +46,30 @@ type GoogleSyncOptions = {
   calendarSources?: GoogleCalendarSource[];
   syncOnMount?: boolean;
 };
+
+/** Window of dates currently visible for a given view, for recurrence expansion. */
+function expansionRange(
+  view: CalendarView,
+  date: Date,
+): { start: Date; end: Date } {
+  switch (view) {
+    case "month":
+      return {
+        start: startOfWeek(startOfMonth(date), { weekStartsOn: 1 }),
+        end: endOfWeek(endOfMonth(date), { weekStartsOn: 1 }),
+      };
+    case "week":
+      return {
+        start: startOfWeek(date, { weekStartsOn: 1 }),
+        end: endOfWeek(date, { weekStartsOn: 1 }),
+      };
+    case "day":
+      return { start: startOfDay(date), end: endOfDay(date) };
+    case "agenda":
+    default:
+      return { start: startOfDay(date), end: endOfDay(addDays(date, 60)) };
+  }
+}
 
 export function CalendarClient({
   initialEvents = [],
@@ -57,15 +93,24 @@ export function CalendarClient({
   const didMountSync = useRef(false);
   const rehabStoreEvents = useRehabPlanStore((state) => state.events);
   const [localEvents, setLocalEvents] = useState(initialEvents);
-  const events = syncRehabStore ? rehabStoreEvents : localEvents;
   const setEvents = syncRehabStore ? undefined : setLocalEvents;
   const [calendarSources, setCalendarSources] = useState<GoogleCalendarSource[]>(
     googleSync?.calendarSources ?? [],
   );
   const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()));
+  // Rehab: expand recurring masters into concrete occurrences for the window.
+  const events = useMemo(() => {
+    if (syncRehabStore) {
+      const { start, end } = expansionRange(view, currentDate);
+      return expandRehabEvents(rehabStoreEvents, start, end);
+    }
+    return localEvents;
+  }, [syncRehabStore, rehabStoreEvents, localEvents, view, currentDate]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [journalEvent, setJournalEvent] = useState<CalendarEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [syncing, setSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(
@@ -175,11 +220,22 @@ export function CalendarClient({
     setDialogOpen(true);
   }, []);
 
-  const openEdit = useCallback((event: CalendarEvent) => {
-    setSelectedEvent(event);
-    setDraftStart(new Date(event.startAt));
-    setDialogOpen(true);
-  }, []);
+  const openEdit = useCallback(
+    (event: CalendarEvent) => {
+      if (
+        syncRehabStore &&
+        (event as Partial<RehabPlanEvent>).eventKind === "journal"
+      ) {
+        setJournalEvent(event);
+        setJournalOpen(true);
+        return;
+      }
+      setSelectedEvent(event);
+      setDraftStart(new Date(event.startAt));
+      setDialogOpen(true);
+    },
+    [syncRehabStore],
+  );
 
   const handleNavigate = useCallback(
     (direction: "prev" | "next" | "today") => {
@@ -383,6 +439,15 @@ export function CalendarClient({
             variant={variant}
             onSaved={handleSaved}
             onDeleted={handleDeleted}
+          />
+
+          <RehabJournalDialog
+            open={journalOpen && journalEvent !== null}
+            onOpenChange={setJournalOpen}
+            event={journalEvent}
+            persistence={persistence}
+            variant={variant}
+            onSaved={() => setJournalOpen(false)}
           />
         </div>
       </CalendarDndProvider>

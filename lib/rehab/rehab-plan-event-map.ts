@@ -1,5 +1,6 @@
 import type { CalendarEventColor } from "@/types/calendar";
 import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
+import { parseRecurrenceRule } from "@/lib/rehab/recurrence";
 import {
   REHAB_EVENT_KINDS,
   type RehabEventKind,
@@ -19,12 +20,16 @@ export type RehabPlanEventRow = {
   event_kind: string;
   program_id: string | null;
   plan_week: number | null;
+  series_id: string | null;
+  recurrence_rule: string | null;
+  recurrence_at: string | null;
+  recurrence_cancelled: boolean;
   created_at: string;
   updated_at: string;
 };
 
 export const REHAB_PLAN_EVENT_SELECT =
-  "id, user_id, title, description, start_at, end_at, all_day, color, completed_at, event_kind, program_id, plan_week, created_at, updated_at";
+  "id, user_id, title, description, start_at, end_at, all_day, color, completed_at, event_kind, program_id, plan_week, series_id, recurrence_rule, recurrence_at, recurrence_cancelled, created_at, updated_at";
 
 function isEventColor(value: string): value is CalendarEventColor {
   return (CALENDAR_EVENT_COLORS as readonly string[]).includes(value);
@@ -49,6 +54,10 @@ export function mapRehabPlanEvent(row: RehabPlanEventRow): RehabPlanEvent {
     eventKind: isEventKind(row.event_kind) ? row.event_kind : "custom",
     programId: row.program_id,
     planWeek: row.plan_week,
+    seriesId: row.series_id,
+    recurrence: parseRecurrenceRule(row.recurrence_rule),
+    recurrenceAt: row.recurrence_at,
+    recurrenceCancelled: row.recurrence_cancelled ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

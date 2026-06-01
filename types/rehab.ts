@@ -1,4 +1,5 @@
 import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
+import type { RecurrenceRule } from "@/lib/rehab/recurrence";
 
 export const REHAB_EVENT_KINDS = [
   "gym_a",
@@ -28,6 +29,19 @@ export type RehabPlanEvent = CalendarEvent & {
   eventKind: RehabEventKind;
   programId: string | null;
   planWeek: number | null;
+  /** Groups a recurring master + its override rows. null for standalone events. */
+  seriesId: string | null;
+  /** Parsed recurrence rule. Only set on the master row of a series. */
+  recurrence: RecurrenceRule | null;
+  /** Override rows: the original occurrence start this row replaces. */
+  recurrenceAt: string | null;
+  /** Override rows: true to skip (EXDATE) this occurrence. */
+  recurrenceCancelled: boolean;
+  /**
+   * Set on virtual (expanded) occurrences only: the master row id.
+   * Real rows (master/override/standalone) leave this undefined.
+   */
+  recurrenceMasterId?: string;
 };
 
 export type RehabWikiPage = {

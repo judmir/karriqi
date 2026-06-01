@@ -5,6 +5,8 @@ import {
   isEventPast,
 } from "@/lib/calendar/calendar-utils";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
+import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { getRehabEventKind } from "@/lib/rehab/rehab-event-kind-visual";
 import type { MonthEventSegment } from "@/lib/calendar/all-day-events";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +22,7 @@ export function MonthMultiDayEventBar({
   const past = isEventPast(event);
   const { appearanceForEvent } = useCalendarSources();
   const appearance = appearanceForEvent(event);
+  const rehabKind = getRehabEventKind(event);
 
   const insetLeft = continuesFromPriorWeek ? 0 : 2;
   const insetRight = continuesToNextWeek ? 0 : 2;
@@ -32,7 +35,7 @@ export function MonthMultiDayEventBar({
         onSelectEvent(event);
       }}
       className={cn(
-        "pointer-events-auto absolute box-border h-[18px] cursor-pointer truncate border-0 px-1.5 text-left text-[11px] leading-[16px] text-white transition-opacity sm:text-xs",
+        "pointer-events-auto absolute box-border flex h-[18px] cursor-pointer items-center gap-1 truncate border-0 px-1 text-left text-[11px] leading-[16px] text-white transition-opacity sm:text-xs",
         appearance.className,
         eventPastClass(event),
         !past && "hover:opacity-90",
@@ -47,7 +50,12 @@ export function MonthMultiDayEventBar({
       }}
       title={event.title}
     >
-      {showTitle ? event.title : "\u00a0"}
+      {showTitle && rehabKind ? (
+        <RehabEventKindIcon event={event} size="sm" className="shrink-0" />
+      ) : null}
+      <span className="min-w-0 truncate">
+        {showTitle ? event.title : "\u00a0"}
+      </span>
     </button>
   );
 }

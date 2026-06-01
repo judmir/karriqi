@@ -23,6 +23,8 @@ import {
   weekDays,
 } from "@/lib/calendar/calendar-utils";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
+import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { getRehabEventKind } from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -187,6 +189,7 @@ function TimeGrid({
           }
 
           const appearance = appearanceForEvent(event, "block");
+          const rehabKind = getRehabEventKind(event);
 
           return (
             <DraggableEventChip
@@ -203,10 +206,21 @@ function TimeGrid({
               <button
                 type="button"
                 onClick={() => onSelectEvent(event)}
-                className="h-full w-full cursor-pointer text-left text-white"
+                className="flex h-full w-full cursor-pointer items-start gap-1.5 text-left text-white"
               >
-                <div className="truncate font-medium">{event.title}</div>
-                <div className="truncate text-white/80">{formatEventTime(event)}</div>
+                {rehabKind ? (
+                  <RehabEventKindIcon
+                    event={event}
+                    size="sm"
+                    className="mt-0.5 shrink-0"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{event.title}</div>
+                  <div className="truncate text-white/80">
+                    {formatEventTime(event)}
+                  </div>
+                </div>
               </button>
             </DraggableEventChip>
           );

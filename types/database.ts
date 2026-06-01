@@ -517,6 +517,10 @@ export type Database = {
           event_kind: string;
           program_id: string | null;
           plan_week: number | null;
+          series_id: string | null;
+          recurrence_rule: string | null;
+          recurrence_at: string | null;
+          recurrence_cancelled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -533,6 +537,10 @@ export type Database = {
           event_kind?: string;
           program_id?: string | null;
           plan_week?: number | null;
+          series_id?: string | null;
+          recurrence_rule?: string | null;
+          recurrence_at?: string | null;
+          recurrence_cancelled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -549,6 +557,10 @@ export type Database = {
           event_kind?: string;
           program_id?: string | null;
           plan_week?: number | null;
+          series_id?: string | null;
+          recurrence_rule?: string | null;
+          recurrence_at?: string | null;
+          recurrence_cancelled?: boolean;
           created_at?: string;
           updated_at?: string;
         };

@@ -4,6 +4,7 @@ import {
   updateCalendarEvent,
 } from "@/lib/calendar/calendar-actions";
 import { rehabPlanEventActions as rehabStoreEventActions } from "@/lib/rehab/rehab-plan-event-actions";
+import type { RecurrenceRule } from "@/lib/rehab/recurrence";
 import type { CalendarEventColor } from "@/types/calendar";
 
 export type CalendarEventActions = {
@@ -14,6 +15,8 @@ export type CalendarEventActions = {
     endAt: string;
     allDay?: boolean;
     color?: CalendarEventColor;
+    /** Rehab-only: a recurrence rule makes this event a series master. */
+    recurrence?: RecurrenceRule | null;
   }) => Promise<{ ok: true; id: string } | { ok: false; message: string }>;
   update: (input: {
     id: string;
@@ -23,6 +26,7 @@ export type CalendarEventActions = {
     endAt?: string;
     allDay?: boolean;
     color?: CalendarEventColor;
+    recurrence?: RecurrenceRule | null;
   }) => Promise<{ ok: true } | { ok: false; message: string }>;
   delete: (id: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 };

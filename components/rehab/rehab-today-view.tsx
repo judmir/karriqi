@@ -6,7 +6,7 @@ import {
   List,
 } from "lucide-react";
 import Link from "next/link";
-import { format, startOfDay } from "date-fns";
+import { endOfDay, format, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
@@ -14,7 +14,8 @@ import {
   RehabInlineAddTask,
   type RehabInlineTaskCreated,
 } from "@/components/rehab/rehab-inline-add-task";
-import { RehabJournalTodayLink } from "@/components/rehab/rehab-journal-editor";
+import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import { RehabMarkdown } from "@/components/rehab/rehab-markdown";
 import { buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,9 +31,10 @@ import {
   rehabTodaySectionForSchedule,
   type RehabTodaySection,
 } from "@/lib/rehab/rehab-today-utils";
+import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
+import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
-import type { CalendarEvent } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
 
 const ACTIVE_SECTIONS = REHAB_TODAY_SECTIONS.filter(
@@ -45,16 +47,18 @@ type DepartedTaskNotice = {
   fromSection: Exclude<RehabTodaySection, "completed">;
 };
 
-export function RehabTodayView({ journalDate }: { journalDate: string }) {
+export function RehabTodayView() {
   const today = useMemo(() => startOfDay(new Date()), []);
   const allEvents = useRehabPlanStore((state) => state.events);
   const persistence = useRehabPlanStore((state) => state.persistence);
-  const toggleCompleted = useRehabPlanStore((state) => state.toggleCompleted);
-
-  const events = useMemo(
-    () => filterRehabEventsForDay(allEvents, today),
-    [allEvents, today],
+  const toggleOccurrenceCompleted = useRehabPlanStore(
+    (state) => state.toggleOccurrenceCompleted,
   );
+
+  const events = useMemo(() => {
+    const expanded = expandRehabEvents(allEvents, startOfDay(today), endOfDay(today));
+    return filterRehabEventsForDay(expanded, today);
+  }, [allEvents, today]);
   const [collapsed, setCollapsed] = useState<Record<RehabTodaySection, boolean>>(
     {
       all_day: false,
@@ -66,6 +70,8 @@ export function RehabTodayView({ journalDate }: { journalDate: string }) {
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(null);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
@@ -143,22 +149,27 @@ export function RehabTodayView({ journalDate }: { journalDate: string }) {
   );
 
   const openEdit = useCallback((event: RehabPlanEvent) => {
+    if (event.eventKind === "journal") {
+      setJournalEvent(event);
+      setJournalOpen(true);
+      return;
+    }
     setSelectedEvent(event);
     setDraftAllDay(event.allDay);
     setDraftStart(new Date(event.startAt));
     setDialogOpen(true);
   }, []);
 
-  function handleSaved(_event: CalendarEvent) {
+  function handleSaved() {
     setDialogOpen(false);
   }
 
-  function handleDeleted(_id: string) {
+  function handleDeleted() {
     setDialogOpen(false);
   }
 
   async function handleToggleCompleted(event: RehabPlanEvent, completed: boolean) {
-    await toggleCompleted(event.id, completed);
+    await toggleOccurrenceCompleted(event, completed);
   }
 
   function toggleSection(section: RehabTodaySection) {
@@ -222,11 +233,6 @@ export function RehabTodayView({ journalDate }: { journalDate: string }) {
               showAdd={false}
             />
           ) : null}
-
-          <div className="border-border flex items-center justify-between border-t py-4">
-            <span className="text-muted-foreground text-sm">Evening journal</span>
-            <RehabJournalTodayLink date={journalDate} />
-          </div>
       </div>
 
       <EventFormDialog
@@ -239,6 +245,15 @@ export function RehabTodayView({ journalDate }: { journalDate: string }) {
         variant="rehab"
         onSaved={handleSaved}
         onDeleted={handleDeleted}
+      />
+
+      <RehabJournalDialog
+        open={journalOpen && journalEvent !== null}
+        onOpenChange={setJournalOpen}
+        event={journalEvent}
+        persistence={persistence}
+        variant="rehab"
+        onSaved={() => setJournalOpen(false)}
       />
     </div>
   );
@@ -366,7 +381,8 @@ function RehabTodayItemRow({
   const completed = Boolean(event.completedAt);
   const timeLabel = rehabEventTimeLabel(event);
   const [expanded, setExpanded] = useState(false);
-  const hasDescription = Boolean(event.description?.trim());
+  const descriptionText = getEventDescriptionPlainText(event.description);
+  const hasDescription = Boolean(descriptionText);
 
   return (
     <div
@@ -383,6 +399,7 @@ function RehabTodayItemRow({
           className="mt-0.5 rounded-full"
           aria-label={`Mark ${event.title} ${completed ? "incomplete" : "complete"}`}
         />
+        <RehabEventKindIcon event={event} size="md" className="mt-0.5" />
         <div className="min-w-0 flex-1">
           <button
             type="button"
@@ -414,9 +431,9 @@ function RehabTodayItemRow({
           ) : null}
         </div>
       </div>
-      {expanded && event.description ? (
-        <div className="ml-9 rounded-md border border-border bg-muted/30 p-3">
-          <RehabMarkdown content={event.description} className="prose-xs" />
+      {expanded && descriptionText ? (
+        <div className="ml-[3.25rem] rounded-md border border-border bg-muted/30 p-3">
+          <RehabMarkdown content={descriptionText} className="prose-xs" />
         </div>
       ) : null}
     </div>

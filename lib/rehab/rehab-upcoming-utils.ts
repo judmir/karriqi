@@ -10,6 +10,7 @@ import {
 } from "date-fns";
 
 import { eventSpansDay } from "@/lib/calendar/all-day-events";
+import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
 import { PROGRAM_START, PROGRAM_WEEKS } from "@/modules/rehab/neuro-rehab-2026/constants";
 import type { RehabPlanEvent } from "@/types/rehab";
 
@@ -65,7 +66,8 @@ export function filterUpcomingEventsBySearch(
   return events
     .filter((event) => {
       const title = event.title.toLowerCase();
-      const description = event.description?.toLowerCase() ?? "";
+      const description =
+        getEventDescriptionPlainText(event.description)?.toLowerCase() ?? "";
       return title.includes(normalized) || description.includes(normalized);
     })
     .sort(byStart);

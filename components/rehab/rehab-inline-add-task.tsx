@@ -16,12 +16,14 @@ import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
 import { calendarDateToStorage } from "@/lib/calendar/all-day-events";
 import {
   combineDateAndTime,
   defaultEventEnd,
   toDateInputValue,
 } from "@/lib/calendar/calendar-utils";
+import type { RecurrenceRule } from "@/lib/rehab/recurrence";
 import { cn } from "@/lib/utils";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 
@@ -71,6 +73,7 @@ export function RehabInlineAddTask({
   const [pending, setPending] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
+  const [recurrence, setRecurrence] = useState<RecurrenceRule | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -82,6 +85,7 @@ export function RehabInlineAddTask({
     setTime("");
     setDateOpen(false);
     setTimeOpen(false);
+    setRecurrence(null);
   }, [defaultStart]);
 
   const cancel = useCallback(() => {
@@ -157,6 +161,7 @@ export function RehabInlineAddTask({
         startAt,
         endAt,
         allDay,
+        recurrence,
       });
 
       if (!result.ok) {
@@ -267,6 +272,14 @@ export function RehabInlineAddTask({
                 setTime(next);
                 setTimeOpen(false);
               }}
+            />
+
+            <RehabRepeatField
+              value={recurrence}
+              startDate={date}
+              onChange={setRecurrence}
+              disabled={pending}
+              appearance="inline"
             />
           </div>
         </div>

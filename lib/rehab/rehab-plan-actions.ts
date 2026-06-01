@@ -1,9 +1,14 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  serializeRecurrenceRule,
+  type RecurrenceRule,
+} from "@/lib/rehab/recurrence";
 import type { Database } from "@/types/database";
 import type { CalendarEventColor } from "@/types/calendar";
 import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
+import { REHAB_EVENT_KINDS, type RehabEventKind } from "@/types/rehab";
 
 type RehabPlanEventUpdate =
   Database["public"]["Tables"]["rehab_plan_events"]["Update"];
@@ -20,6 +25,12 @@ function isEventColor(value: string | undefined): value is CalendarEventColor {
   );
 }
 
+function eventKindOrCustom(value: string | undefined): RehabEventKind {
+  return value && (REHAB_EVENT_KINDS as readonly string[]).includes(value)
+    ? (value as RehabEventKind)
+    : "custom";
+}
+
 export type CreateRehabPlanEventResult =
   | { ok: true; id: string }
   | { ok: false; message: string };
@@ -31,6 +42,7 @@ export async function createRehabPlanEvent(input: {
   endAt: string;
   allDay?: boolean;
   color?: CalendarEventColor;
+  recurrence?: RecurrenceRule | null;
 }): Promise<CreateRehabPlanEventResult> {
   const title = input.title.trim();
   if (!title) {
@@ -55,6 +67,8 @@ export async function createRehabPlanEvent(input: {
     return { ok: false, message: "Not signed in." };
   }
 
+  const recurrenceRule = serializeRecurrenceRule(input.recurrence ?? null);
+
   const { data: created, error } = await supabase
     .from("rehab_plan_events")
     .insert({
@@ -65,12 +79,25 @@ export async function createRehabPlanEvent(input: {
       end_at: endAt.toISOString(),
       all_day: input.allDay ?? false,
       color: isEventColor(input.color) ? input.color : "blue",
+      recurrence_rule: recurrenceRule,
     })
     .select("id")
     .single();
 
   if (error || !created) {
     return { ok: false, message: error?.message ?? "Insert failed." };
+  }
+
+  // A recurring master groups its overrides via series_id = its own id.
+  if (recurrenceRule) {
+    const { error: seriesError } = await supabase
+      .from("rehab_plan_events")
+      .update({ series_id: created.id })
+      .eq("id", created.id)
+      .eq("user_id", user.id);
+    if (seriesError) {
+      return { ok: false, message: seriesError.message };
+    }
   }
 
   return ok({ ok: true, id: created.id });
@@ -86,6 +113,7 @@ export async function updateRehabPlanEvent(input: {
   endAt?: string;
   allDay?: boolean;
   color?: CalendarEventColor;
+  recurrence?: RecurrenceRule | null;
 }): Promise<UpdateRehabPlanEventResult> {
   const supabase = await createClient();
   const {
@@ -132,6 +160,14 @@ export async function updateRehabPlanEvent(input: {
 
   if (input.color !== undefined && isEventColor(input.color)) {
     patch.color = input.color;
+  }
+
+  if (input.recurrence !== undefined) {
+    patch.recurrence_rule = serializeRecurrenceRule(input.recurrence);
+    // A plain event converting to recurring becomes its own series master.
+    if (input.recurrence) {
+      patch.series_id = input.id;
+    }
   }
 
   if (Object.keys(patch).length === 0) {
@@ -206,4 +242,243 @@ export async function toggleRehabPlanEventCompleted(input: {
   }
 
   return ok({ ok: true });
+}
+
+export type UpsertRehabOccurrenceResult =
+  | { ok: true; id: string }
+  | { ok: false; message: string };
+
+/**
+ * Create or update a per-occurrence override row for a recurring series.
+ * Identified by (series_id, recurrence_at). Used for editing, completing, or
+ * cancelling (skipping) a single occurrence.
+ */
+export async function upsertRehabOccurrenceOverride(input: {
+  seriesId: string;
+  recurrenceAt: string;
+  title: string;
+  description?: string | null;
+  startAt: string;
+  endAt: string;
+  allDay?: boolean;
+  color?: CalendarEventColor;
+  eventKind?: string;
+  completedAt?: string | null;
+  cancelled?: boolean;
+}): Promise<UpsertRehabOccurrenceResult> {
+  const recurrenceAt = new Date(input.recurrenceAt);
+  const startAt = new Date(input.startAt);
+  const endAt = new Date(input.endAt);
+  if (
+    Number.isNaN(recurrenceAt.getTime()) ||
+    Number.isNaN(startAt.getTime()) ||
+    Number.isNaN(endAt.getTime())
+  ) {
+    return { ok: false, message: "Invalid date or time." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const row = {
+    user_id: user.id,
+    title: input.title.trim() || "Untitled",
+    description: input.description?.trim() || null,
+    start_at: startAt.toISOString(),
+    end_at: endAt.toISOString(),
+    all_day: input.allDay ?? false,
+    color: isEventColor(input.color) ? input.color : "blue",
+    event_kind: eventKindOrCustom(input.eventKind),
+    series_id: input.seriesId,
+    recurrence_at: recurrenceAt.toISOString(),
+    recurrence_cancelled: input.cancelled ?? false,
+    completed_at: input.completedAt ?? null,
+  };
+
+  const { data: existing, error: findError } = await supabase
+    .from("rehab_plan_events")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("series_id", input.seriesId)
+    .eq("recurrence_at", recurrenceAt.toISOString())
+    .maybeSingle();
+
+  if (findError) {
+    return { ok: false, message: findError.message };
+  }
+
+  if (existing) {
+    const { error } = await supabase
+      .from("rehab_plan_events")
+      .update(row)
+      .eq("id", existing.id)
+      .eq("user_id", user.id);
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+    return ok({ ok: true, id: existing.id });
+  }
+
+  const { data: created, error } = await supabase
+    .from("rehab_plan_events")
+    .insert(row)
+    .select("id")
+    .single();
+  if (error || !created) {
+    return { ok: false, message: error?.message ?? "Insert failed." };
+  }
+  return ok({ ok: true, id: created.id });
+}
+
+export type DeleteRehabSeriesResult = { ok: true } | Err;
+
+/** Delete an entire recurring series (master + all override rows). */
+export async function deleteRehabSeries(
+  seriesId: string,
+): Promise<DeleteRehabSeriesResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const { error } = await supabase
+    .from("rehab_plan_events")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("series_id", seriesId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+  return ok({ ok: true });
+}
+
+export type SplitRehabSeriesResult =
+  | { ok: true; id: string }
+  | { ok: false; message: string };
+
+/**
+ * "This and following": end the original series the day before `splitAt`, then
+ * start a new series at `splitAt` with the supplied fields/rule. Overrides on or
+ * after the split move to the new series.
+ */
+export async function splitRehabSeries(input: {
+  seriesId: string;
+  masterId: string;
+  splitAt: string;
+  title: string;
+  description?: string | null;
+  startAt: string;
+  endAt: string;
+  allDay?: boolean;
+  color?: CalendarEventColor;
+  eventKind?: string;
+  recurrence: RecurrenceRule;
+}): Promise<SplitRehabSeriesResult> {
+  const splitAt = new Date(input.splitAt);
+  const startAt = new Date(input.startAt);
+  const endAt = new Date(input.endAt);
+  if (
+    Number.isNaN(splitAt.getTime()) ||
+    Number.isNaN(startAt.getTime()) ||
+    Number.isNaN(endAt.getTime())
+  ) {
+    return { ok: false, message: "Invalid date or time." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  // Load the original master to preserve its rule shape (interval/weekdays).
+  const { data: master, error: masterError } = await supabase
+    .from("rehab_plan_events")
+    .select("recurrence_rule")
+    .eq("id", input.masterId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (masterError || !master) {
+    return { ok: false, message: masterError?.message ?? "Series not found." };
+  }
+
+  // End the original series the day before the split occurrence.
+  const untilDate = new Date(splitAt);
+  untilDate.setDate(untilDate.getDate() - 1);
+  const until = untilDate.toISOString().slice(0, 10);
+
+  let originalRule: RecurrenceRule | null = null;
+  try {
+    originalRule = master.recurrence_rule
+      ? (JSON.parse(master.recurrence_rule) as RecurrenceRule)
+      : null;
+  } catch {
+    originalRule = null;
+  }
+  if (originalRule) {
+    const { error } = await supabase
+      .from("rehab_plan_events")
+      .update({
+        recurrence_rule: serializeRecurrenceRule({ ...originalRule, until }),
+      })
+      .eq("id", input.masterId)
+      .eq("user_id", user.id);
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+  }
+
+  // Create the new master.
+  const { data: created, error: insertError } = await supabase
+    .from("rehab_plan_events")
+    .insert({
+      user_id: user.id,
+      title: input.title.trim() || "Untitled",
+      description: input.description?.trim() || null,
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+      all_day: input.allDay ?? false,
+      color: isEventColor(input.color) ? input.color : "blue",
+      event_kind: eventKindOrCustom(input.eventKind),
+      recurrence_rule: serializeRecurrenceRule(input.recurrence),
+    })
+    .select("id")
+    .single();
+  if (insertError || !created) {
+    return { ok: false, message: insertError?.message ?? "Insert failed." };
+  }
+
+  const { error: seriesError } = await supabase
+    .from("rehab_plan_events")
+    .update({ series_id: created.id })
+    .eq("id", created.id)
+    .eq("user_id", user.id);
+  if (seriesError) {
+    return { ok: false, message: seriesError.message };
+  }
+
+  // Move overrides on/after the split to the new series.
+  const { error: moveError } = await supabase
+    .from("rehab_plan_events")
+    .update({ series_id: created.id })
+    .eq("user_id", user.id)
+    .eq("series_id", input.seriesId)
+    .not("recurrence_at", "is", null)
+    .gte("recurrence_at", splitAt.toISOString());
+  if (moveError) {
+    return { ok: false, message: moveError.message };
+  }
+
+  return ok({ ok: true, id: created.id });
 }

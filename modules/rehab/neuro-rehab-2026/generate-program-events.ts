@@ -291,7 +291,7 @@ function dailyNonNegotiables(
       0,
       5,
       "Journal (5 min)",
-      "Rate sleep, stress, fatigue, hand, leg, speech. See Rehab → Journal.",
+      null,
       "journal",
       "red",
     ),

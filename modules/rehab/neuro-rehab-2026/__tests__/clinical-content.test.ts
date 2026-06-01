@@ -24,6 +24,10 @@ function mockEvent(
     eventKind: partial.eventKind,
     programId: "neuro-rehab-2026-v1",
     planWeek: null,
+    seriesId: null,
+    recurrence: null,
+    recurrenceAt: null,
+    recurrenceCancelled: false,
     createdAt: partial.startAt,
     updatedAt: partial.startAt,
   };

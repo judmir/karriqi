@@ -19,12 +19,10 @@ export default async function RehabTodayPage() {
     await ensureNeuroRehabProgramReady(user.id);
   }
 
-  const journalDate = new Date().toISOString().slice(0, 10);
-
   return (
     <Suspense fallback={null}>
       <RehabPlanStoreGate>
-        <RehabTodayView journalDate={journalDate} />
+        <RehabTodayView />
       </RehabPlanStoreGate>
     </Suspense>
   );

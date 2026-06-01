@@ -1,5 +1,10 @@
 import type { CSSProperties } from "react";
 
+import {
+  CALENDAR_COLOR_HEX,
+  getRehabEventKind,
+  hexToRgba,
+} from "@/lib/rehab/rehab-event-kind-visual";
 import type { CalendarEvent, GoogleCalendarSource } from "@/types/calendar";
 
 function normalizeHex(hex: string): string {
@@ -23,10 +28,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
-export function hexToRgba(hex: string, alpha: number): string {
-  const { r, g, b } = hexToRgb(hex);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+export { hexToRgba } from "@/lib/rehab/rehab-event-kind-visual";
 
 const DEFAULT_CALENDAR_COLOR = "#039be5";
 
@@ -58,7 +60,10 @@ export function eventAppearance(
   sources: GoogleCalendarSource[],
   display: EventAppearanceDisplay = "list",
 ): EventAppearance {
-  const accentColor = resolveDefaultCalendarColor(sources);
+  const rehabKind = getRehabEventKind(event);
+  const accentColor = rehabKind
+    ? (CALENDAR_COLOR_HEX[event.color] ?? DEFAULT_CALENDAR_COLOR)
+    : resolveDefaultCalendarColor(sources);
 
   if (event.allDay || display === "block") {
     return {

@@ -9,7 +9,10 @@ import {
   formatEventTime,
   monthGridDays,
 } from "@/lib/calendar/calendar-utils";
+import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
+import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { getRehabEventKind } from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -60,6 +63,7 @@ export function CalendarAgendaView({
           <ul className="divide-y divide-border">
             {dayEvents.map((event) => {
               const appearance = appearanceForEvent(event);
+              const rehabKind = getRehabEventKind(event);
               return (
               <li key={event.id}>
                 <button
@@ -70,21 +74,28 @@ export function CalendarAgendaView({
                     eventPastClass(event),
                   )}
                 >
-                  <span
-                    aria-hidden
-                    className="mt-1.5 size-2 shrink-0 rounded-full"
-                    style={appearance.dotStyle}
-                  />
+                  {rehabKind ? (
+                    <RehabEventKindIcon event={event} size="md" className="mt-0.5" />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="mt-1.5 size-2 shrink-0 rounded-full"
+                      style={appearance.dotStyle}
+                    />
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium text-white">{event.title}</div>
                     <div className="text-sm text-white/70">
                       {formatEventTime(event)}
                     </div>
-                    {event.description ? (
-                      <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
-                        {event.description}
-                      </p>
-                    ) : null}
+            {(() => {
+              const plainDescription = getEventDescriptionPlainText(event.description);
+              return plainDescription ? (
+                <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                  {plainDescription}
+                </p>
+              ) : null;
+            })()}
                   </div>
                 </button>
               </li>

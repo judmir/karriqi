@@ -4,7 +4,6 @@ export const ROUTES = {
   rehabPlanList: "/rehab/plan-list",
   rehabToday: "/rehab/today",
   rehabPlan: "/rehab/plan",
-  rehabJournal: "/rehab/journal",
   rehabWiki: "/rehab/wiki",
   rehabWikiOverview: "/rehab/wiki",
   dashboard: "/dashboard",

@@ -1,12 +1,15 @@
 "use client";
 
-import { ChevronDown, Search, Stethoscope } from "lucide-react";
+import { addDays, endOfDay, startOfDay } from "date-fns";
+import { ChevronDown, Search, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CalendarClient } from "@/components/calendar/calendar-client";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
 import { RehabInlineAddTask } from "@/components/rehab/rehab-inline-add-task";
+import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import {
   RehabUpcomingViewSwitcher,
   type RehabUpcomingViewMode,
@@ -18,16 +21,16 @@ import {
   defaultStartForUpcomingDay,
   filterUpcomingEventsBySearch,
   hasMoreUpcomingDays,
+  maxUpcomingDaysFrom,
   nextUpcomingVisibleDays,
   upcomingEventScheduleLabel,
   UPCOMING_INITIAL_DAYS,
   type UpcomingListSection,
 } from "@/lib/rehab/rehab-upcoming-utils";
 import { rehabEventTimeLabel } from "@/lib/rehab/rehab-today-utils";
-import { isClinicalRehabEvent } from "@/lib/rehab/rehab-clinical-utils";
+import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
-import type { CalendarEvent } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
 
 function initialViewMode(searchParams: URLSearchParams | null): RehabUpcomingViewMode {
@@ -36,9 +39,12 @@ function initialViewMode(searchParams: URLSearchParams | null): RehabUpcomingVie
 
 export function RehabUpcomingView() {
   const searchParams = useSearchParams();
-  const events = useRehabPlanStore((state) => state.events);
+  const allEvents = useRehabPlanStore((state) => state.events);
   const persistence = useRehabPlanStore((state) => state.persistence);
-  const toggleCompleted = useRehabPlanStore((state) => state.toggleCompleted);
+  const toggleOccurrenceCompleted = useRehabPlanStore(
+    (state) => state.toggleOccurrenceCompleted,
+  );
+  const deleteOccurrence = useRehabPlanStore((state) => state.deleteOccurrence);
 
   const [view, setView] = useState<RehabUpcomingViewMode>(() =>
     initialViewMode(searchParams),
@@ -49,6 +55,8 @@ export function RehabUpcomingView() {
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(null);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [overdueCollapsed, setOverdueCollapsed] = useState(true);
@@ -59,14 +67,22 @@ export function RehabUpcomingView() {
   const trimmedSearch = searchQuery.trim();
   const searchActive = trimmedSearch.length > 0;
 
+  /** Expand recurring masters across the overdue + forward (program) window. */
+  const expandedEvents = useMemo(() => {
+    const now = new Date();
+    const windowStart = startOfDay(addDays(now, -14));
+    const windowEnd = endOfDay(addDays(startOfDay(now), maxUpcomingDaysFrom(now)));
+    return expandRehabEvents(allEvents, windowStart, windowEnd);
+  }, [allEvents]);
+
   const sections = useMemo(
-    () => buildUpcomingListSections(events, new Date(), visibleDays),
-    [events, visibleDays],
+    () => buildUpcomingListSections(expandedEvents, new Date(), visibleDays),
+    [expandedEvents, visibleDays],
   );
 
   const searchResults = useMemo(
-    () => filterUpcomingEventsBySearch(events, trimmedSearch),
-    [events, trimmedSearch],
+    () => filterUpcomingEventsBySearch(expandedEvents, trimmedSearch),
+    [expandedEvents, trimmedSearch],
   );
 
   const canShowMore = hasMoreUpcomingDays(visibleDays);
@@ -91,22 +107,31 @@ export function RehabUpcomingView() {
   }, []);
 
   const openEdit = useCallback((event: RehabPlanEvent) => {
+    if (event.eventKind === "journal") {
+      setJournalEvent(event);
+      setJournalOpen(true);
+      return;
+    }
     setSelectedEvent(event);
     setDraftAllDay(event.allDay);
     setDraftStart(new Date(event.startAt));
     setDialogOpen(true);
   }, []);
 
-  function handleSaved(_event: CalendarEvent) {
+  function handleSaved() {
     setDialogOpen(false);
   }
 
-  function handleDeleted(_id: string) {
+  function handleDeleted() {
     setDialogOpen(false);
   }
 
   async function handleToggleCompleted(event: RehabPlanEvent, completed: boolean) {
-    await toggleCompleted(event.id, completed);
+    await toggleOccurrenceCompleted(event, completed);
+  }
+
+  async function handleDelete(event: RehabPlanEvent) {
+    await deleteOccurrence(event, "occurrence");
   }
 
   return (
@@ -147,6 +172,7 @@ export function RehabUpcomingView() {
                     void handleToggleCompleted(event, completed)
                   }
                   onEdit={() => openEdit(event)}
+                  onDelete={() => void handleDelete(event)}
                 />
               ))}
             </div>
@@ -181,6 +207,7 @@ export function RehabUpcomingView() {
               onToggleOverdue={() => setOverdueCollapsed((value) => !value)}
               onToggleCompleted={handleToggleCompleted}
               onEdit={openEdit}
+              onDelete={handleDelete}
               activeAddId={activeAddId}
               onActivateAdd={setActiveAddId}
             />
@@ -214,6 +241,15 @@ export function RehabUpcomingView() {
         onSaved={handleSaved}
         onDeleted={handleDeleted}
       />
+
+      <RehabJournalDialog
+        open={journalOpen && journalEvent !== null}
+        onOpenChange={setJournalOpen}
+        event={journalEvent}
+        persistence={persistence}
+        variant="rehab"
+        onSaved={() => setJournalOpen(false)}
+      />
     </div>
   );
 }
@@ -231,6 +267,7 @@ function UpcomingSectionBlock({
   onToggleOverdue,
   onToggleCompleted,
   onEdit,
+  onDelete,
   activeAddId,
   onActivateAdd,
 }: {
@@ -239,6 +276,7 @@ function UpcomingSectionBlock({
   onToggleOverdue: () => void;
   onToggleCompleted: (event: RehabPlanEvent, completed: boolean) => void;
   onEdit: (event: RehabPlanEvent) => void;
+  onDelete: (event: RehabPlanEvent) => void | Promise<void>;
   activeAddId: string | null;
   onActivateAdd: (id: string | null) => void;
 }) {
@@ -264,6 +302,7 @@ function UpcomingSectionBlock({
             events={section.events}
             onToggleCompleted={onToggleCompleted}
             onEdit={onEdit}
+            onDelete={onDelete}
             showAdd={false}
           />
         ) : null}
@@ -282,6 +321,7 @@ function UpcomingSectionBlock({
         events={section.events}
         onToggleCompleted={onToggleCompleted}
         onEdit={onEdit}
+        onDelete={onDelete}
         addId={addId}
         activeAddId={activeAddId}
         onActivateAdd={onActivateAdd}
@@ -295,6 +335,7 @@ function UpcomingEventList({
   events,
   onToggleCompleted,
   onEdit,
+  onDelete,
   addId,
   activeAddId,
   onActivateAdd,
@@ -304,6 +345,7 @@ function UpcomingEventList({
   events: RehabPlanEvent[];
   onToggleCompleted: (event: RehabPlanEvent, completed: boolean) => void;
   onEdit: (event: RehabPlanEvent) => void;
+  onDelete: (event: RehabPlanEvent) => void | Promise<void>;
   addId?: string;
   activeAddId?: string | null;
   onActivateAdd?: (id: string | null) => void;
@@ -318,6 +360,7 @@ function UpcomingEventList({
           event={event}
           onToggleCompleted={(completed) => onToggleCompleted(event, completed)}
           onEdit={() => onEdit(event)}
+          onDelete={() => void onDelete(event)}
         />
       ))}
 
@@ -337,41 +380,53 @@ function UpcomingEventRow({
   event,
   onToggleCompleted,
   onEdit,
+  onDelete,
   scheduleLabel,
 }: {
   event: RehabPlanEvent;
   onToggleCompleted: (completed: boolean) => void;
   onEdit: () => void;
+  onDelete: () => void;
   scheduleLabel?: string;
 }) {
   const completed = Boolean(event.completedAt);
   const timeLabel = scheduleLabel ?? rehabEventTimeLabel(event);
 
   return (
-    <div className="flex items-start gap-3 py-2">
+    <div className="group flex cursor-pointer items-start gap-3 rounded-lg py-2 pr-1">
       <Checkbox
         checked={completed}
         onCheckedChange={(value) => onToggleCompleted(Boolean(value))}
-        className="mt-0.5 rounded-full"
+        className="mt-0.5 cursor-pointer rounded-full"
         aria-label={`Mark ${event.title} ${completed ? "incomplete" : "complete"}`}
       />
-      <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
+      <RehabEventKindIcon event={event} size="md" className="mt-0.5" />
+      <button
+        type="button"
+        onClick={onEdit}
+        className="min-w-0 flex-1 cursor-pointer text-left"
+      >
         <p
           className={cn(
-            "flex items-center gap-1.5 text-sm font-medium leading-snug",
+            "text-sm font-medium leading-snug",
             completed && "text-muted-foreground line-through",
           )}
         >
-          {isClinicalRehabEvent(event.eventKind) ? (
-            <Stethoscope className="size-3.5 shrink-0" aria-hidden />
-          ) : null}
-          <span>{event.title}</span>
+          {event.title}
         </p>
         {timeLabel ? (
           <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
             {timeLabel}
           </p>
         ) : null}
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 cursor-pointer rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+        aria-label={`Remove ${event.title}`}
+      >
+        <X className="size-4" aria-hidden />
       </button>
     </div>
   );
