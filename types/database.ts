@@ -521,6 +521,7 @@ export type Database = {
           recurrence_rule: string | null;
           recurrence_at: string | null;
           recurrence_cancelled: boolean;
+          reminder_sent_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -541,6 +542,7 @@ export type Database = {
           recurrence_rule?: string | null;
           recurrence_at?: string | null;
           recurrence_cancelled?: boolean;
+          reminder_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -561,6 +563,7 @@ export type Database = {
           recurrence_rule?: string | null;
           recurrence_at?: string | null;
           recurrence_cancelled?: boolean;
+          reminder_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
