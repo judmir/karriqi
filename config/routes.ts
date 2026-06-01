@@ -1,5 +1,12 @@
 export const ROUTES = {
   home: "/",
+  rehabClinical: "/rehab/clinical",
+  rehabPlanList: "/rehab/plan-list",
+  rehabToday: "/rehab/today",
+  rehabPlan: "/rehab/plan",
+  rehabJournal: "/rehab/journal",
+  rehabWiki: "/rehab/wiki",
+  rehabWikiOverview: "/rehab/wiki",
   dashboard: "/dashboard",
   shopping: "/shopping",
   shoppingAdmin: "/shopping/admin",
@@ -21,6 +28,7 @@ export function todoTaskPath(id: string) {
 
 /** URL prefixes that require an authenticated session (middleware). */
 export const PROTECTED_ROUTE_PREFIXES: string[] = [
+  "/rehab",
   ROUTES.dashboard,
   ROUTES.shopping,
   ROUTES.todo,
@@ -36,8 +44,15 @@ export function isProtectedPath(pathname: string): boolean {
   );
 }
 
+export function rehabWikiPath(slug: string): string {
+  return slug === "overview" ? ROUTES.rehabWikiOverview : `${ROUTES.rehabWiki}/${slug}`;
+}
+
 export function isCalendarRoute(pathname: string): boolean {
   return (
-    pathname === ROUTES.calendar || pathname.startsWith(`${ROUTES.calendar}/`)
+    pathname === ROUTES.calendar ||
+    pathname.startsWith(`${ROUTES.calendar}/`) ||
+    pathname === ROUTES.rehabPlan ||
+    pathname.startsWith(`${ROUTES.rehabPlan}/`)
   );
 }

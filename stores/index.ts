@@ -1,5 +1,6 @@
 import { useCalendarStore } from "@/stores/calendar-store";
 import { useNotesStore } from "@/stores/notes-store";
+import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { useShoppingStore } from "@/stores/shopping-store";
 import { useTodoStore } from "@/stores/todo-store";
 
@@ -9,12 +10,17 @@ export function resetAllStores(): void {
   useCalendarStore.getState().reset();
   useShoppingStore.getState().reset();
   useNotesStore.getState().reset();
+  useRehabPlanStore.getState().reset();
 }
 
 export {
   useCalendarStore,
   selectCalendarReady,
 } from "@/stores/calendar-store";
+export {
+  useRehabPlanStore,
+  selectRehabPlanReady,
+} from "@/stores/rehab-plan-store";
 export {
   useShoppingStore,
   selectShoppingReady,

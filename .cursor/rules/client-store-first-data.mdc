@@ -1,0 +1,54 @@
+---
+description: Client Zustand stores are the source of truth for interactive app data — load once, mutate optimistically, sync Supabase in background
+alwaysApply: true
+---
+
+# Client store-first data (Zustand)
+
+Interactive features must treat **Zustand stores under `stores/`** as the primary data layer in the browser. Do **not** re-fetch from Supabase on every navigation, view switch, or local UI toggle when a store already holds the data.
+
+Reference implementations: `stores/shopping-store.ts`, `stores/todo-store.ts`, `stores/calendar-store.ts`, `stores/rehab-plan-store.ts`.
+
+## Required pattern
+
+1. **Store** (`stores/<feature>-store.ts`)
+   - Holds client state: entities, `persistence`, `loadedAt`, `loading`, `error`.
+   - Exposes `ensureLoaded()` — fetches only when empty/stale (`isStoreStale` in `stores/store-utils.ts`).
+   - Exposes `reset()` — wired into `resetAllStores()` in `stores/index.ts` (sign-out).
+   - Exposes `invalidate()` when a full refresh is intentional.
+
+2. **Load action** (`stores/load-actions.ts`)
+   - Server action that reads Supabase once and returns a typed payload.
+   - No `revalidatePath` for store-backed features (avoid RSC refetch on every mutation).
+
+3. **Mutations (optimistic → Supabase → rollback)**
+   - Update the store **immediately** (optimistic UI).
+   - Call the existing server action / Supabase write in the background.
+   - On failure: **revert** the store to the previous snapshot and `toast.error`.
+   - On success: keep store as-is (or merge server ids, e.g. temp id → real id).
+
+4. **UI components**
+   - Subscribe with `useXStore((s) => s.items)` — never duplicate entity state in `useState` when the store exists.
+   - Wrap routes in a thin gate (e.g. `RehabPlanStoreGate`) that calls `ensureLoaded()` once.
+   - Server pages: auth + one-time setup only (e.g. program materialization). **Do not** pass full lists as props for store-backed features.
+   - View toggles (list ↔ calendar, tabs) use **client state** only — do not change the URL on every switch unless deep-linking is required; URL changes trigger slow RSC refetches.
+
+5. **Server actions**
+   - Stay in `lib/**/**-actions.ts` (`"use server"`).
+   - Stores import and call them from client mutation methods.
+   - Forms/actions used by the store should not call `revalidatePath` for store-owned routes.
+
+## Checklist for new features
+
+- [ ] `stores/<feature>-store.ts` with `ensureLoaded`, `reset`, optimistic mutations
+- [ ] `load<Feature>StoreAction` in `stores/load-actions.ts`
+- [ ] Export from `stores/index.ts`; add to `resetAllStores()`
+- [ ] Page: gate + components read from store (no per-navigation Supabase fetch)
+- [ ] Tests for grouping/selectors; store mutation rollback where non-trivial
+
+## Do not
+
+- Fetch the same list in the server component **and** the client on every visit.
+- Keep parallel `useState(events)` copies when a store exists.
+- Use `revalidatePath` as a substitute for updating the store.
+- Block UI on Supabase for reads when cached store data is available.

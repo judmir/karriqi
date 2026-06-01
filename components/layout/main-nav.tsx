@@ -11,10 +11,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { devNavItem, mainNavItems } from "@/config/navigation";
+import {
+  devNavItem,
+  mainNavItems,
+  rehabNavItems,
+  type MainNavItem,
+} from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
-type NavIcon = (typeof mainNavItems)[number]["icon"];
+type NavIcon = MainNavItem["icon"];
 
 function useIsActive(href: string) {
   const pathname = usePathname();
@@ -120,6 +125,41 @@ function MobileNavLink({
 
 function navItemsFor(includeDev: boolean) {
   return includeDev ? [...mainNavItems, devNavItem] : mainNavItems;
+}
+
+function DesktopNavSection({
+  title,
+  items,
+  open,
+}: {
+  title: string;
+  items: MainNavItem[];
+  open: boolean;
+}) {
+  return (
+    <div className="relative flex w-64 min-w-0 flex-col p-2">
+      <p
+        className={cn(
+          "text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium transition-opacity duration-200",
+          open ? "opacity-100" : "opacity-0",
+        )}
+      >
+        {title}
+      </p>
+      <ul className="flex min-w-0 flex-col gap-1">
+        {items.map((item) => (
+          <li key={item.href} className="relative">
+            <DesktopNavLink
+              href={item.href}
+              label={item.label}
+              icon={item.icon}
+              collapsed={!open}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 const sidebarToggleButtonClass =
@@ -255,28 +295,8 @@ export function MainNavDesktop({
         )}
       </div>
 
-      <div className="relative flex w-64 min-w-0 flex-col p-2">
-        <p
-          className={cn(
-            "text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium transition-opacity duration-200",
-            open ? "opacity-100" : "opacity-0",
-          )}
-        >
-          Family
-        </p>
-        <ul className="flex min-w-0 flex-col gap-1">
-          {items.map((item) => (
-            <li key={item.href} className="relative">
-              <DesktopNavLink
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-                collapsed={!open}
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
+      <DesktopNavSection title="Rehab" items={rehabNavItems} open={open} />
+      <DesktopNavSection title="Family" items={items} open={open} />
     </nav>
   );
 }

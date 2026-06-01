@@ -102,11 +102,28 @@ export function weekDays(date: Date): Date[] {
 export function eventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
   return events
     .filter((event) => eventSpansDay(event, day))
-    .sort(
-      (a, b) =>
-        parseEventDate(a.startAt).getTime() -
-        parseEventDate(b.startAt).getTime(),
-    );
+    .sort((a, b) => {
+      const aUser =
+        "eventKind" in a &&
+        a.eventKind === "custom" &&
+        "programId" in a &&
+        a.programId === null
+          ? 0
+          : 1;
+      const bUser =
+        "eventKind" in b &&
+        b.eventKind === "custom" &&
+        "programId" in b &&
+        b.programId === null
+          ? 0
+          : 1;
+      if (aUser !== bUser) {
+        return aUser - bUser;
+      }
+      return (
+        parseEventDate(a.startAt).getTime() - parseEventDate(b.startAt).getTime()
+      );
+    });
 }
 
 export function eventsInRange(

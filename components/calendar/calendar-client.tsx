@@ -15,12 +15,17 @@ import {
   CalendarWeekView,
 } from "@/components/calendar/calendar-time-views";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
-import { updateCalendarEvent } from "@/lib/calendar/calendar-actions";
+import {
+  calendarEventActionsFor,
+  type CalendarClientVariant,
+} from "@/lib/calendar/calendar-event-actions";
 import { filterEventsBySelectedCalendars } from "@/lib/calendar/google-event-colors";
 import { navigateDate } from "@/lib/calendar/calendar-utils";
 import { syncGoogleCalendarAction } from "@/lib/google-calendar/sync-actions";
 import { useCalendarStore } from "@/stores/calendar-store";
+import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import type { CalendarEvent, CalendarView, GoogleCalendarSource } from "@/types/calendar";
+import type { RehabPlanEvent } from "@/types/rehab";
 
 type GoogleSyncOptions = {
   enabled: boolean;
@@ -31,20 +36,29 @@ type GoogleSyncOptions = {
 };
 
 export function CalendarClient({
-  initialEvents,
+  initialEvents = [],
   persistence,
   googleSync,
   readOnly = false,
+  variant = "family",
 }: {
-  initialEvents: CalendarEvent[];
+  initialEvents?: CalendarEvent[];
   persistence: boolean;
   googleSync?: GoogleSyncOptions;
   /** View-only mode: no create/edit/delete; Google is source of truth. */
   readOnly?: boolean;
+  /** Which event store/actions to use (family calendar vs rehab plan). */
+  variant?: CalendarClientVariant;
 }) {
+  const eventActions = calendarEventActionsFor(variant);
+  const syncGlobalStore = variant === "family";
+  const syncRehabStore = variant === "rehab";
   const router = useRouter();
   const didMountSync = useRef(false);
-  const [events, setEvents] = useState(initialEvents);
+  const rehabStoreEvents = useRehabPlanStore((state) => state.events);
+  const [localEvents, setLocalEvents] = useState(initialEvents);
+  const events = syncRehabStore ? rehabStoreEvents : localEvents;
+  const setEvents = syncRehabStore ? undefined : setLocalEvents;
   const [calendarSources, setCalendarSources] = useState<GoogleCalendarSource[]>(
     googleSync?.calendarSources ?? [],
   );
@@ -59,8 +73,18 @@ export function CalendarClient({
   );
 
   useEffect(() => {
-    setEvents(initialEvents);
-  }, [initialEvents]);
+    if (syncRehabStore) {
+      return;
+    }
+    setLocalEvents(initialEvents);
+  }, [initialEvents, syncRehabStore]);
+
+  useEffect(() => {
+    if (!syncGlobalStore) {
+      return;
+    }
+    useCalendarStore.getState().setEvents(events);
+  }, [events, syncGlobalStore]);
 
   useEffect(() => {
     setCalendarSources(googleSync?.calendarSources ?? []);
@@ -94,7 +118,7 @@ export function CalendarClient({
           return;
         }
 
-        setEvents(result.events);
+        setEvents?.(result.events);
         setLastSyncedAt(result.lastSyncedAt);
         if (result.calendarSources) {
           setCalendarSources(result.calendarSources);
@@ -144,10 +168,6 @@ export function CalendarClient({
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [googleSync?.enabled, syncing, runSync]);
-
-  useEffect(() => {
-    useCalendarStore.getState().setEvents(events);
-  }, [events]);
 
   const openCreate = useCallback((start: Date) => {
     setSelectedEvent(null);
@@ -201,6 +221,9 @@ export function CalendarClient({
   }, []);
 
   function handleSaved(event: CalendarEvent) {
+    if (syncRehabStore || !setEvents) {
+      return;
+    }
     setEvents((prev) => {
       const exists = prev.some((item) => item.id === event.id);
       if (exists) {
@@ -211,6 +234,9 @@ export function CalendarClient({
   }
 
   function handleDeleted(id: string) {
+    if (syncRehabStore || !setEvents) {
+      return;
+    }
     setEvents((prev) => prev.filter((item) => item.id !== id));
   }
 
@@ -236,7 +262,21 @@ export function CalendarClient({
         return;
       }
 
-      setEvents((prev) =>
+      if (syncRehabStore) {
+        if (!persistence) {
+          useRehabPlanStore.getState().upsertLocalEvent(event as RehabPlanEvent);
+          return;
+        }
+        const result = await useRehabPlanStore
+          .getState()
+          .updateEventSchedule(event);
+        if (!result.ok) {
+          toast.error(result.message);
+        }
+        return;
+      }
+
+      setEvents?.((prev) =>
         prev.map((item) => (item.id === event.id ? event : item)),
       );
 
@@ -244,7 +284,7 @@ export function CalendarClient({
         return;
       }
 
-      const result = await updateCalendarEvent({
+      const result = await eventActions.update({
         id: event.id,
         startAt: event.startAt,
         endAt: event.endAt,
@@ -253,11 +293,13 @@ export function CalendarClient({
 
       if (!result.ok) {
         toast.error(result.message);
-        useCalendarStore.getState().invalidate();
-        void useCalendarStore.getState().ensureLoaded();
+        if (syncGlobalStore) {
+          useCalendarStore.getState().invalidate();
+          void useCalendarStore.getState().ensureLoaded();
+        }
       }
     },
-    [persistence, readOnly],
+    [eventActions, persistence, readOnly, syncGlobalStore, syncRehabStore],
   );
 
   return (
@@ -338,6 +380,7 @@ export function CalendarClient({
             defaultStart={draftStart}
             persistence={persistence}
             readOnly={readOnly}
+            variant={variant}
             onSaved={handleSaved}
             onDeleted={handleDeleted}
           />

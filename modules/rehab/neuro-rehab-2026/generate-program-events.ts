@@ -1,0 +1,376 @@
+import { addDays, addMinutes } from "date-fns";
+
+import { calendarDateToStorage } from "@/lib/calendar/all-day-events";
+import {
+  NEURO_REHAB_PROGRAM_ID,
+  PROGRAM_START,
+  PROGRAM_WEEKS,
+  isRetestWeek,
+} from "@/modules/rehab/neuro-rehab-2026/constants";
+import {
+  DAY0_DESCRIPTION,
+  GYM_A_DESCRIPTION,
+  GYM_B_DESCRIPTION,
+  GYM_C_DESCRIPTION,
+  GYM_D_DESCRIPTION,
+  HAND_OT_DESCRIPTION,
+  RETEST_DESCRIPTION,
+  SPEECH_DESCRIPTION,
+  WEEKLY_REVIEW_DESCRIPTION,
+  footballDescriptionForWeek,
+} from "@/modules/rehab/neuro-rehab-2026/gym-templates";
+import { runWalkPlanForWeek } from "@/modules/rehab/neuro-rehab-2026/run-walk-progression";
+import { weekdayTemplate } from "@/modules/rehab/neuro-rehab-2026/weekly-template";
+import type { CalendarEventColor } from "@/types/calendar";
+import type { RehabEventKind, RehabPlanEventInsert } from "@/types/rehab";
+
+function atTime(day: Date, hour: number, minute = 0): Date {
+  const d = new Date(day);
+  d.setHours(hour, minute, 0, 0);
+  return d;
+}
+
+function timed(
+  userId: string,
+  day: Date,
+  week: number,
+  hour: number,
+  minute: number,
+  durationMin: number,
+  title: string,
+  description: string | null,
+  eventKind: RehabEventKind,
+  color: CalendarEventColor,
+): RehabPlanEventInsert {
+  const start = atTime(day, hour, minute);
+  const end = addMinutes(start, durationMin);
+  return {
+    user_id: userId,
+    title,
+    description,
+    start_at: start.toISOString(),
+    end_at: end.toISOString(),
+    all_day: false,
+    color,
+    event_kind: eventKind,
+    program_id: NEURO_REHAB_PROGRAM_ID,
+    plan_week: week,
+  };
+}
+
+function allDay(
+  userId: string,
+  day: Date,
+  week: number,
+  title: string,
+  description: string | null,
+  eventKind: RehabEventKind,
+  color: CalendarEventColor,
+): RehabPlanEventInsert {
+  const startDay = new Date(day);
+  startDay.setHours(0, 0, 0, 0);
+  return {
+    user_id: userId,
+    title,
+    description,
+    start_at: calendarDateToStorage(startDay),
+    end_at: calendarDateToStorage(addDays(startDay, 1)),
+    all_day: true,
+    color,
+    event_kind: eventKind,
+    program_id: NEURO_REHAB_PROGRAM_ID,
+    plan_week: week,
+  };
+}
+
+function gymDescription(kind: RehabEventKind): string {
+  switch (kind) {
+    case "gym_a":
+      return GYM_A_DESCRIPTION;
+    case "gym_b":
+      return GYM_B_DESCRIPTION;
+    case "gym_c":
+      return GYM_C_DESCRIPTION;
+    case "gym_d":
+      return GYM_D_DESCRIPTION;
+    default:
+      return "";
+  }
+}
+
+function mainSessionForDay(
+  userId: string,
+  day: Date,
+  week: number,
+  dayOfWeek: number,
+  isRetest: boolean,
+): RehabPlanEventInsert[] {
+  const template = weekdayTemplate(dayOfWeek, week, isRetest);
+  const events: RehabPlanEventInsert[] = [];
+
+  if (dayOfWeek === 0) {
+    events.push(
+      allDay(
+        userId,
+        day,
+        week,
+        "Weekly review",
+        WEEKLY_REVIEW_DESCRIPTION,
+        "weekly_review",
+        "purple",
+      ),
+    );
+    events.push(
+      timed(
+        userId,
+        day,
+        week,
+        10,
+        0,
+        45,
+        "Light mobility / recovery",
+        "Easy mobility only. No hard training.",
+        "recovery",
+        "green",
+      ),
+    );
+    if (isRetest) {
+      events.push(
+        timed(
+          userId,
+          day,
+          week,
+          11,
+          0,
+          60,
+          "Retest videos",
+          RETEST_DESCRIPTION,
+          "retest",
+          "orange",
+        ),
+      );
+    }
+    return events;
+  }
+
+  const { mainKind, mainTitle } = template;
+  let description = template.mainDescription;
+  let duration = isRetest ? 36 : 60;
+
+  if (mainKind === "gym_a" || mainKind === "gym_b" || mainKind === "gym_c" || mainKind === "gym_d") {
+    description = gymDescription(mainKind);
+    if (isRetest) {
+      description = `(Deload ~20%)\n\n${description}`;
+    }
+  } else if (mainKind === "run_walk") {
+    const plan = runWalkPlanForWeek(week);
+    description = `${plan.description}\n\n${template.includeSpeech ? "Include speech after walk." : ""}`;
+    duration = isRetest ? 30 : 45;
+  } else if (mainKind === "recovery") {
+    duration = 30;
+  }
+
+  events.push(
+    timed(
+      userId,
+      day,
+      week,
+      9,
+      0,
+      duration,
+      mainTitle,
+      description.trim() || null,
+      mainKind,
+      mainKind === "run_walk" ? "green" : mainKind === "recovery" ? "green" : "blue",
+    ),
+  );
+
+  if (template.handMinutes > 0) {
+    events.push(
+      timed(
+        userId,
+        day,
+        week,
+        15,
+        0,
+        template.handMinutes,
+        `Left-hand / OT (${template.handMinutes} min)`,
+        HAND_OT_DESCRIPTION,
+        "hand",
+        "orange",
+      ),
+    );
+  }
+
+  if (template.includeSpeech) {
+    events.push(
+      timed(
+        userId,
+        day,
+        week,
+        16,
+        30,
+        15,
+        "Speech practice",
+        SPEECH_DESCRIPTION,
+        "speech",
+        "red",
+      ),
+    );
+  }
+
+  if (template.includeFootball) {
+    events.push(
+      timed(
+        userId,
+        day,
+        week,
+        17,
+        0,
+        20,
+        "Football / ball control",
+        footballDescriptionForWeek(week),
+        "football",
+        "purple",
+      ),
+    );
+  }
+
+  return events;
+}
+
+function dailyNonNegotiables(
+  userId: string,
+  day: Date,
+  week: number,
+  isFirstDay: boolean,
+): RehabPlanEventInsert[] {
+  const events: RehabPlanEventInsert[] = [
+    allDay(
+      userId,
+      day,
+      week,
+      "Vitamin D (with breakfast)",
+      "Take with breakfast if agreed with doctor. See Wiki: Supplements.",
+      "supplement",
+      "blue",
+    ),
+    timed(
+      userId,
+      day,
+      week,
+      7,
+      30,
+      10,
+      "Waking Up meditation",
+      week <= 4
+        ? "Introductory course or daily meditation, 5–10 min."
+        : week <= 8
+          ? "Daily meditation, 10 min. Optional theory 1–2×/week."
+          : "Daily meditation 10 min. Short session before hard rehab days if stress is high.",
+      "meditation",
+      "purple",
+    ),
+    timed(
+      userId,
+      day,
+      week,
+      12,
+      0,
+      5,
+      "Omega-3 + posture reset",
+      "Omega-3 with lunch if taking. 2 min posture/breath reset.",
+      "supplement",
+      "blue",
+    ),
+    timed(
+      userId,
+      day,
+      week,
+      21,
+      0,
+      5,
+      "Journal (5 min)",
+      "Rate sleep, stress, fatigue, hand, leg, speech. See Rehab → Journal.",
+      "journal",
+      "red",
+    ),
+    timed(
+      userId,
+      day,
+      week,
+      21,
+      30,
+      5,
+      "Magnesium (evening)",
+      "Evening/night if tolerated. See Wiki: Supplements.",
+      "supplement",
+      "blue",
+    ),
+  ];
+
+  if (isFirstDay) {
+    events.unshift(
+      allDay(
+        userId,
+        day,
+        week,
+        "Day 0 checklist",
+        DAY0_DESCRIPTION,
+        "day0",
+        "orange",
+      ),
+    );
+  }
+
+  return events;
+}
+
+/** Generate 12 weeks of rehab calendar events for one user. */
+export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventInsert[] {
+  const events: RehabPlanEventInsert[] = [];
+  const totalDays = PROGRAM_WEEKS * 7;
+
+  for (let offset = 0; offset < totalDays; offset++) {
+    const day = addDays(PROGRAM_START, offset);
+    const week = Math.floor(offset / 7) + 1;
+    const dayOfWeek = day.getDay();
+    const isRetest = isRetestWeek(week);
+    const isFirstDay = offset === 0;
+
+    events.push(...dailyNonNegotiables(userId, day, week, isFirstDay));
+    events.push(...mainSessionForDay(userId, day, week, dayOfWeek, isRetest));
+
+    // Workout-day creatine reminder (Mon, Wed, Fri, Sat gym)
+    if ([1, 3, 5, 6].includes(dayOfWeek) && dayOfWeek !== 0) {
+      events.push(
+        timed(
+          userId,
+          day,
+          week,
+          8,
+          45,
+          5,
+          "Creatine (workout day)",
+          "With meal or around workout if agreed with doctor.",
+          "supplement",
+          "blue",
+        ),
+      );
+    }
+  }
+
+  return events;
+}
+
+export function countEventsByWeekday(events: RehabPlanEventInsert[]): Record<number, number> {
+  const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+  for (const event of events) {
+    if (event.event_kind === "gym_a") counts[1] = (counts[1] ?? 0) + 1;
+    if (event.event_kind === "run_walk") {
+      const d = new Date(event.start_at).getDay();
+      counts[d] = (counts[d] ?? 0) + 1;
+    }
+  }
+  return counts;
+}

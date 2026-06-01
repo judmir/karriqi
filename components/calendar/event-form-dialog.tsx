@@ -33,10 +33,9 @@ import {
   toTimeInputValue,
 } from "@/lib/calendar/calendar-utils";
 import {
-  createCalendarEvent,
-  deleteCalendarEvent,
-  updateCalendarEvent,
-} from "@/lib/calendar/calendar-actions";
+  calendarEventActionsFor,
+  type CalendarClientVariant,
+} from "@/lib/calendar/calendar-event-actions";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
 import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
@@ -48,6 +47,8 @@ type EventFormDialogProps = {
   defaultStart: Date;
   persistence: boolean;
   readOnly?: boolean;
+  variant?: CalendarClientVariant;
+  defaultAllDay?: boolean;
   onSaved: (event: CalendarEvent) => void;
   onDeleted: (id: string) => void;
 };
@@ -59,6 +60,8 @@ export function EventFormDialog({
   defaultStart,
   persistence,
   readOnly = false,
+  variant = "family",
+  defaultAllDay = false,
   onSaved,
   onDeleted,
 }: EventFormDialogProps) {
@@ -66,11 +69,16 @@ export function EventFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
         <EventFormDialogBody
-          key={event?.id ?? defaultStart.toISOString()}
+          key={
+            event?.id ??
+            `${defaultStart.toISOString()}:${defaultAllDay ? "1" : "0"}`
+          }
           event={event}
           defaultStart={defaultStart}
           persistence={persistence}
           readOnly={readOnly}
+          variant={variant}
+          defaultAllDay={defaultAllDay}
           onOpenChange={onOpenChange}
           onSaved={onSaved}
           onDeleted={onDeleted}
@@ -85,10 +93,13 @@ function EventFormDialogBody({
   defaultStart,
   persistence,
   readOnly = false,
+  variant = "family",
+  defaultAllDay = false,
   onOpenChange,
   onSaved,
   onDeleted,
 }: Omit<EventFormDialogProps, "open">) {
+  const actions = calendarEventActionsFor(variant);
   const isEditing = event !== null;
   const viewOnly = readOnly;
   const initialStart = event ? new Date(event.startAt) : defaultStart;
@@ -100,7 +111,7 @@ function EventFormDialogBody({
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
-  const [allDay, setAllDay] = useState(event?.allDay ?? false);
+  const [allDay, setAllDay] = useState(event?.allDay ?? defaultAllDay);
   const [color, setColor] = useState<CalendarEventColor>(event?.color ?? "blue");
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
@@ -170,7 +181,7 @@ function EventFormDialogBody({
     setPending(true);
     try {
       if (isEditing && event) {
-        const result = await updateCalendarEvent({
+        const result = await actions.update({
           id: event.id,
           title: trimmedTitle,
           description: description.trim() || null,
@@ -195,7 +206,7 @@ function EventFormDialogBody({
         });
         toast.success("Event updated.");
       } else {
-        const result = await createCalendarEvent({
+        const result = await actions.create({
           title: trimmedTitle,
           description: description.trim() || null,
           startAt: range.startAt,
@@ -247,7 +258,7 @@ function EventFormDialogBody({
 
     setPending(true);
     try {
-      const result = await deleteCalendarEvent(event.id);
+      const result = await actions.delete(event.id);
       if (!result.ok) {
         toast.error(result.message);
         return;
@@ -268,7 +279,7 @@ function EventFormDialogBody({
         </DialogTitle>
         <DialogDescription>
           {viewOnly
-            ? "This calendar is view-only. Change this event in Google Calendar, then sync."
+            ? "This calendar is view-only."
             : isEditing
               ? "Update the details below or delete this event."
               : "Add a title, time, and optional notes."}

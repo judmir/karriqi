@@ -3,6 +3,8 @@
 import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
 import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
+import { ensureNeuroRehabProgramReady } from "@/lib/rehab/ensure-neuro-rehab-program";
+import { fetchRehabPlanEventsForUser } from "@/lib/rehab/fetch-rehab-plan-events";
 import { isGoogleCalendarConfigured } from "@/lib/env/google-calendar";
 import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
@@ -15,6 +17,9 @@ import { getSessionUser } from "@/lib/supabase/server";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
 import { fetchTodosBoardSummary } from "@/lib/todo/fetch-todos";
 import type { CalendarEvent } from "@/types/calendar";
+import type { RehabPlanEvent } from "@/types/rehab";
+import type { RehabPlanListItem } from "@/types/rehab";
+import type { RehabClinicalItem } from "@/types/rehab";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 import type { TodoAssignableMember, TodoBoardItem } from "@/types/todo";
 
@@ -127,6 +132,127 @@ export async function loadCalendarStoreAction(): Promise<CalendarStorePayload> {
       lastSyncedAt: connection.lastSyncedAt,
     };
   }
+}
+
+export type RehabPlanStorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      events: RehabPlanEvent[];
+      persistence: boolean;
+    };
+
+export async function loadRehabPlanStoreAction(): Promise<RehabPlanStorePayload> {
+  if (!isSupabaseConfigured()) {
+    const { generateNeuroRehabProgramEvents } = await import(
+      "@/modules/rehab/neuro-rehab-2026/generate-program-events"
+    );
+    const { mapRehabPlanEvent } = await import("@/lib/rehab/rehab-plan-event-map");
+    const mockRows = generateNeuroRehabProgramEvents("local");
+    const events = mockRows.map((row, i) =>
+      mapRehabPlanEvent({
+        id: `demo-${i}`,
+        user_id: "local",
+        title: row.title,
+        description: row.description ?? null,
+        start_at: row.start_at,
+        end_at: row.end_at,
+        all_day: row.all_day ?? false,
+        color: row.color ?? "blue",
+        completed_at: null,
+        event_kind: row.event_kind,
+        program_id: row.program_id,
+        plan_week: row.plan_week,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    );
+    return { ok: true, events, persistence: false };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  await ensureNeuroRehabProgramReady(user.id);
+  const events = await fetchRehabPlanEventsForUser();
+  return { ok: true, events, persistence: true };
+}
+
+export type RehabPlanListStorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      items: RehabPlanListItem[];
+      persistence: boolean;
+    };
+
+export async function loadRehabPlanListStoreAction(): Promise<RehabPlanListStorePayload> {
+  const { REHAB_PLAN_CATALOG } = await import(
+    "@/modules/rehab/neuro-rehab-2026/plan-catalog"
+  );
+
+  if (!isSupabaseConfigured()) {
+    return {
+      ok: true,
+      items: REHAB_PLAN_CATALOG.map((item) => ({
+        ...item,
+        completedAt: null,
+        notes: "",
+      })),
+      persistence: false,
+    };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const { fetchRehabPlanListForUser } = await import(
+    "@/lib/rehab/fetch-rehab-plan-list"
+  );
+  const items = await fetchRehabPlanListForUser(user.id);
+  return { ok: true, items, persistence: true };
+}
+
+export type RehabClinicalStorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      items: RehabClinicalItem[];
+      persistence: boolean;
+    };
+
+export async function loadRehabClinicalStoreAction(): Promise<RehabClinicalStorePayload> {
+  const { REHAB_CLINICAL_ITEMS } = await import(
+    "@/modules/rehab/neuro-rehab-2026/clinical-content"
+  );
+
+  if (!isSupabaseConfigured()) {
+    return {
+      ok: true,
+      items: REHAB_CLINICAL_ITEMS.map((item) => ({
+        ...item,
+        completedAt: null,
+        notes: "",
+        subtasksDone: [],
+      })),
+      persistence: false,
+    };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const { fetchRehabClinicalForUser } = await import(
+    "@/lib/rehab/fetch-rehab-clinical"
+  );
+  const items = await fetchRehabClinicalForUser(user.id);
+  return { ok: true, items, persistence: true };
 }
 
 export type ShoppingStorePayload =

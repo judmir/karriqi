@@ -503,6 +503,243 @@ export type Database = {
         };
         Relationships: [];
       };
+      rehab_plan_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          description: string | null;
+          start_at: string;
+          end_at: string;
+          all_day: boolean;
+          color: string;
+          completed_at: string | null;
+          event_kind: string;
+          program_id: string | null;
+          plan_week: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          description?: string | null;
+          start_at: string;
+          end_at: string;
+          all_day?: boolean;
+          color?: string;
+          completed_at?: string | null;
+          event_kind?: string;
+          program_id?: string | null;
+          plan_week?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          description?: string | null;
+          start_at?: string;
+          end_at?: string;
+          all_day?: boolean;
+          color?: string;
+          completed_at?: string | null;
+          event_kind?: string;
+          program_id?: string | null;
+          plan_week?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rehab_wiki_pages: {
+        Row: {
+          slug: string;
+          title: string;
+          body: string;
+          parent_slug: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          slug: string;
+          title: string;
+          body: string;
+          parent_slug?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          slug?: string;
+          title?: string;
+          body?: string;
+          parent_slug?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rehab_plan_catalog: {
+        Row: {
+          id: string;
+          parent_id: string | null;
+          kind: string;
+          title: string;
+          body: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          parent_id?: string | null;
+          kind: string;
+          title: string;
+          body?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          parent_id?: string | null;
+          kind?: string;
+          title?: string;
+          body?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      rehab_plan_item_state: {
+        Row: {
+          user_id: string;
+          item_id: string;
+          completed_at: string | null;
+          notes: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          item_id: string;
+          completed_at?: string | null;
+          notes?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          item_id?: string;
+          completed_at?: string | null;
+          notes?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rehab_clinical_catalog: {
+        Row: {
+          id: string;
+          phase: string;
+          title: string;
+          body: string;
+          sort_order: number;
+          calendar_event_kind: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          phase: string;
+          title: string;
+          body?: string;
+          sort_order?: number;
+          calendar_event_kind?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          phase?: string;
+          title?: string;
+          body?: string;
+          sort_order?: number;
+          calendar_event_kind?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      rehab_clinical_item_state: {
+        Row: {
+          user_id: string;
+          item_id: string;
+          completed_at: string | null;
+          notes: string;
+          subtasks_done: number[];
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          item_id: string;
+          completed_at?: string | null;
+          notes?: string;
+          subtasks_done?: number[];
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          item_id?: string;
+          completed_at?: string | null;
+          notes?: string;
+          subtasks_done?: number[];
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rehab_journal_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          entry_date: string;
+          body: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          entry_date: string;
+          body?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          entry_date?: string;
+          body?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rehab_user_programs: {
+        Row: {
+          user_id: string;
+          program_id: string;
+          materialized_at: string;
+        };
+        Insert: {
+          user_id: string;
+          program_id: string;
+          materialized_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          program_id?: string;
+          materialized_at?: string;
+        };
+        Relationships: [];
+      };
       google_calendar_connections: {
         Row: {
           user_id: string;

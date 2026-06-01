@@ -1,0 +1,55 @@
+import type { CalendarEventColor } from "@/types/calendar";
+import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
+import {
+  REHAB_EVENT_KINDS,
+  type RehabEventKind,
+  type RehabPlanEvent,
+} from "@/types/rehab";
+
+export type RehabPlanEventRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  color: string;
+  completed_at: string | null;
+  event_kind: string;
+  program_id: string | null;
+  plan_week: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const REHAB_PLAN_EVENT_SELECT =
+  "id, user_id, title, description, start_at, end_at, all_day, color, completed_at, event_kind, program_id, plan_week, created_at, updated_at";
+
+function isEventColor(value: string): value is CalendarEventColor {
+  return (CALENDAR_EVENT_COLORS as readonly string[]).includes(value);
+}
+
+function isEventKind(value: string): value is RehabEventKind {
+  return (REHAB_EVENT_KINDS as readonly string[]).includes(value as RehabEventKind);
+}
+
+export function mapRehabPlanEvent(row: RehabPlanEventRow): RehabPlanEvent {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    description: row.description,
+    startAt: row.start_at,
+    endAt: row.end_at,
+    allDay: row.all_day,
+    color: isEventColor(row.color) ? row.color : "blue",
+    source: "local",
+    completedAt: row.completed_at,
+    eventKind: isEventKind(row.event_kind) ? row.event_kind : "custom",
+    programId: row.program_id,
+    planWeek: row.plan_week,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
