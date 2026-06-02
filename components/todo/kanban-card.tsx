@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PriorityBadge, PriorityMenuLabel } from "@/components/todo/priority-icon";
+import { ChecklistHoverPreview } from "@/components/todo/checklist-hover-preview";
 import { TodoTagChip } from "@/components/todo/tag-input";
 import { isTodoBoardChecklistComplete } from "@/lib/todo/checklist-complete";
 import { todoStatusLabel } from "@/lib/todo/status-label";
@@ -400,24 +401,24 @@ export function KanbanCard({
           className="text-muted-foreground flex shrink-0 items-center gap-3 text-[11px] font-medium tabular-nums"
           aria-hidden={false}
         >
-          <span
-            className="inline-flex items-center gap-1"
-            aria-label={
-              subtaskTotal > 0
-                ? `Checklist ${subtaskDone} of ${subtaskTotal} done`
-                : "No checklist items"
-            }
-            title={
-              subtaskTotal > 0
-                ? `Checklist ${subtaskDone}/${subtaskTotal}`
-                : "No checklist items"
-            }
+          <ChecklistHoverPreview
+            subtasks={item.subtasks ?? []}
+            doneCount={subtaskDone}
           >
-            <ListChecks className="size-3.5" aria-hidden />
-            <span>
-              {subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : 0}
+            <span
+              className="inline-flex items-center gap-1"
+              aria-label={
+                subtaskTotal > 0
+                  ? `Checklist ${subtaskDone} of ${subtaskTotal} done`
+                  : "No checklist items"
+              }
+            >
+              <ListChecks className="size-3.5" aria-hidden />
+              <span>
+                {subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : 0}
+              </span>
             </span>
-          </span>
+          </ChecklistHoverPreview>
           <span
             className="inline-flex items-center gap-1"
             aria-label={

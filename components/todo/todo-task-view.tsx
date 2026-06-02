@@ -388,6 +388,7 @@ export function TodoTaskView({
     syncBoardStore({
       subtaskCount: nextSubtasks.length,
       subtaskDoneCount: nextSubtasks.filter((subtask) => subtask.done).length,
+      subtasks: nextSubtasks,
     });
   }
 
@@ -408,6 +409,7 @@ export function TodoTaskView({
     syncBoardStore({
       subtaskCount: nextSubtasks.length,
       subtaskDoneCount: nextSubtasks.filter((subtask) => subtask.done).length,
+      subtasks: nextSubtasks,
     });
   }
 
@@ -426,6 +428,7 @@ export function TodoTaskView({
     syncBoardStore({
       subtaskCount: nextSubtasks.length,
       subtaskDoneCount: nextSubtasks.filter((subtask) => subtask.done).length,
+      subtasks: nextSubtasks,
     });
   }
 

@@ -91,7 +91,7 @@ export type TodoItem = {
   attachments: TodoAttachment[];
 };
 
-/** Lightweight Kanban card payload — aggregate counts, no nested relations. */
+/** Lightweight Kanban card payload — aggregate counts, checklist preview only. */
 export type TodoBoardItem = Omit<
   TodoItem,
   "comments" | "subtasks" | "attachments"
@@ -100,4 +100,6 @@ export type TodoBoardItem = Omit<
   subtaskCount: number;
   subtaskDoneCount: number;
   attachmentCount: number;
+  /** Checklist rows for Kanban hover preview (sorted by position). */
+  subtasks: TodoSubtask[];
 };

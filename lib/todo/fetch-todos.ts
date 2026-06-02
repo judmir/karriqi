@@ -301,6 +301,7 @@ function emptyRelationCounts(): RelationCounts {
 function mapBoardItem(
   row: BoardItemRow,
   counts: RelationCounts,
+  subtasks: TodoSubtask[],
   iconByLabel: Map<string, string>,
 ): TodoBoardItem {
   const status = isTodoStatus(row.status) ? row.status : "backlog";
@@ -322,38 +323,50 @@ function mapBoardItem(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     ...counts,
+    subtasks,
   };
 }
 
 function aggregateRelationCounts(
   itemIds: string[],
   comments: { todo_item_id: string }[] | null,
-  subtasks: { todo_item_id: string; done: boolean }[] | null,
+  subtasks: SubtaskRow[] | null,
   attachments: { todo_item_id: string }[] | null,
-): Map<string, RelationCounts> {
-  const byId = new Map<string, RelationCounts>();
+): {
+  countsById: Map<string, RelationCounts>;
+  subtasksById: Map<string, TodoSubtask[]>;
+} {
+  const countsById = new Map<string, RelationCounts>();
+  const subtasksById = new Map<string, TodoSubtask[]>();
   for (const id of itemIds) {
-    byId.set(id, emptyRelationCounts());
+    countsById.set(id, emptyRelationCounts());
+    subtasksById.set(id, []);
   }
 
   for (const row of comments ?? []) {
-    const entry = byId.get(row.todo_item_id);
+    const entry = countsById.get(row.todo_item_id);
     if (entry) entry.commentCount += 1;
   }
 
   for (const row of subtasks ?? []) {
-    const entry = byId.get(row.todo_item_id);
+    const entry = countsById.get(row.todo_item_id);
     if (!entry) continue;
     entry.subtaskCount += 1;
     if (row.done) entry.subtaskDoneCount += 1;
+    const list = subtasksById.get(row.todo_item_id);
+    if (list) list.push(mapSubtask(row));
+  }
+
+  for (const list of subtasksById.values()) {
+    list.sort((a, b) => a.position - b.position);
   }
 
   for (const row of attachments ?? []) {
-    const entry = byId.get(row.todo_item_id);
+    const entry = countsById.get(row.todo_item_id);
     if (entry) entry.attachmentCount += 1;
   }
 
-  return byId;
+  return { countsById, subtasksById };
 }
 
 /** Kanban board load — item rows plus lightweight relation counts (no bodies or signed URLs). */
@@ -386,7 +399,7 @@ export async function fetchTodosBoardSummary(): Promise<TodoBoardItem[]> {
     supabase.from("todo_comments").select("todo_item_id").in("todo_item_id", itemIds),
     supabase
       .from("todo_subtasks")
-      .select("todo_item_id, done")
+      .select("id, todo_item_id, label, done, position")
       .in("todo_item_id", itemIds),
     supabase
       .from("todo_attachments")
@@ -394,15 +407,20 @@ export async function fetchTodosBoardSummary(): Promise<TodoBoardItem[]> {
       .in("todo_item_id", itemIds),
   ]);
 
-  const countsById = aggregateRelationCounts(
+  const { countsById, subtasksById } = aggregateRelationCounts(
     itemIds,
     commentsResult.error ? null : (commentsResult.data ?? []),
-    subtasksResult.error ? null : (subtasksResult.data ?? []),
+    subtasksResult.error ? null : ((subtasksResult.data ?? []) as SubtaskRow[]),
     attachmentsResult.error ? null : (attachmentsResult.data ?? []),
   );
 
   const iconByLabel = todoTagIconByLabel(tagsResult);
   return rows.map((row) =>
-    mapBoardItem(row, countsById.get(row.id) ?? emptyRelationCounts(), iconByLabel),
+    mapBoardItem(
+      row,
+      countsById.get(row.id) ?? emptyRelationCounts(),
+      subtasksById.get(row.id) ?? [],
+      iconByLabel,
+    ),
   );
 }

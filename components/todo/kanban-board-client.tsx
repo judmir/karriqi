@@ -351,6 +351,7 @@ export function KanbanBoardClient({
         subtaskCount: 0,
         subtaskDoneCount: 0,
         attachmentCount: 0,
+        subtasks: [],
       };
       const next = {
         ...current,
