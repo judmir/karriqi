@@ -74,6 +74,31 @@ export async function fetchAssignableMembers(
   return fetchHouseholdAssignableMembers(user);
 }
 
+async function resolveHouseholdMemberProfile(
+  userId: string,
+  householdDisplayName: string | null | undefined,
+): Promise<Pick<TodoAssignableMember, "displayName" | "avatarPreset">> {
+  const fallback = householdDisplayName?.trim() || "Member";
+  const admin = createAdminClient();
+  if (!admin) {
+    return { displayName: fallback, avatarPreset: null };
+  }
+
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) {
+    return { displayName: fallback, avatarPreset: null };
+  }
+
+  const meta = data.user.user_metadata as Record<string, unknown> | undefined;
+  return {
+    displayName:
+      displayNameFromUserMeta(meta) ||
+      fallback ||
+      (data.user.email ? defaultDisplayNameFromEmail(data.user.email) : "Member"),
+    avatarPreset: avatarPresetFromUserMeta(meta),
+  };
+}
+
 async function fetchHouseholdAssignableMembers(
   user: User,
 ): Promise<TodoAssignableMember[]> {
@@ -91,13 +116,14 @@ async function fetchHouseholdAssignableMembers(
   const byId = new Map<string, TodoAssignableMember>();
 
   for (const r of rows ?? []) {
-    const name = r.display_name?.trim();
+    const profile = await resolveHouseholdMemberProfile(
+      r.member_user_id,
+      r.display_name,
+    );
     byId.set(r.member_user_id, {
       userId: r.member_user_id,
-      displayName: name || "Member",
-      // Without service role we cannot read other users' metadata; the
-      // initials fallback will show until an admin lists them.
-      avatarPreset: null,
+      displayName: profile.displayName,
+      avatarPreset: profile.avatarPreset,
     });
   }
 
