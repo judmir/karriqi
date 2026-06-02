@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 
 import { avatarPresetFromUserMeta } from "@/lib/avatar/presets";
+import { getHouseholdPeerUserIds } from "@/lib/notifications/household-peers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TodoAssignableMember } from "@/types/todo";
@@ -102,30 +103,7 @@ async function resolveHouseholdMemberProfile(
 async function fetchHouseholdAssignableMembers(
   user: User,
 ): Promise<TodoAssignableMember[]> {
-  const supabase = await createClient();
-  const { data: rows, error } = await supabase
-    .from("household_members")
-    .select("member_user_id, display_name")
-    .eq("owner_user_id", user.id)
-    .order("display_name", { ascending: true });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
   const byId = new Map<string, TodoAssignableMember>();
-
-  for (const r of rows ?? []) {
-    const profile = await resolveHouseholdMemberProfile(
-      r.member_user_id,
-      r.display_name,
-    );
-    byId.set(r.member_user_id, {
-      userId: r.member_user_id,
-      displayName: profile.displayName,
-      avatarPreset: profile.avatarPreset,
-    });
-  }
 
   const meta = user.user_metadata as Record<string, unknown>;
   const selfName =
@@ -133,17 +111,20 @@ async function fetchHouseholdAssignableMembers(
     (user.email ? defaultDisplayNameFromEmail(user.email) : "Me");
   const selfPreset = avatarPresetFromUserMeta(meta);
 
-  if (!byId.has(user.id)) {
-    byId.set(user.id, {
-      userId: user.id,
-      displayName: selfName,
-      avatarPreset: selfPreset,
+  byId.set(user.id, {
+    userId: user.id,
+    displayName: selfName,
+    avatarPreset: selfPreset,
+  });
+
+  const peerIds = await getHouseholdPeerUserIds(user.id);
+  for (const peerId of peerIds) {
+    const profile = await resolveHouseholdMemberProfile(peerId, null);
+    byId.set(peerId, {
+      userId: peerId,
+      displayName: profile.displayName,
+      avatarPreset: profile.avatarPreset,
     });
-  } else {
-    const existing = byId.get(user.id);
-    if (existing) {
-      byId.set(user.id, { ...existing, avatarPreset: selfPreset });
-    }
   }
 
   return [...byId.values()].sort((a, b) =>

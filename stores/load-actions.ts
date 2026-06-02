@@ -14,6 +14,7 @@ import { resolveHouseholdOwnerUserId } from "@/lib/shopping/household-owner";
 import { mockStaples } from "@/lib/shopping/mock-staples";
 import { medianGapDaysByStaple } from "@/lib/shopping/suggestions";
 import { getSessionUser } from "@/lib/supabase/server";
+import { ensureHouseholdLinked } from "@/lib/household/ensure-household-linked";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
 import { fetchTodosBoardSummary } from "@/lib/todo/fetch-todos";
 import type { CalendarEvent } from "@/types/calendar";
@@ -43,6 +44,8 @@ export async function loadKanbanStoreAction(): Promise<KanbanStorePayload> {
   if (!user) {
     return { ok: false, reason: "signed_out" };
   }
+
+  await ensureHouseholdLinked();
 
   const [assignableResult, todosResult] = await Promise.allSettled([
     fetchAssignableMembers(user),
@@ -280,6 +283,8 @@ export async function loadShoppingStoreAction(): Promise<ShoppingStorePayload> {
   if (!user) {
     return { ok: false, reason: "signed_out" };
   }
+
+  await ensureHouseholdLinked();
 
   const [ownerResult, staplesResult, listResult, eventsResult] =
     await Promise.allSettled([

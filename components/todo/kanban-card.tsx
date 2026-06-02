@@ -280,7 +280,7 @@ export function KanbanCard({
               disabled={!persistence || assignableUsers.length === 0}
               title={
                 assignableUsers.length === 0
-                  ? "Add household members to assign others"
+                  ? "No one else to assign to yet"
                   : assigneeUserId
                     ? assigneeLabel
                       ? `Assigned — ${assigneeLabel}`

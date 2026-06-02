@@ -1,7 +1,6 @@
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
 import { DevMenuSettings } from "@/components/settings/dev-menu-settings";
 import { GoogleCalendarSettings } from "@/components/settings/google-calendar-settings";
-import { HouseholdSettingsForm } from "@/components/settings/household-settings-form";
 import { PinSettingsForm } from "@/components/settings/pin-settings-form";
 import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
 import { PageContainer } from "@/components/layout/page-container";
@@ -20,7 +19,6 @@ import {
   isDevMenuEnabledInMetadata,
 } from "@/lib/dev/dev-access";
 import { isSupabaseConfigured } from "@/lib/env";
-import { fetchHouseholdOverview } from "@/lib/household/household-actions";
 import { getGoogleCalendarConnectionStatus } from "@/lib/google-calendar/connection-actions";
 import { getSessionUser } from "@/lib/supabase/server";
 import { displayNameFromUserMeta } from "@/lib/todo/assignable-members";
@@ -55,12 +53,10 @@ export default async function SettingsPage() {
 
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
-  const [pinStatus, householdOverview, googleCalendarStatus] =
-    await Promise.all([
-      getOwnPinStatus(),
-      fetchHouseholdOverview(),
-      getGoogleCalendarConnectionStatus(user.id),
-    ]);
+  const [pinStatus, googleCalendarStatus] = await Promise.all([
+    getOwnPinStatus(),
+    getGoogleCalendarConnectionStatus(user.id),
+  ]);
 
   return (
     <PageContainer>
@@ -79,23 +75,6 @@ export default async function SettingsPage() {
               email={user.email ?? ""}
               initialDisplayName={initialDisplayName}
               initialAvatarPreset={initialAvatarPreset}
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Household</CardTitle>
-            <CardDescription>
-              Pair with a partner to share the shopping list, staples, and
-              purchase history in real time.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <HouseholdSettingsForm
-              partners={householdOverview?.partners ?? []}
-              serviceRoleAvailable={
-                householdOverview?.serviceRoleAvailable ?? false
-              }
             />
           </CardContent>
         </Card>

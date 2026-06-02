@@ -1,6 +1,6 @@
 /**
  * Shared helpers for assignee display names (metadata + email fallback).
- * Assignable people are loaded from `household_members` — see fetch-assignable-members.ts.
+ * Assignable people are household peers (auto-linked) + self — see fetch-assignable-members.ts.
  */
 
 const META_NAME_KEYS = [
