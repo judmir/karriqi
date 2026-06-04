@@ -3,7 +3,7 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
 import {
@@ -14,8 +14,10 @@ import {
 import {
   devNavItem,
   mainNavItems,
+  mobileNavSectionFromPathname,
   rehabNavItems,
   type MainNavItem,
+  type MobileNavSection,
 } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
@@ -227,27 +229,145 @@ function SidebarBrandHeader({
   );
 }
 
+function MobileNavRow({ items }: { items: MainNavItem[] }) {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl shrink-0 items-stretch justify-between gap-0.5 px-2 pt-1">
+      {items.map((item) => (
+        <MobileNavLink
+          key={item.href}
+          href={item.href}
+          label={item.shortLabel}
+          icon={item.icon}
+        />
+      ))}
+    </div>
+  );
+}
+
+const MOBILE_NAV_SWIPE_THRESHOLD_PX = 28;
+const MOBILE_NAV_SWIPE_INTENT_PX = 8;
+
 export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
-  const items = navItemsFor(includeDevNav ?? false);
+  const pathname = usePathname();
+  const familyItems = navItemsFor(includeDevNav ?? false);
+  const [section, setSection] = useState<MobileNavSection>(() =>
+    mobileNavSectionFromPathname(pathname),
+  );
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    swiping: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    setSection(mobileNavSectionFromPathname(pathname));
+  }, [pathname]);
+
+  const sectionLabel = section === "rehab" ? "Rehab" : "Family";
+  const otherSectionLabel = section === "rehab" ? "Family" : "Rehab";
+
+  function onPointerDown(e: React.PointerEvent<HTMLElement>) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      swiping: false,
+    };
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLElement>) {
+    if (!dragRef.current) return;
+
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+
+    if (!dragRef.current.swiping) {
+      const absY = Math.abs(dy);
+      const absX = Math.abs(dx);
+      if (absY <= MOBILE_NAV_SWIPE_INTENT_PX || absY <= absX) return;
+
+      dragRef.current.swiping = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+
+    if (dragRef.current.swiping) {
+      e.preventDefault();
+    }
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLElement>) {
+    if (!dragRef.current) return;
+
+    const dy = e.clientY - dragRef.current.startY;
+    const shouldToggle =
+      dragRef.current.swiping &&
+      Math.abs(dy) >= MOBILE_NAV_SWIPE_THRESHOLD_PX;
+
+    if (shouldToggle) {
+      setSection((current) => (current === "rehab" ? "family" : "rehab"));
+    }
+
+    if (dragRef.current.swiping) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+
+    dragRef.current = null;
+  }
+
+  function onPointerCancel(e: React.PointerEvent<HTMLElement>) {
+    if (dragRef.current?.swiping) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    dragRef.current = null;
+  }
+
   return (
     <nav
-      className="border-border bg-background/90 supports-[backdrop-filter]:bg-background/75 fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-md md:hidden"
-      aria-label="Main navigation"
+      className="border-border bg-background/90 supports-[backdrop-filter]:bg-background/75 fixed right-0 bottom-0 left-0 z-40 touch-pan-x border-t backdrop-blur-md md:hidden"
+      aria-label={`Main navigation, ${sectionLabel} section. Swipe up or down to switch to ${otherSectionLabel}.`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
     >
       <div
-        className="mx-auto flex max-w-3xl items-stretch justify-between gap-0.5 px-2 pt-1"
+        className="flex flex-col"
         style={{
           paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
         }}
       >
-        {items.map((item) => (
-          <MobileNavLink
-            key={item.href}
-            href={item.href}
-            label={item.shortLabel}
-            icon={item.icon}
+        <div className="text-muted-foreground flex items-center justify-center gap-1.5 px-2 pt-1.5 select-none">
+          <span
+            className={cn(
+              "size-1 rounded-full transition-colors",
+              section === "rehab" ? "bg-foreground/70" : "bg-foreground/25",
+            )}
+            aria-hidden
           />
-        ))}
+          <p className="text-[0.6rem] font-medium tracking-wide uppercase">
+            {sectionLabel}
+          </p>
+          <span
+            className={cn(
+              "size-1 rounded-full transition-colors",
+              section === "family" ? "bg-foreground/70" : "bg-foreground/25",
+            )}
+            aria-hidden
+          />
+        </div>
+
+        <div className="h-[4.1rem] overflow-hidden">
+          <div
+            className="flex flex-col transition-transform duration-300 ease-out"
+            style={{
+              transform:
+                section === "rehab" ? "translateY(0%)" : "translateY(-50%)",
+            }}
+          >
+            <MobileNavRow items={rehabNavItems} />
+            <MobileNavRow items={familyItems} />
+          </div>
+        </div>
       </div>
     </nav>
   );
