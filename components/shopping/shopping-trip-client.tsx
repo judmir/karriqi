@@ -9,12 +9,49 @@ import { SwipeRevealRow } from "@/components/shopping/swipe-reveal-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { rankDueSoonStaples } from "@/lib/shopping/suggestions";
+import { mergeDevSuggestedStaples } from "@/lib/shopping/mock-suggested-staples";
 import { useShoppingListRealtime } from "@/hooks/use-shopping-list-realtime";
 import { useShoppingStore } from "@/stores/shopping-store";
 import type { StapleItem } from "@/types/shopping";
 
 function normalizeItemLabel(label: string) {
   return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+const SUGGESTION_PREVIEW_LIMIT = 8;
+
+function SuggestedSectionHeader({
+  count,
+  expanded,
+  onToggle,
+}: {
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-2 text-left text-xs font-medium tracking-wide uppercase transition-colors"
+      aria-expanded={expanded}
+      aria-controls="shopping-suggested-panel"
+      onClick={onToggle}
+    >
+      <span>Suggested</span>
+      <span className="inline-flex items-center gap-1.5 normal-case tracking-normal">
+        {count > 0 ? (
+          <span className="text-muted-foreground/80 text-[0.65rem] tabular-nums">
+            {count}
+          </span>
+        ) : null}
+        {expanded ? (
+          <ChevronUp className="size-3.5 shrink-0" aria-hidden />
+        ) : (
+          <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+        )}
+      </span>
+    </button>
+  );
 }
 
 function SuggestedItemChip({
@@ -99,8 +136,8 @@ export function ShoppingTripClient() {
     (s) => s.promoteFreeTextToSuggested,
   );
 
-  const [showAllSuggestionsOnMobile, setShowAllSuggestionsOnMobile] =
-    useState(true);
+  const [suggestedSectionExpanded, setSuggestedSectionExpanded] = useState(true);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [draft, setDraft] = useState("");
 
   useShoppingListRealtime({
@@ -137,14 +174,19 @@ export function ShoppingTripClient() {
     [dismissedSuggestedIds],
   );
 
+  const catalogForSuggestions = useMemo(
+    () => mergeDevSuggestedStaples(catalog),
+    [catalog],
+  );
+
   const dueSoon = useMemo(
     () =>
       rankDueSoonStaples({
-        staples: catalog,
+        staples: catalogForSuggestions,
         excludeStapleIds: stapleIdsOnList,
         medianIntervalByStapleId,
       }),
-    [catalog, stapleIdsOnList, medianIntervalByStapleId],
+    [catalogForSuggestions, stapleIdsOnList, medianIntervalByStapleId],
   );
 
   const dueSoonStapleIds = useMemo(
@@ -154,14 +196,14 @@ export function ShoppingTripClient() {
 
   const suggestedCatalog = useMemo(
     () => [
-      ...catalog.filter(
+      ...catalogForSuggestions.filter(
         (s) =>
           dueSoonStapleIds.has(s.id) &&
           !stapleIdsOnList.has(s.id) &&
           !s.hiddenFromSuggestions &&
           !dismissedSet.has(s.id),
       ),
-      ...catalog.filter(
+      ...catalogForSuggestions.filter(
         (s) =>
           !dueSoonStapleIds.has(s.id) &&
           !stapleIdsOnList.has(s.id) &&
@@ -169,18 +211,19 @@ export function ShoppingTripClient() {
           !dismissedSet.has(s.id),
       ),
     ],
-    [catalog, dueSoonStapleIds, stapleIdsOnList, dismissedSet],
+    [catalogForSuggestions, dueSoonStapleIds, stapleIdsOnList, dismissedSet],
   );
 
-  const MOBILE_SUGGESTION_LIMIT = 8;
-  const quickSuggestedCatalog = useMemo(
-    () => suggestedCatalog.slice(0, MOBILE_SUGGESTION_LIMIT),
+  const previewSuggestedCatalog = useMemo(
+    () => suggestedCatalog.slice(0, SUGGESTION_PREVIEW_LIMIT),
     [suggestedCatalog],
   );
   const visibleSuggestedCatalog = useMemo(
-    () => (showAllSuggestionsOnMobile ? suggestedCatalog : quickSuggestedCatalog),
-    [quickSuggestedCatalog, showAllSuggestionsOnMobile, suggestedCatalog],
+    () => (showAllSuggestions ? suggestedCatalog : previewSuggestedCatalog),
+    [previewSuggestedCatalog, showAllSuggestions, suggestedCatalog],
   );
+  const hiddenSuggestionCount =
+    suggestedCatalog.length - previewSuggestedCatalog.length;
 
   function handleAddFromStaple(staple: StapleItem) {
     const added = addItemFromStaple(staple);
@@ -201,14 +244,19 @@ export function ShoppingTripClient() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Suggested
-        </h2>
-        {suggestedCatalog.length === 0 ? (
+        <SuggestedSectionHeader
+          count={suggestedCatalog.length}
+          expanded={suggestedSectionExpanded}
+          onToggle={() => setSuggestedSectionExpanded((current) => !current)}
+        />
+        {!suggestedSectionExpanded ? null : suggestedCatalog.length === 0 ? (
           <p className="text-muted-foreground text-sm">—</p>
         ) : (
           <>
-            <div className="flex flex-wrap gap-2 sm:hidden">
+            <div
+              id="shopping-suggested-panel"
+              className="flex flex-wrap gap-2"
+            >
               {visibleSuggestedCatalog.map((staple) => (
                 <SuggestedItemChip
                   key={staple.id}
@@ -218,32 +266,21 @@ export function ShoppingTripClient() {
                 />
               ))}
             </div>
-            <div className="hidden flex-wrap gap-2 sm:flex">
-              {suggestedCatalog.map((staple) => (
-                <SuggestedItemChip
-                  key={staple.id}
-                  staple={staple}
-                  onAdd={() => handleAddFromStaple(staple)}
-                  onDismiss={() => dismissSuggested(staple.id)}
-                />
-              ))}
-            </div>
-            {suggestedCatalog.length > MOBILE_SUGGESTION_LIMIT ? (
+            {hiddenSuggestionCount > 0 ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground mt-1 inline-flex h-8 w-fit items-center gap-1 px-2 text-xs sm:hidden"
-                onClick={() => setShowAllSuggestionsOnMobile((current) => !current)}
+                className="text-muted-foreground mt-1 inline-flex h-8 w-fit items-center gap-1 px-2 text-xs"
+                onClick={() => setShowAllSuggestions((current) => !current)}
               >
-                {showAllSuggestionsOnMobile ? (
+                {showAllSuggestions ? (
                   <>
                     Show fewer <ChevronUp className="size-3" aria-hidden />
                   </>
                 ) : (
                   <>
-                    Show{" "}
-                    {suggestedCatalog.length - quickSuggestedCatalog.length} more{" "}
+                    Show {hiddenSuggestionCount} more{" "}
                     <ChevronDown className="size-3" aria-hidden />
                   </>
                 )}

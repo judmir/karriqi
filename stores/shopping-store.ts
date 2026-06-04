@@ -528,83 +528,61 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   },
 
   async promoteFreeTextToSuggested(itemId) {
-    const { listItems, listPersistence, purchasePersistence, staples } = get();
-    const item = listItems.find((i) => i.id === itemId);
-    if (!item || item.stapleId) return;
-    const name = item.name.trim();
+    const initial = get();
+    const target = initial.listItems.find((i) => i.id === itemId);
+    if (!target || target.stapleId) return;
+    const name = target.name.trim();
     if (!name) return;
 
-    if (purchasePersistence) {
+    let stapleId: string;
+
+    if (initial.purchasePersistence) {
       const r = await createStaple({
         name,
-        unit: item.quantity,
+        unit: target.quantity,
       });
       if (!r.ok) {
         showStoreError(`Couldn't add "${name}" to suggestions: ${r.message}`);
         return;
       }
-      const stapleId = r.id;
-      const createdAt = new Date().toISOString();
-      const existingMeta = staples.find((s) => s.id === stapleId);
-      const catalogNext = existingMeta
-        ? staples
-        : [
-            ...staples,
-            {
-              id: stapleId,
-              name,
-              unit: item.quantity,
-              createdAt,
-            },
-          ];
-      const itemsNext = listItems.map((i) =>
-        i.id === itemId ? { ...i, stapleId } : i,
+      stapleId = r.id;
+    } else {
+      const existing = initial.staples.find(
+        (s) => s.name.trim().toLowerCase() === name.toLowerCase(),
       );
-      set({
-        staples: catalogNext,
-        listItems: itemsNext,
-        loadedAt: Date.now(),
-      });
-      if (listPersistence) {
-        const updated = { ...item, stapleId };
-        const position = positionsRef.get(itemId) ?? nextPosition();
-        void persistItem(updated, position, listPersistence).then((result) => {
-          if (!result.ok) {
-            set({ listItems, staples, loadedAt: Date.now() });
-            showStoreError(`Couldn't save "${name}": ${result.message}`);
-          }
-        });
-      }
+      stapleId = existing?.id ?? `staple-${newShoppingListItemId()}`;
+    }
+
+    const current = get();
+    const currentTarget = current.listItems.find((i) => i.id === itemId);
+    if (!currentTarget || currentTarget.stapleId) return;
+
+    const existingMeta = current.staples.find((s) => s.id === stapleId);
+    const catalogNext = existingMeta
+      ? current.staples
+      : [
+          ...current.staples,
+          {
+            id: stapleId,
+            name,
+            unit: currentTarget.quantity,
+            createdAt: new Date().toISOString(),
+          },
+        ];
+
+    const updated: ShoppingListItem = { ...currentTarget, stapleId };
+    const itemsNext = current.listItems.map((i) =>
+      i.id === itemId ? updated : i,
+    );
+
+    set({ staples: catalogNext, loadedAt: Date.now() });
+
+    if (current.listPersistence) {
+      get().replaceListItems(itemsNext);
       return;
     }
 
-    const existing = staples.find(
-      (s) => s.name.trim().toLowerCase() === name.toLowerCase(),
-    );
-    let catalogNext = staples;
-    let stapleId: string;
-    if (existing) {
-      stapleId = existing.id;
-    } else {
-      stapleId = `staple-${newShoppingListItemId()}`;
-      catalogNext = [
-        ...staples,
-        {
-          id: stapleId,
-          name,
-          unit: item.quantity,
-          createdAt: new Date().toISOString(),
-        },
-      ];
-    }
-    const itemsNext = listItems.map((i) =>
-      i.id === itemId ? { ...i, stapleId } : i,
-    );
-    set({
-      staples: catalogNext,
-      listItems: itemsNext,
-      loadedAt: Date.now(),
-    });
+    set({ listItems: itemsNext, loadedAt: Date.now() });
   },
 
   applyRemoteUpsert(row) {
