@@ -64,9 +64,10 @@ begin
 end
 $$;
 
+-- pg_cron has no per-job timezone argument; schedules always run in UTC.
+-- 21:00 UTC == 21:00 Europe/London in winter (GMT) and 22:00 during BST.
 select cron.schedule(
   'rule-of-3-tomorrow-21-london',
   '0 21 * * *',
-  $cron$select public.invoke_rule_of_3_tomorrow_reminder();$cron$,
-  'Europe/London'
+  $cron$select public.invoke_rule_of_3_tomorrow_reminder();$cron$
 );
