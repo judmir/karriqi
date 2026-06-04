@@ -755,6 +755,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      rehab_event_reminders: {
+        Row: {
+          master_id: string;
+          occurrence_at: string;
+          sent_at: string;
+        };
+        Insert: {
+          master_id: string;
+          occurrence_at: string;
+          sent_at?: string;
+        };
+        Update: {
+          master_id?: string;
+          occurrence_at?: string;
+          sent_at?: string;
+        };
+        Relationships: [];
+      };
       google_calendar_connections: {
         Row: {
           user_id: string;

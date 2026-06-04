@@ -29,7 +29,7 @@ Copy the public key into `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and the private key into
 - **`POST /api/push/subscribe`** — Authenticated; upserts a row in `public.push_subscriptions`.
 - **`POST /api/push/test`** — Authenticated; sends one Web Push to the current user (used to confirm VAPID + subscription after enabling).
 - **`GET` / `POST /api/cron/stale-tasks`** — `Authorization: Bearer $CRON_SECRET`; runs stale-task reminders (assigned tasks inactive ≥ 2 days).
-- **`GET` / `POST /api/cron/rehab-reminders`** — `Authorization: Bearer $CRON_SECRET`; sends a push **5 minutes before** each timed rehab plan event's start. Designed to be hit **every minute**; dedupes via `rehab_plan_events.reminder_sent_at`.
+- **`GET` / `POST /api/cron/rehab-reminders`** — `Authorization: Bearer $CRON_SECRET`; sends a push **5 minutes before** each timed rehab plan event occurrence. Designed to be hit **every minute**. Standalone + override rows dedupe via `rehab_plan_events.reminder_sent_at`; **recurring masters** are expanded per occurrence and dedupe via the `rehab_event_reminders` table (so every repeat is reminded, exactly once).
 
 Feature code should not call `web-push` directly; use [`lib/notifications/dispatch.ts`](../notifications/dispatch.ts) so in-app rows and pushes stay in sync.
 
