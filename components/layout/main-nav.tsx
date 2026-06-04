@@ -325,7 +325,7 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
 
   return (
     <nav
-      className="border-border bg-background/90 supports-[backdrop-filter]:bg-background/75 fixed right-0 bottom-0 left-0 z-40 touch-pan-x border-t backdrop-blur-md md:hidden"
+      className="border-border fixed right-0 bottom-0 left-0 z-40 touch-pan-x border-t bg-[#101011] md:hidden"
       aria-label={`Main navigation, ${sectionLabel} section. Swipe up or down to switch to ${otherSectionLabel}.`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -359,11 +359,11 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
         </div>
 
         <div
-          className="bg-background overflow-hidden"
+          className="overflow-hidden bg-[#101011]"
           style={{ height: MOBILE_NAV_ROW_HEIGHT }}
         >
           <div
-            className="bg-background transition-transform duration-300 ease-out"
+            className="bg-[#101011] transition-transform duration-300 ease-out"
             style={{
               transform:
                 section === "rehab"
