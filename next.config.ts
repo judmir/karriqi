@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 import withPWAInit from "@ducanh2912/next-pwa";
 
+import { pageRuntimeCaching } from "./lib/pwa/runtime-caching";
+
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 /** Default: PWA (service worker) is off in `next dev` for faster reloads. Set `ENABLE_PWA_IN_DEV=true` in `.env.local` to test Web Push locally. */
@@ -18,14 +20,18 @@ const withPWA = withPWAInit({
   register: true,
   scope: "/",
   /**
-   * Workbox precaches build assets. Keep defaults for the scaffold; tune
-   * `runtimeCaching` when you add offline-first flows.
+   * Extend (not replace) the built-in `defaultCache`. Our overrides add a
+   * short `networkTimeoutSeconds` to the page/RSC NetworkFirst rules so a slow
+   * network falls back to the cached shell quickly instead of hanging — see
+   * `lib/pwa/runtime-caching.ts`.
    *
    * Web push: extend the generated service worker (custom worker / importScripts)
    * or add a `push` event listener in a future phase — see `lib/push/README.md`.
    */
+  extendDefaultRuntimeCaching: true,
   workboxOptions: {
     disableDevLogs: true,
+    runtimeCaching: pageRuntimeCaching,
   },
 });
 

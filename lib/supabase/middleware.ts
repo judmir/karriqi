@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { isSupabaseConfigured } from "@/lib/env";
+import { claimsToUser } from "@/lib/supabase/claims-to-user";
 import type { Database } from "@/types/database";
 
 export async function updateSession(
@@ -35,9 +36,10 @@ export async function updateSession(
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `getClaims()` verifies the access token locally (asymmetric signing keys),
+  // avoiding a network round-trip to the Auth server on every navigation.
+  const { data, error } = await supabase.auth.getClaims();
+  const user = error || !data?.claims ? null : claimsToUser(data.claims);
 
   return { response: supabaseResponse, user };
 }
