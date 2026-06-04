@@ -7,6 +7,7 @@ export const ROUTES = {
   rehabWiki: "/rehab/wiki",
   rehabWikiOverview: "/rehab/wiki",
   dashboard: "/dashboard",
+  ruleOfThree: "/rule-of-3",
   shopping: "/shopping",
   shoppingAdmin: "/shopping/admin",
   todo: "/kanban",
@@ -29,6 +30,7 @@ export function todoTaskPath(id: string) {
 export const PROTECTED_ROUTE_PREFIXES: string[] = [
   "/rehab",
   ROUTES.dashboard,
+  ROUTES.ruleOfThree,
   ROUTES.shopping,
   ROUTES.todo,
   ROUTES.calendar,

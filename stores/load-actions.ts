@@ -7,6 +7,7 @@ import { ensureNeuroRehabProgramReady } from "@/lib/rehab/ensure-neuro-rehab-pro
 import { fetchRehabPlanEventsForUser } from "@/lib/rehab/fetch-rehab-plan-events";
 import { isGoogleCalendarConfigured } from "@/lib/env/google-calendar";
 import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
+import { fetchRuleOf3DaysForUser } from "@/lib/rule-of-3/fetch-rule-of-3";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
 import { fetchShoppingListForUser } from "@/lib/shopping/fetch-shopping-list";
 import { fetchStaplesWithDefaults } from "@/lib/shopping/fetch-staples-with-defaults";
@@ -21,6 +22,7 @@ import type { CalendarEvent } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
 import type { RehabPlanListItem } from "@/types/rehab";
 import type { RehabClinicalItem } from "@/types/rehab";
+import type { RuleOf3Day } from "@/types/rule-of-3";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 import type { TodoAssignableMember, TodoBoardItem } from "@/types/todo";
 
@@ -308,4 +310,26 @@ export async function loadShoppingStoreAction(): Promise<ShoppingStorePayload> {
     householdOwnerId:
       ownerResult.status === "fulfilled" ? ownerResult.value : null,
   };
+}
+
+export type RuleOf3StorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      days: RuleOf3Day[];
+      persistence: boolean;
+    };
+
+export async function loadRuleOf3StoreAction(): Promise<RuleOf3StorePayload> {
+  if (!isSupabaseConfigured()) {
+    return { ok: true, days: [], persistence: false };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const days = await fetchRuleOf3DaysForUser(user.id);
+  return { ok: true, days, persistence: true };
 }

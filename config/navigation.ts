@@ -10,6 +10,7 @@ import {
   SquareKanban,
   Stethoscope,
   StickyNote,
+  Target,
 } from "lucide-react";
 
 import { ROUTES } from "@/config/routes";
@@ -57,6 +58,12 @@ export const mainNavItems: MainNavItem[] = [
     label: "Dashboard",
     shortLabel: "Home",
     icon: LayoutDashboard,
+  },
+  {
+    href: ROUTES.ruleOfThree,
+    label: "Rule of 3",
+    shortLabel: "Rule 3",
+    icon: Target,
   },
   {
     href: ROUTES.shopping,

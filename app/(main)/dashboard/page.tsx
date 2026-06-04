@@ -1,4 +1,6 @@
 import { WeekendOptionsCard } from "@/components/operator/weekend-options-card";
+import { RuleOf3DashboardCard } from "@/components/rule-of-3/rule-of-3-dashboard-card";
+import { RuleOf3StoreGate } from "@/components/rule-of-3/rule-of-3-store-gate";
 import { PageContainer } from "@/components/layout/page-container";
 import { isSupabaseConfigured } from "@/lib/env";
 import { fetchCurrentWeekendPlannerForUser } from "@/lib/repositories/operator-entries";
@@ -29,10 +31,23 @@ export default async function DashboardPage() {
   return (
     <PageContainer width="wide">
       <div className="mx-auto flex max-w-2xl flex-col gap-8">
-        <p className="text-sm text-muted-foreground">
-          What&apos;s next for your family this week.
-        </p>
-        <WeekendOptionsCard {...weekendCard} />
+        <RuleOf3StoreGate
+          fallback={
+            <div
+              className="h-64 animate-pulse rounded-xl border border-border/60 bg-muted/20"
+              aria-label="Loading Rule of 3"
+              role="status"
+            />
+          }
+        >
+          <RuleOf3DashboardCard />
+        </RuleOf3StoreGate>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            What&apos;s next for your family this week.
+          </p>
+          <WeekendOptionsCard {...weekendCard} />
+        </div>
       </div>
     </PageContainer>
   );

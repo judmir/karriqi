@@ -812,6 +812,69 @@ export type Database = {
         };
         Relationships: [];
       };
+      rule_of_3_days: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_date: string;
+          reflection: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          plan_date: string;
+          reflection?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          plan_date?: string;
+          reflection?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rule_of_3_items: {
+        Row: {
+          id: string;
+          day_id: string;
+          position: number;
+          title: string;
+          notes: string;
+          completed_at: string | null;
+          blocked_reason: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          day_id: string;
+          position: number;
+          title?: string;
+          notes?: string;
+          completed_at?: string | null;
+          blocked_reason?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          day_id?: string;
+          position?: number;
+          title?: string;
+          notes?: string;
+          completed_at?: string | null;
+          blocked_reason?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       google_calendar_sources: {
         Row: {
           user_id: string;
