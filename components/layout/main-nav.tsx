@@ -113,7 +113,7 @@ function MobileNavLink({
       href={href}
       prefetch={false}
       className={cn(
-        "flex min-h-10 min-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-3 py-1.5 text-[0.65rem] font-medium leading-tight transition-colors",
+        "flex h-full min-h-0 min-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[0.65rem] font-medium leading-tight transition-colors",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -231,7 +231,7 @@ function SidebarBrandHeader({
 
 function MobileNavRow({ items }: { items: MainNavItem[] }) {
   return (
-    <div className="mx-auto flex w-full max-w-3xl shrink-0 items-stretch justify-between gap-0.5 px-2 pt-1">
+    <div className="mx-auto flex h-[3.25rem] w-full max-w-3xl shrink-0 items-stretch justify-between gap-0.5 px-2">
       {items.map((item) => (
         <MobileNavLink
           key={item.href}
@@ -243,6 +243,8 @@ function MobileNavRow({ items }: { items: MainNavItem[] }) {
     </div>
   );
 }
+
+const MOBILE_NAV_ROW_HEIGHT = "3.25rem";
 
 const MOBILE_NAV_SWIPE_THRESHOLD_PX = 28;
 const MOBILE_NAV_SWIPE_INTENT_PX = 8;
@@ -356,12 +358,17 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
           />
         </div>
 
-        <div className="h-[4.1rem] overflow-hidden">
+        <div
+          className="bg-background overflow-hidden"
+          style={{ height: MOBILE_NAV_ROW_HEIGHT }}
+        >
           <div
-            className="flex flex-col transition-transform duration-300 ease-out"
+            className="bg-background transition-transform duration-300 ease-out"
             style={{
               transform:
-                section === "rehab" ? "translateY(0%)" : "translateY(-50%)",
+                section === "rehab"
+                  ? "translateY(0)"
+                  : `translateY(calc(-1 * ${MOBILE_NAV_ROW_HEIGHT}))`,
             }}
           >
             <MobileNavRow items={rehabNavItems} />
