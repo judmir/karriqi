@@ -106,6 +106,16 @@ function matchesNavHref(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+export function isRehabRoute(pathname: string): boolean {
+  return pathname === "/rehab" || pathname.startsWith("/rehab/");
+}
+
+export type MobileNavSection = "rehab" | "family";
+
+export function mobileNavSectionFromPathname(pathname: string): MobileNavSection {
+  return isRehabRoute(pathname) ? "rehab" : "family";
+}
+
 function resolveWikiTitle(pathname: string): string | null {
   if (pathname === ROUTES.rehabWikiOverview) {
     return "Wiki";
