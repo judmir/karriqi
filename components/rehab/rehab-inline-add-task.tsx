@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
+import { RehabTimePicker } from "@/components/rehab/rehab-time-picker";
 import { calendarDateToStorage } from "@/lib/calendar/all-day-events";
 import {
   combineDateAndTime,
@@ -26,8 +27,6 @@ import {
 import type { RecurrenceRule } from "@/lib/rehab/recurrence";
 import { cn } from "@/lib/utils";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
-
-const TIME_PRESETS = ["09:00", "12:00", "15:00", "18:00", "21:00"] as const;
 
 function dateButtonLabel(date: Date): string {
   if (isToday(date)) {
@@ -264,7 +263,7 @@ export function RehabInlineAddTask({
               }}
             />
 
-            <TimePickerButton
+            <RehabTimePicker
               time={time}
               open={timeOpen}
               onOpenChange={setTimeOpen}
@@ -272,6 +271,20 @@ export function RehabInlineAddTask({
                 setTime(next);
                 setTimeOpen(false);
               }}
+              trigger={
+                <button
+                  type="button"
+                  aria-label={time ? `Time, ${time}` : "Time"}
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
+                    timeOpen && "text-foreground bg-muted/60",
+                    time && "tabular-nums",
+                  )}
+                >
+                  <Clock className="size-3.5 shrink-0" />
+                  {time || "Time"}
+                </button>
+              }
             />
 
             <RehabRepeatField
@@ -351,76 +364,6 @@ function DatePickerButton({
             }
           }}
         />
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function TimePickerButton({
-  time,
-  open,
-  onOpenChange,
-  onSelect,
-}: {
-  time: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSelect: (time: string) => void;
-}) {
-  const [draft, setDraft] = useState(time);
-
-  useEffect(() => {
-    if (open) {
-      setDraft(time);
-    }
-  }, [open, time]);
-
-  return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            aria-label={time ? `Time, ${time}` : "Time"}
-            className={cn(
-              "text-muted-foreground hover:text-foreground inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
-              open && "text-foreground bg-muted/60",
-              time && "tabular-nums",
-            )}
-          >
-            <Clock className="size-3.5 shrink-0" />
-            {time || "Time"}
-          </button>
-        }
-      />
-      <PopoverContent className="w-44 p-2" align="start" side="bottom">
-        <div className="relative mb-1">
-          <Clock className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-          <Input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="HH:MM"
-            className="h-8 pl-8 text-xs tabular-nums"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                if (/^\d{2}:\d{2}$/.test(draft)) {
-                  onSelect(draft);
-                }
-              }
-            }}
-          />
-        </div>
-        <div className="flex flex-col">
-          {TIME_PRESETS.map((preset) => (
-            <ShortcutButton
-              key={preset}
-              icon={<Clock className="size-3.5" />}
-              label={preset}
-              onClick={() => onSelect(preset)}
-            />
-          ))}
-        </div>
       </PopoverContent>
     </Popover>
   );
