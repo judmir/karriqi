@@ -812,6 +812,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      rule_of_3_evening_reminder_sends: {
+        Row: {
+          user_id: string;
+          sent_on: string;
+          sent_at: string;
+        };
+        Insert: {
+          user_id: string;
+          sent_on: string;
+          sent_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          sent_on?: string;
+          sent_at?: string;
+        };
+        Relationships: [];
+      };
       rule_of_3_days: {
         Row: {
           id: string;

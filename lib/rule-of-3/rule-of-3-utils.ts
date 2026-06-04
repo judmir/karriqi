@@ -27,6 +27,46 @@ export function tomorrowDateString(now: Date = new Date()): string {
   return toDateString(next);
 }
 
+/** IANA timezone for evening Rule of 3 reminders (matches planner copy / en-GB). */
+export const RULE_OF_3_REMINDER_TIMEZONE = "Europe/London";
+
+/** Calendar date (YYYY-MM-DD) for `date` in the given IANA timezone. */
+export function dateStringInTimeZone(
+  date: Date,
+  timeZone: string = RULE_OF_3_REMINDER_TIMEZONE,
+): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone }).format(date);
+}
+
+/** Next calendar day in the given IANA timezone (relative to `date`). */
+export function tomorrowDateStringInTimeZone(
+  date: Date = new Date(),
+  timeZone: string = RULE_OF_3_REMINDER_TIMEZONE,
+): string {
+  return dateStringInTimeZone(
+    new Date(date.getTime() + 24 * 60 * 60 * 1000),
+    timeZone,
+  );
+}
+
+/** Local hour (0–23) for `date` in the given IANA timezone. */
+export function hourInTimeZone(
+  date: Date,
+  timeZone: string = RULE_OF_3_REMINDER_TIMEZONE,
+): number {
+  const hour = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "numeric",
+    hour12: false,
+  }).format(date);
+  return Number.parseInt(hour, 10);
+}
+
+/** True when all three tomorrow slots have a non-empty title. */
+export function isTomorrowPlanningComplete(plannedCount: number): boolean {
+  return plannedCount >= RULE_OF_3_POSITIONS.length;
+}
+
 export function isValidPosition(value: number): value is RuleOf3Position {
   return RULE_OF_3_POSITIONS.includes(value as RuleOf3Position);
 }

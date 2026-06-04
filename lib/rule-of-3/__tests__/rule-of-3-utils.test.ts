@@ -1,16 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  dateStringInTimeZone,
   dayProgress,
   emptyDay,
   getDaySlots,
   historyDays,
+  hourInTimeZone,
+  isTomorrowPlanningComplete,
   isValidPosition,
   itemId,
   ruleOf3ItemStatus,
   toDateString,
   todayDateString,
   tomorrowDateString,
+  tomorrowDateStringInTimeZone,
   upsertItem,
 } from "@/lib/rule-of-3/rule-of-3-utils";
 import type { RuleOf3Day } from "@/types/rule-of-3";
@@ -36,6 +40,23 @@ describe("date helpers", () => {
     const ref = new Date(2026, 11, 31, 23, 0, 0);
     expect(todayDateString(ref)).toBe("2026-12-31");
     expect(tomorrowDateString(ref)).toBe("2027-01-01");
+  });
+
+  it("formats dates in Europe/London for evening reminders", () => {
+    const ref = new Date("2026-06-04T20:30:00.000Z");
+    expect(dateStringInTimeZone(ref, "Europe/London")).toBe("2026-06-04");
+    expect(tomorrowDateStringInTimeZone(ref, "Europe/London")).toBe(
+      "2026-06-05",
+    );
+    expect(hourInTimeZone(ref, "Europe/London")).toBe(21);
+  });
+});
+
+describe("isTomorrowPlanningComplete", () => {
+  it("requires all three slots", () => {
+    expect(isTomorrowPlanningComplete(0)).toBe(false);
+    expect(isTomorrowPlanningComplete(2)).toBe(false);
+    expect(isTomorrowPlanningComplete(3)).toBe(true);
   });
 });
 
