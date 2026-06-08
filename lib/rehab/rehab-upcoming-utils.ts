@@ -11,7 +11,10 @@ import {
 
 import { eventSpansDay } from "@/lib/calendar/all-day-events";
 import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
-import { PROGRAM_START, PROGRAM_WEEKS } from "@/modules/rehab/neuro-rehab-2026/constants";
+import {
+  PROGRAM_START,
+  PROGRAM_WEEKS,
+} from "@/modules/rehab/neuro-rehab-2026/constants";
 import type { RehabPlanEvent } from "@/types/rehab";
 
 /** Each "See more" reveals this many additional day rows (2 weeks). */
@@ -35,7 +38,10 @@ function byStart(a: RehabPlanEvent, b: RehabPlanEvent): number {
 
 function eventPrimaryDay(event: RehabPlanEvent): Date {
   if (event.allDay) {
-    const [year, month, day] = event.startAt.slice(0, 10).split("-").map(Number);
+    const [year, month, day] = event.startAt
+      .slice(0, 10)
+      .split("-")
+      .map(Number);
     return new Date(year!, month! - 1, day!);
   }
   return startOfDay(parseISO(event.startAt));
@@ -80,10 +86,6 @@ function isOverdue(event: RehabPlanEvent, today: Date): boolean {
   return isBefore(eventPrimaryDay(event), today);
 }
 
-function activeEvents(events: RehabPlanEvent[]): RehabPlanEvent[] {
-  return events.filter((event) => !event.completedAt);
-}
-
 export function upcomingDayLabel(date: Date, today: Date): string {
   const tomorrow = addDays(today, 1);
   if (isSameDay(date, today)) {
@@ -109,7 +111,10 @@ export function hasMoreUpcomingDays(
   return visibleDays < maxUpcomingDaysFrom(now);
 }
 
-export function nextUpcomingVisibleDays(current: number, now: Date = new Date()): number {
+export function nextUpcomingVisibleDays(
+  current: number,
+  now: Date = new Date(),
+): number {
   return Math.min(current + UPCOMING_DAYS_CHUNK, maxUpcomingDaysFrom(now));
 }
 
@@ -120,21 +125,20 @@ export function buildUpcomingListSections(
   visibleDays: number = UPCOMING_INITIAL_DAYS,
 ): UpcomingListSection[] {
   const today = startOfDay(now);
-  const active = activeEvents(events);
   const sections: UpcomingListSection[] = [];
   const dayCount = Math.min(visibleDays, maxUpcomingDaysFrom(now));
 
-  const overdue = active.filter((event) => isOverdue(event, today)).sort(byStart);
+  const overdue = events
+    .filter((event) => isOverdue(event, today))
+    .sort(byStart);
   if (overdue.length > 0) {
     sections.push({ kind: "overdue", events: overdue });
   }
 
   for (let offset = 0; offset < dayCount; offset++) {
     const date = addDays(today, offset);
-    const dayEvents = active
-      .filter(
-        (event) => eventSpansDay(event, date) && !isOverdue(event, today),
-      )
+    const dayEvents = events
+      .filter((event) => eventSpansDay(event, date) && !isOverdue(event, today))
       .sort(byStart);
 
     sections.push({

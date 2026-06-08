@@ -1,7 +1,15 @@
 "use client";
 
 import { addDays, addMilliseconds, format, startOfDay } from "date-fns";
-import { BellOff, CalendarIcon, Clock3, RotateCcw, Trash2, X } from "lucide-react";
+import {
+  BellOff,
+  CalendarIcon,
+  Clock3,
+  ExternalLink,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -19,7 +27,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { allDayInclusiveEndForForm, calendarDateToStorage } from "@/lib/calendar/all-day-events";
+import {
+  allDayInclusiveEndForForm,
+  calendarDateToStorage,
+} from "@/lib/calendar/all-day-events";
 import {
   combineDateAndTime,
   defaultEventEnd,
@@ -42,7 +53,10 @@ import {
   type RecurrenceRule,
 } from "@/lib/rehab/recurrence";
 import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
-import { useRehabPlanStore, type SeriesEditScope } from "@/stores/rehab-plan-store";
+import {
+  useRehabPlanStore,
+  type SeriesEditScope,
+} from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
@@ -146,7 +160,9 @@ function EventFormDialogBody({
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [description, setDescription] = useState(initialParsed.description);
-  const [subtasks, setSubtasks] = useState<EventSubtask[]>(initialParsed.subtasks);
+  const [subtasks, setSubtasks] = useState<EventSubtask[]>(
+    initialParsed.subtasks,
+  );
   const allDay = event?.allDay ?? defaultAllDay;
   const color: CalendarEventColor = event?.color ?? "blue";
   const [startDate, setStartDate] = useState(initialStart);
@@ -165,7 +181,8 @@ function EventFormDialogBody({
   const [editScopePrompt, setEditScopePrompt] = useState(false);
   const [deleteScopePrompt, setDeleteScopePrompt] = useState(false);
   const effectiveAllDay = allDay || !showTime;
-  const recurrenceChanged = isRehab && !rulesEqual(recurrence, initialRecurrence);
+  const recurrenceChanged =
+    isRehab && !rulesEqual(recurrence, initialRecurrence);
   const hasChanges =
     title !== (event?.title ?? "") ||
     description !== initialParsed.description ||
@@ -212,10 +229,7 @@ function EventFormDialogBody({
       };
     }
 
-    const start = combineDateAndTime(
-      toDateInputValue(startDate),
-      startTime,
-    );
+    const start = combineDateAndTime(toDateInputValue(startDate), startTime);
     const end = combineDateAndTime(toDateInputValue(endDate), endTime);
     if (end < start) {
       toast.error("End must be after start.");
@@ -487,7 +501,9 @@ function EventFormDialogBody({
 
         <div className="flex min-h-0 flex-1 gap-3">
           <Checkbox
-            checked={Boolean(event && "completedAt" in event && event.completedAt)}
+            checked={Boolean(
+              event && "completedAt" in event && event.completedAt,
+            )}
             disabled
             className="mt-0.5 shrink-0 border-white/25"
             aria-label="Completion"
@@ -521,7 +537,9 @@ function EventFormDialogBody({
         </div>
 
         {pending ? (
-          <p className="mt-3 shrink-0 text-right text-xs text-white/35">Saving…</p>
+          <p className="mt-3 shrink-0 text-right text-xs text-white/35">
+            Saving…
+          </p>
         ) : null}
       </section>
 
@@ -588,9 +606,7 @@ function EventFormDialogBody({
             { id: "occurrence", label: "This event" },
             { id: "series", label: "All events in series" },
           ]}
-          onSelect={(id) =>
-            void performDelete(id as "occurrence" | "series")
-          }
+          onSelect={(id) => void performDelete(id as "occurrence" | "series")}
           onCancel={() => setDeleteScopePrompt(false)}
         />
       ) : null}
@@ -718,6 +734,18 @@ function EventSubtasksEditor({
               subtask.done && "text-white/35 line-through",
             )}
           />
+          {subtask.referenceUrl ? (
+            <a
+              href={subtask.referenceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-white/10 px-1.5 py-0.5 text-[11px] font-medium text-white/45 transition-colors hover:border-white/20 hover:bg-white/8 hover:text-white/75"
+              aria-label={`Open reference for ${subtask.label || "exercise"}`}
+            >
+              {subtask.referenceLabel ?? "Ref"}
+              <ExternalLink className="size-3" aria-hidden />
+            </a>
+          ) : null}
           {!disabled ? (
             <button
               type="button"
@@ -794,7 +822,10 @@ function DateField({
         <CalendarIcon className="size-3.5 shrink-0 text-white/50" />
         {format(date, "EEE d MMM")}
       </PopoverTrigger>
-      <PopoverContent className={cn("w-64 overflow-hidden p-0", POPOVER_BG)} align="start">
+      <PopoverContent
+        className={cn("w-64 overflow-hidden p-0", POPOVER_BG)}
+        align="start"
+      >
         {/* Editable date input */}
         <div className="p-2">
           <div className="flex items-center gap-2 rounded-lg bg-white/8 px-3 py-2 text-sm">
@@ -913,7 +944,10 @@ function TimeField({
         <Clock3 className="size-3.5 shrink-0 text-white/40" />
         {time}
       </PopoverTrigger>
-      <PopoverContent className={cn("w-52 overflow-hidden p-0", POPOVER_BG)} align="start">
+      <PopoverContent
+        className={cn("w-52 overflow-hidden p-0", POPOVER_BG)}
+        align="start"
+      >
         {/* Editable time input */}
         <div className="p-2">
           <div className="flex items-center gap-2 rounded-lg bg-white/8 px-3 py-2 text-sm">

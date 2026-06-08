@@ -51,7 +51,11 @@ describe("buildUpcomingListSections", () => {
 
   it("shows two weeks of day rows initially", () => {
     const events = mapGenerated();
-    const sections = buildUpcomingListSections(events, today, UPCOMING_INITIAL_DAYS);
+    const sections = buildUpcomingListSections(
+      events,
+      today,
+      UPCOMING_INITIAL_DAYS,
+    );
 
     const daySections = sections.filter((section) => section.kind === "day");
     expect(daySections).toHaveLength(UPCOMING_INITIAL_DAYS);
@@ -79,6 +83,30 @@ describe("buildUpcomingListSections", () => {
     const sections = buildUpcomingListSections(events, addDays(today, 30));
     const overdue = sections.find((section) => section.kind === "overdue");
     expect(overdue?.events.length).toBeGreaterThan(0);
+  });
+
+  it("keeps completed events visible in their day section", () => {
+    const events = mapGenerated();
+    const target = events.find((event) =>
+      event.startAt.startsWith("2026-06-08"),
+    );
+    expect(target).toBeDefined();
+
+    const completed = {
+      ...target!,
+      completedAt: "2026-06-08T10:00:00.000Z",
+    };
+    const sections = buildUpcomingListSections(
+      events.map((event) => (event.id === completed.id ? completed : event)),
+      new Date(2026, 5, 8),
+    );
+    const todaySection = sections.find(
+      (section) => section.kind === "day" && section.label === "Today 8 Jun",
+    );
+
+    expect(
+      todaySection?.events.some((event) => event.id === completed.id),
+    ).toBe(true);
   });
 });
 
@@ -131,8 +159,8 @@ describe("upcomingEventScheduleLabel", () => {
       allDay: false,
       completedAt: null,
     };
-    expect(upcomingEventScheduleLabel(event, startOfDay(new Date(2026, 5, 1)))).toMatch(
-      /5 Jun/,
-    );
+    expect(
+      upcomingEventScheduleLabel(event, startOfDay(new Date(2026, 5, 1))),
+    ).toMatch(/5 Jun/);
   });
 });

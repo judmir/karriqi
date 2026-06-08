@@ -2,6 +2,8 @@ export type EventSubtask = {
   id: string;
   label: string;
   done: boolean;
+  referenceLabel?: string;
+  referenceUrl?: string;
 };
 
 const SUBTASKS_MARKER = /<!-- karriqi-subtasks:([\s\S]+?) -->$/;
@@ -38,6 +40,14 @@ export function parseEventDescription(raw: string | null | undefined): {
         id: item.id,
         label: item.label,
         done: item.done,
+        ...(typeof item.referenceLabel === "string" &&
+        item.referenceLabel.trim().length > 0
+          ? { referenceLabel: item.referenceLabel.trim() }
+          : {}),
+        ...(typeof item.referenceUrl === "string" &&
+        item.referenceUrl.trim().length > 0
+          ? { referenceUrl: item.referenceUrl.trim() }
+          : {}),
       }));
     return { description, subtasks };
   } catch {
@@ -55,8 +65,17 @@ export function serializeEventDescription(
       id: item.id,
       label: item.label.trim(),
       done: item.done,
+      referenceLabel: item.referenceLabel?.trim(),
+      referenceUrl: item.referenceUrl?.trim(),
     }))
-    .filter((item) => item.label.length > 0);
+    .filter((item) => item.label.length > 0)
+    .map((item) => ({
+      id: item.id,
+      label: item.label,
+      done: item.done,
+      ...(item.referenceLabel ? { referenceLabel: item.referenceLabel } : {}),
+      ...(item.referenceUrl ? { referenceUrl: item.referenceUrl } : {}),
+    }));
 
   if (cleanSubtasks.length === 0) {
     return trimmedDescription || null;
@@ -92,7 +111,9 @@ export function subtasksEqual(a: EventSubtask[], b: EventSubtask[]): boolean {
     return (
       item.id === other.id &&
       item.label === other.label &&
-      item.done === other.done
+      item.done === other.done &&
+      item.referenceLabel === other.referenceLabel &&
+      item.referenceUrl === other.referenceUrl
     );
   });
 }

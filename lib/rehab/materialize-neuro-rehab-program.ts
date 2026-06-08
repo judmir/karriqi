@@ -1,4 +1,5 @@
 import { deleteAllProgramEventsForUser } from "@/lib/rehab/dedupe-rehab-program-events";
+import { parseEventDescription } from "@/lib/calendar/event-subtasks";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
@@ -7,6 +8,8 @@ const BATCH_SIZE = 100;
 
 const EXPECTED_NEURO_REHAB_EVENT_COUNT =
   generateNeuroRehabProgramEvents("count-probe").length;
+
+const GYM_EVENT_KINDS = ["gym_a", "gym_b", "gym_c", "gym_d"] as const;
 
 type MaterializationLock =
   | { status: "claimed" }
@@ -28,10 +31,7 @@ async function claimMaterializationLock(
   if (error.code === "23505") {
     return { status: "held" };
   }
-  if (
-    error.code === "42P01" ||
-    error.message.includes("rehab_user_programs")
-  ) {
+  if (error.code === "42P01" || error.message.includes("rehab_user_programs")) {
     return { status: "unavailable" };
   }
   throw new Error(error.message);
@@ -65,6 +65,61 @@ async function countProgramEvents(
   return count ?? 0;
 }
 
+async function repairGeneratedGymEventDescriptions(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string,
+): Promise<number> {
+  const generatedGymEvents = generateNeuroRehabProgramEvents(userId).filter(
+    (event) =>
+      event.description &&
+      GYM_EVENT_KINDS.includes(
+        event.event_kind as (typeof GYM_EVENT_KINDS)[number],
+      ),
+  );
+  const expectedByKey = new Map(
+    generatedGymEvents.map((event) => [
+      `${event.event_kind}:${event.start_at}`,
+      event.description ?? null,
+    ]),
+  );
+
+  const { data, error } = await admin
+    .from("rehab_plan_events")
+    .select("id, start_at, event_kind, description")
+    .eq("user_id", userId)
+    .eq("program_id", NEURO_REHAB_PROGRAM_ID)
+    .in("event_kind", [...GYM_EVENT_KINDS]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  let repaired = 0;
+  for (const row of data ?? []) {
+    const expected = expectedByKey.get(`${row.event_kind}:${row.start_at}`);
+    if (!expected) {
+      continue;
+    }
+
+    const parsed = parseEventDescription(row.description);
+    if (parsed.subtasks.length > 0) {
+      continue;
+    }
+
+    const { error: updateError } = await admin
+      .from("rehab_plan_events")
+      .update({ description: expected })
+      .eq("id", row.id);
+
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
+    repaired += 1;
+  }
+
+  return repaired;
+}
+
 export type MaterializeNeuroRehabResult =
   | { ok: true; inserted: number; skipped: true; reset?: boolean }
   | { ok: true; inserted: number; skipped: false; reset?: boolean }
@@ -82,6 +137,7 @@ export async function materializeNeuroRehabProgramForUser(
   let reset = false;
 
   if (count === EXPECTED_NEURO_REHAB_EVENT_COUNT) {
+    await repairGeneratedGymEventDescriptions(admin, userId);
     return { ok: true, inserted: 0, skipped: true };
   }
 
@@ -96,6 +152,7 @@ export async function materializeNeuroRehabProgramForUser(
   if (lock.status === "held") {
     const currentCount = await countProgramEvents(admin, userId);
     if (currentCount === EXPECTED_NEURO_REHAB_EVENT_COUNT) {
+      await repairGeneratedGymEventDescriptions(admin, userId);
       return { ok: true, inserted: 0, skipped: true, reset };
     }
     return { ok: true, inserted: 0, skipped: true, reset };

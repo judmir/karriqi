@@ -10,7 +10,13 @@ import {
 
 describe("event-subtasks", () => {
   const subtasks: EventSubtask[] = [
-    { id: "a", label: "Warm up", done: false },
+    {
+      id: "a",
+      label: "Warm up",
+      done: false,
+      referenceLabel: "GIF",
+      referenceUrl: "https://example.com/warm-up.gif",
+    },
     { id: "b", label: "Stretch", done: true },
   ];
 

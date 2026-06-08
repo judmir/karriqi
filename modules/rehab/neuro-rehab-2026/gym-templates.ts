@@ -1,45 +1,185 @@
-export const GYM_A_DESCRIPTION = `## Gym A — Lower body + left leg control
+import {
+  serializeEventDescription,
+  type EventSubtask,
+} from "@/lib/calendar/event-subtasks";
 
-- Warm-up: 5–10 min bike/walk + mobility
-- Sit-to-stand or goblet squat: 3 sets
-- Supported split squat: 3 sets each side
-- Step-ups: 3 sets each side
-- Slow step-downs: 2–3 sets each side
-- Heel raises: 2–3 sets
-- Balance: single-leg stance with support, 2–3 rounds
-- Cool-down: easy walk + breathing
+function gifReferenceUrl(query: string): string {
+  return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(
+    `${query} exercise gif`,
+  )}`;
+}
 
-Keep session 45–60 min. Stop before you are destroyed.`;
+function exerciseSubtask(
+  id: string,
+  label: string,
+  query: string,
+): EventSubtask {
+  return {
+    id,
+    label,
+    done: false,
+    referenceLabel: "GIF",
+    referenceUrl: gifReferenceUrl(query),
+  };
+}
 
-export const GYM_B_DESCRIPTION = `## Gym B — Upper body + core + coordination
+function gymDescription(
+  title: string,
+  note: string,
+  subtasks: EventSubtask[],
+): string {
+  return serializeEventDescription(`## ${title}\n\n${note}`, subtasks) ?? "";
+}
 
-- Warm-up: 5–10 min
-- Row: 3 sets
-- Chest press or push-up variation: 3 sets
-- Lat pulldown: 3 sets
-- Shoulder press light/moderate: 2–3 sets
-- Farmer carry or suitcase carry: 3 rounds
-- Core anti-rotation / Pallof press: 2–3 sets
-- Left-hand dexterity finisher: 5–10 min`;
+export const GYM_A_DESCRIPTION = gymDescription(
+  "Gym A — Lower body + left leg control",
+  "Keep session 45–60 min. Stop before you are destroyed.",
+  [
+    exerciseSubtask(
+      "gym-a-warm-up",
+      "Warm-up: 5–10 min bike/walk + mobility",
+      "stationary bike warm up mobility",
+    ),
+    exerciseSubtask(
+      "gym-a-squat",
+      "Sit-to-stand or goblet squat: 3 sets",
+      "goblet squat",
+    ),
+    exerciseSubtask(
+      "gym-a-split-squat",
+      "Supported split squat: 3 sets each side",
+      "supported split squat",
+    ),
+    exerciseSubtask(
+      "gym-a-step-ups",
+      "Step-ups: 3 sets each side",
+      "step up exercise",
+    ),
+    exerciseSubtask(
+      "gym-a-step-downs",
+      "Slow step-downs: 2–3 sets each side",
+      "slow step down exercise",
+    ),
+    exerciseSubtask(
+      "gym-a-heel-raises",
+      "Heel raises: 2–3 sets",
+      "standing heel raise",
+    ),
+    exerciseSubtask(
+      "gym-a-balance",
+      "Balance: single-leg stance with support, 2–3 rounds",
+      "single leg stance balance support",
+    ),
+    exerciseSubtask(
+      "gym-a-cool-down",
+      "Cool-down: easy walk + breathing",
+      "cool down walk breathing exercise",
+    ),
+  ],
+);
 
-export const GYM_C_DESCRIPTION = `## Gym C — Lower body + dynamic stability
+export const GYM_B_DESCRIPTION = gymDescription(
+  "Gym B — Upper body + core + coordination",
+  "Keep session 45–60 min. Stay controlled and leave 1–2 reps in reserve.",
+  [
+    exerciseSubtask("gym-b-warm-up", "Warm-up: 5–10 min", "upper body warm up"),
+    exerciseSubtask("gym-b-row", "Row: 3 sets", "seated cable row"),
+    exerciseSubtask(
+      "gym-b-chest-press",
+      "Chest press or push-up variation: 3 sets",
+      "machine chest press push up",
+    ),
+    exerciseSubtask(
+      "gym-b-lat-pulldown",
+      "Lat pulldown: 3 sets",
+      "lat pulldown",
+    ),
+    exerciseSubtask(
+      "gym-b-shoulder-press",
+      "Shoulder press light/moderate: 2–3 sets",
+      "dumbbell shoulder press",
+    ),
+    exerciseSubtask(
+      "gym-b-carry",
+      "Farmer carry or suitcase carry: 3 rounds",
+      "farmer carry suitcase carry",
+    ),
+    exerciseSubtask(
+      "gym-b-pallof",
+      "Core anti-rotation / Pallof press: 2–3 sets",
+      "pallof press",
+    ),
+    exerciseSubtask(
+      "gym-b-hand",
+      "Left-hand dexterity finisher: 5–10 min",
+      "hand dexterity exercise",
+    ),
+  ],
+);
 
-- Warm-up: 5–10 min
-- Romanian deadlift pattern: 3 sets
-- Leg press or squat pattern: 3 sets
-- Lateral step-down or lateral lunge: 2–3 sets
-- Eccentric knee-control drill: 2–3 sets
-- Direction-change walking drills: 5–10 min
-- Optional mini hops only after Week 5 and only if safe/stable`;
+export const GYM_C_DESCRIPTION = gymDescription(
+  "Gym C — Lower body + dynamic stability",
+  "Keep this accurate before making it faster. Optional hops only after Week 5 and only if safe/stable.",
+  [
+    exerciseSubtask(
+      "gym-c-warm-up",
+      "Warm-up: 5–10 min",
+      "lower body warm up mobility",
+    ),
+    exerciseSubtask(
+      "gym-c-rdl",
+      "Romanian deadlift pattern: 3 sets",
+      "romanian deadlift",
+    ),
+    exerciseSubtask(
+      "gym-c-leg-press",
+      "Leg press or squat pattern: 3 sets",
+      "leg press exercise",
+    ),
+    exerciseSubtask(
+      "gym-c-lateral",
+      "Lateral step-down or lateral lunge: 2–3 sets",
+      "lateral step down lateral lunge",
+    ),
+    exerciseSubtask(
+      "gym-c-knee-control",
+      "Eccentric knee-control drill: 2–3 sets",
+      "eccentric knee control exercise",
+    ),
+    exerciseSubtask(
+      "gym-c-direction-change",
+      "Direction-change walking drills: 5–10 min",
+      "direction change walking drill",
+    ),
+    exerciseSubtask(
+      "gym-c-mini-hops",
+      "Optional mini hops after Week 5 only if safe/stable",
+      "mini hop plyometric drill",
+    ),
+  ],
+);
 
-export const GYM_D_DESCRIPTION = `## Gym D — Optional fourth day
-
-Choose one:
-- Easy full-body strength, OR
-- Football-specific coordination, OR
-- Mobility + balance + left-side control
-
-Do not make Gym D a punishment day. It is optional.`;
+export const GYM_D_DESCRIPTION = gymDescription(
+  "Gym D — Optional fourth day",
+  "Choose one path. Do not make Gym D a punishment day; it is optional.",
+  [
+    exerciseSubtask(
+      "gym-d-full-body",
+      "Option 1: Easy full-body strength",
+      "easy full body strength workout",
+    ),
+    exerciseSubtask(
+      "gym-d-football",
+      "Option 2: Football-specific coordination",
+      "football coordination drill",
+    ),
+    exerciseSubtask(
+      "gym-d-mobility",
+      "Option 3: Mobility + balance + left-side control",
+      "mobility balance exercise",
+    ),
+  ],
+);
 
 export const HAND_OT_DESCRIPTION = `Choose 2–3 per session (10–20 min):
 - buttons/unbuttons

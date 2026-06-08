@@ -9,6 +9,7 @@ import {
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
 import { filterRehabEventsForDay } from "@/lib/rehab/rehab-today-utils";
 import { mapRehabPlanEvent } from "@/lib/rehab/rehab-plan-event-map";
+import { parseEventDescription } from "@/lib/calendar/event-subtasks";
 
 describe("generateNeuroRehabProgramEvents", () => {
   const userId = "test-user";
@@ -37,6 +38,17 @@ describe("generateNeuroRehabProgramEvents", () => {
   it("includes gym A on Mondays across 12 weeks", () => {
     const gymA = events.filter((e) => e.event_kind === "gym_a");
     expect(gymA.length).toBe(12);
+  });
+
+  it("stores gym exercises as checklist subtasks with reference links", () => {
+    const gymA = events.find((e) => e.event_kind === "gym_a");
+    expect(gymA?.description).toBeTruthy();
+
+    const parsed = parseEventDescription(gymA?.description);
+    expect(parsed.subtasks.length).toBeGreaterThan(5);
+    expect(parsed.subtasks[0]?.label).toContain("Warm-up");
+    expect(parsed.subtasks[0]?.referenceLabel).toBe("GIF");
+    expect(parsed.subtasks[0]?.referenceUrl).toContain("tbm=isch");
   });
 
   it("flags retest weeks 4, 8, 12", () => {
