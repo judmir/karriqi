@@ -11,6 +11,7 @@ import { RehabEventSubtaskChecklist } from "@/components/rehab/rehab-event-subta
 import { RehabInlineAddTask } from "@/components/rehab/rehab-inline-add-task";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
+import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
 import {
   RehabUpcomingViewSwitcher,
   type RehabUpcomingViewMode,
@@ -38,6 +39,7 @@ import {
 } from "@/lib/rehab/rehab-upcoming-utils";
 import { rehabEventTimeLabel } from "@/lib/rehab/rehab-today-utils";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
+import { isStoicEvent } from "@/lib/rehab/stoic-response";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
@@ -67,6 +69,8 @@ export function RehabUpcomingView() {
   const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(null);
   const [journalOpen, setJournalOpen] = useState(false);
   const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
+  const [stoicOpen, setStoicOpen] = useState(false);
+  const [stoicEvent, setStoicEvent] = useState<RehabPlanEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [overdueCollapsed, setOverdueCollapsed] = useState(true);
@@ -120,6 +124,11 @@ export function RehabUpcomingView() {
     if (event.eventKind === "journal") {
       setJournalEvent(event);
       setJournalOpen(true);
+      return;
+    }
+    if (isStoicEvent(event)) {
+      setStoicEvent(event);
+      setStoicOpen(true);
       return;
     }
     setSelectedEvent(event);
@@ -287,6 +296,12 @@ export function RehabUpcomingView() {
         persistence={persistence}
         variant="rehab"
         onSaved={() => setJournalOpen(false)}
+      />
+
+      <RehabStoicDialog
+        open={stoicOpen && stoicEvent !== null}
+        onOpenChange={setStoicOpen}
+        event={stoicEvent}
       />
     </div>
   );

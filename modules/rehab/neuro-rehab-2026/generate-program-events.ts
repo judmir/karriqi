@@ -2,11 +2,20 @@ import { addDays, addMinutes } from "date-fns";
 
 import { calendarDateToStorage } from "@/lib/calendar/all-day-events";
 import {
+  serializeRecurrenceRule,
+  type RecurrenceRule,
+} from "@/lib/rehab/recurrence";
+import {
   NEURO_REHAB_PROGRAM_ID,
   PROGRAM_START,
   PROGRAM_WEEKS,
   isRetestWeek,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
+import {
+  STOIC_BLOCKS,
+  buildStoicDailyDescription,
+  buildStoicWeeklyDescription,
+} from "@/modules/rehab/neuro-rehab-2026/stoic-content";
 import { buildDay0EventDescription } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
   GYM_A_DESCRIPTION,
@@ -45,6 +54,10 @@ function timed(
   const start = atTime(day, hour, minute);
   const end = addMinutes(start, durationMin);
   return {
+    // Every row carries an explicit id: a batch insert mixing rows with and
+    // without `id` makes PostgREST send NULL (not the column default) for the
+    // ones that omit it, violating the not-null id constraint.
+    id: crypto.randomUUID(),
     user_id: userId,
     title,
     description,
@@ -70,6 +83,7 @@ function allDay(
   const startDay = new Date(day);
   startDay.setHours(0, 0, 0, 0);
   return {
+    id: crypto.randomUUID(),
     user_id: userId,
     title,
     description,
@@ -81,6 +95,111 @@ function allDay(
     program_id: NEURO_REHAB_PROGRAM_ID,
     plan_week: week,
   };
+}
+
+/** Local YYYY-MM-DD (recurrence `until` is a date-only string). */
+function toDateOnly(date: Date): string {
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * A recurring master row: id === series_id so per-occurrence overrides
+ * (completion / skip / edit) group correctly. The recurrence rule expands into
+ * concrete occurrences at read time (see lib/rehab/expand-rehab-events.ts), so a
+ * single row covers many days instead of materializing one row per day.
+ */
+function recurringMaster(
+  userId: string,
+  day: Date,
+  week: number,
+  hour: number,
+  minute: number,
+  durationMin: number,
+  title: string,
+  description: string,
+  eventKind: RehabEventKind,
+  color: CalendarEventColor,
+  rule: RecurrenceRule,
+): RehabPlanEventInsert {
+  const start = atTime(day, hour, minute);
+  const end = addMinutes(start, durationMin);
+  const id = crypto.randomUUID();
+  return {
+    id,
+    user_id: userId,
+    title,
+    description,
+    start_at: start.toISOString(),
+    end_at: end.toISOString(),
+    all_day: false,
+    color,
+    event_kind: eventKind,
+    program_id: NEURO_REHAB_PROGRAM_ID,
+    plan_week: week,
+    series_id: id,
+    recurrence_rule: serializeRecurrenceRule(rule),
+    recurrence_at: null,
+  };
+}
+
+/**
+ * Stoicism layer: a daily morning intention (one recurring master per 2-week
+ * block so the theme evolves) plus a weekly Sunday Stoic review. Delivered as
+ * recurring series rather than ~90 standalone rows.
+ */
+function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
+  const events: RehabPlanEventInsert[] = [];
+
+  for (const block of STOIC_BLOCKS) {
+    const startOffset = (block.startWeek - 1) * 7;
+    const blockStart = addDays(PROGRAM_START, startOffset);
+    const blockEnd = addDays(blockStart, 13); // inclusive 14-day block
+    events.push(
+      recurringMaster(
+        userId,
+        blockStart,
+        block.startWeek,
+        7,
+        40,
+        3,
+        "Stoic intention",
+        buildStoicDailyDescription(block),
+        "stoic",
+        "purple",
+        { freq: "daily", interval: 1, until: toDateOnly(blockEnd) },
+      ),
+    );
+  }
+
+  // Weekly Sunday Stoic review, starting the first Sunday of the program.
+  const firstSundayOffset = (7 - PROGRAM_START.getDay()) % 7;
+  const firstSunday = addDays(PROGRAM_START, firstSundayOffset);
+  const programEnd = addDays(PROGRAM_START, PROGRAM_WEEKS * 7 - 1);
+  events.push(
+    recurringMaster(
+      userId,
+      firstSunday,
+      1,
+      19,
+      30,
+      10,
+      "Stoic weekly review",
+      buildStoicWeeklyDescription(),
+      "stoic",
+      "purple",
+      {
+        freq: "weekly",
+        interval: 1,
+        weekdays: [0],
+        until: toDateOnly(programEnd),
+      },
+    ),
+  );
+
+  return events;
 }
 
 function gymDescription(kind: RehabEventKind): string {
@@ -329,6 +448,10 @@ function dailyNonNegotiables(
 /** Generate 12 weeks of rehab calendar events for one user. */
 export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventInsert[] {
   const events: RehabPlanEventInsert[] = [];
+
+  // Stoicism layer: a handful of recurring masters (not one row per day).
+  events.push(...stoicSeriesEvents(userId));
+
   const totalDays = PROGRAM_WEEKS * 7;
 
   for (let offset = 0; offset < totalDays; offset++) {

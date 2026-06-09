@@ -218,6 +218,75 @@ This is a rehab/tracking plan to discuss with your doctor/physio/OT/logopedics t
 3. If sleep is poor: use sleep/rest content in the evening.`,
   ),
 
+  section("sec.stoicism", "sec.root", "Stoic Path: Daily Operating System", 35,
+    "Meditation trains attention. Stoicism trains character. Rehab trains function. Control what is controllable, accept what is not, act with discipline anyway."),
+  task(
+    "task.stoicism.irvine",
+    "sec.stoicism",
+    "The Stoic Path | William B. Irvine — 3–4×/week in Waking Up",
+    0,
+  ),
+  task(
+    "task.stoicism.morning",
+    "sec.stoicism",
+    "Morning Stoic intention after meditation: \"Today I focus on what is mine to do.\"",
+    1,
+  ),
+  task(
+    "task.stoicism.before",
+    "sec.stoicism",
+    "Before rehab (60s): what's in my control? what isn't? what would a disciplined me do?",
+    2,
+  ),
+  task(
+    "task.stoicism.after",
+    "sec.stoicism",
+    "After rehab (2 min): write Action / Reaction / Lesson",
+    3,
+  ),
+  task(
+    "task.stoicism.weekly",
+    "sec.stoicism",
+    "Sunday: Stoic weekly review — answer this week's prompt",
+    4,
+  ),
+  guide(
+    "guide.stoicism.themes",
+    "sec.stoicism",
+    "12-week Stoic themes",
+    5,
+    `| Weeks | Theme | Daily line |
+| --- | --- | --- |
+| 1–2 | Control vs non-control | "My job is not to force symptoms away. My job is to train well today." |
+| 3–4 | Discipline without drama | "One session. Done properly. Then continue life." |
+| 5–6 | Amor fati — work with reality | "I do not need perfect conditions to act well." |
+| 7–8 | Voluntary discomfort | "Effort is not a threat. Effort is training." |
+| 9–10 | Identity shift | "I am someone who trains consistently despite uncertainty." |
+| 11–12 | Review and virtue | "Progress is not only what my body does. It is also how I respond." |
+
+**During rehab cues:** one rep at a time · no drama · precision over panic · train the body I have today · effort is the win.
+
+**Core phrase:** "I control the training, not the timeline."`,
+  ),
+  guide(
+    "guide.stoicism.weekly-prompts",
+    "sec.stoicism",
+    "Weekly Stoic journaling prompts",
+    6,
+    `- Week 1: What is actually under my control?
+- Week 2: Where do I waste energy resisting reality?
+- Week 3: What would consistency look like if I removed drama?
+- Week 4: What symptom-checking habits make things worse?
+- Week 5: How can I accept today's body without giving up on improvement?
+- Week 6: What discomfort is useful training, and what discomfort is a warning?
+- Week 7: Where can I practice courage in small ways?
+- Week 8: How do I behave on bad symptom days?
+- Week 9: Who am I becoming through this rehab process?
+- Week 10: What does patience look like in action?
+- Week 11: What has improved physically?
+- Week 12: What has improved in my reaction, discipline, and confidence?`,
+  ),
+
   section("sec.supplements", "sec.root", "Supplements — Simple Schedule", 40),
   guide(
     "guide.supplements.schedule",

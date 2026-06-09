@@ -17,6 +17,7 @@ import {
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import { RehabMarkdown } from "@/components/rehab/rehab-markdown";
+import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ROUTES } from "@/config/routes";
@@ -33,6 +34,11 @@ import {
 } from "@/lib/rehab/rehab-today-utils";
 import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
+import {
+  getStoicResponseData,
+  isStoicEvent,
+  summarizeStoicResponse,
+} from "@/lib/rehab/stoic-response";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
@@ -72,6 +78,8 @@ export function RehabTodayView() {
   const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(null);
   const [journalOpen, setJournalOpen] = useState(false);
   const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
+  const [stoicOpen, setStoicOpen] = useState(false);
+  const [stoicEvent, setStoicEvent] = useState<RehabPlanEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
@@ -152,6 +160,11 @@ export function RehabTodayView() {
     if (event.eventKind === "journal") {
       setJournalEvent(event);
       setJournalOpen(true);
+      return;
+    }
+    if (isStoicEvent(event)) {
+      setStoicEvent(event);
+      setStoicOpen(true);
       return;
     }
     setSelectedEvent(event);
@@ -254,6 +267,12 @@ export function RehabTodayView() {
         persistence={persistence}
         variant="rehab"
         onSaved={() => setJournalOpen(false)}
+      />
+
+      <RehabStoicDialog
+        open={stoicOpen && stoicEvent !== null}
+        onOpenChange={setStoicOpen}
+        event={stoicEvent}
       />
     </div>
   );
@@ -383,6 +402,9 @@ function RehabTodayItemRow({
   const [expanded, setExpanded] = useState(false);
   const descriptionText = getEventDescriptionPlainText(event.description);
   const hasDescription = Boolean(descriptionText);
+  const stoicResponse = isStoicEvent(event)
+    ? summarizeStoicResponse(getStoicResponseData(event.description))
+    : "";
 
   return (
     <div
@@ -427,6 +449,18 @@ function RehabTodayItemRow({
               className="text-muted-foreground hover:text-foreground mt-1 text-xs"
             >
               {expanded ? "Hide details" : "Show details"}
+            </button>
+          ) : null}
+          {stoicResponse ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="mt-1 flex w-full items-start gap-1.5 text-left"
+            >
+              <span className="text-muted-foreground/80 mt-px text-xs">↳</span>
+              <span className="text-muted-foreground line-clamp-2 text-xs leading-snug">
+                {stoicResponse}
+              </span>
             </button>
           ) : null}
         </div>

@@ -17,6 +17,7 @@ export const REHAB_EVENT_KINDS = [
   "retest",
   "day0",
   "recovery",
+  "stoic",
   "custom",
 ] as const;
 
@@ -108,6 +109,8 @@ export type RehabJournalEntry = {
 };
 
 export type RehabPlanEventInsert = {
+  /** Optional explicit id. Set for recurring masters so series_id can match. */
+  id?: string;
   user_id: string;
   title: string;
   description?: string | null;
@@ -118,4 +121,10 @@ export type RehabPlanEventInsert = {
   event_kind: RehabEventKind;
   program_id: string;
   plan_week: number;
+  /** Recurring master: equals the row's own id. Standalone rows omit this. */
+  series_id?: string | null;
+  /** Serialized RecurrenceRule JSON for recurring masters. */
+  recurrence_rule?: string | null;
+  /** Override rows only; masters/standalone leave this null. */
+  recurrence_at?: string | null;
 };

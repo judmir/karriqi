@@ -152,10 +152,62 @@ Default: start simple. Do not turn meditation into another stressful project.
 3. If sleep poor: sleep/rest content in the evening`,
   },
   {
+    slug: "stoicism",
+    title: "Stoicism",
+    parentSlug: null,
+    sortOrder: 6,
+    body: `# Stoic Path: Daily Operating System
+
+Meditation trains attention. Stoicism trains character. Rehab trains function.
+
+> Control what is controllable. Accept what is not. Act with discipline anyway.
+
+Pair the **Introductory Course | Sam Harris** (attention, nervous-system regulation, less automatic reaction to symptoms) with **The Stoic Path | William B. Irvine** (discipline, steadiness, patience, daily action despite uncertainty), 3–4×/week.
+
+## Daily routine
+- **Morning (after meditation):** "Today I focus on what is mine to do."
+- **Before rehab (60s):** What is in my control? What is not? What would a disciplined me do now?
+- **During rehab:** one rep at a time · no drama · precision over panic · train the body I have today · effort is the win.
+- **After rehab (2 min):** write **Action** (what I did) · **Reaction** (how I responded) · **Lesson** (one thing to improve tomorrow).
+
+## 12-week themes
+| Weeks | Theme | Daily line |
+| --- | --- | --- |
+| 1–2 | Control vs non-control | "My job is not to force symptoms away. My job is to train well today." |
+| 3–4 | Discipline without drama | "One session. Done properly. Then continue life." |
+| 5–6 | Amor fati — work with reality | "I do not need perfect conditions to act well." |
+| 7–8 | Voluntary discomfort | "Effort is not a threat. Effort is training." |
+| 9–10 | Identity shift | "I am someone who trains consistently despite uncertainty." |
+| 11–12 | Review and virtue | "Progress is not only what my body does. It is also how I respond." |
+
+## Weekly journaling prompts
+- Week 1: What is actually under my control?
+- Week 2: Where do I waste energy resisting reality?
+- Week 3: What would consistency look like if I removed drama?
+- Week 4: What symptom-checking habits make things worse?
+- Week 5: How can I accept today's body without giving up on improvement?
+- Week 6: What discomfort is useful training, and what discomfort is a warning?
+- Week 7: Where can I practice courage in small ways?
+- Week 8: How do I behave on bad symptom days?
+- Week 9: Who am I becoming through this rehab process?
+- Week 10: What does patience look like in action?
+- Week 11: What has improved physically?
+- Week 12: What has improved in my reaction, discipline, and confidence?
+
+## Reading
+- **The Practicing Stoic** — Ward Farnsworth (best practical overview)
+- **Meditations** — Marcus Aurelius (daily reflection)
+- **Discourses / Enchiridion** — Epictetus (discipline and control)
+- **Letters from a Stoic** — Seneca (emotional resilience)
+- **A Guide to the Good Life** — William B. Irvine (modern, pairs with his Waking Up course)
+
+**Core phrase:** "I control the training, not the timeline."`,
+  },
+  {
     slug: "weekly-structure",
     title: "Weekly structure",
     parentSlug: null,
-    sortOrder: 6,
+    sortOrder: 7,
     body: `# Weekly Structure
 
 Default week = 4 gym/strength days + 2 run/walk days + 1 lighter recovery day.
@@ -176,7 +228,7 @@ If tired: use 3 gym days, not 4. **Consistency beats intensity.**
     slug: "gym-workouts",
     title: "Gym workouts",
     parentSlug: null,
-    sortOrder: 7,
+    sortOrder: 8,
     body: `# What To Do In The Gym
 
 Keep sessions 45–60 min. Stop before you are destroyed.
@@ -197,7 +249,7 @@ Easy full-body, football coordination, or mobility + balance. Not a punishment d
     slug: "run-walk",
     title: "Run / walk",
     parentSlug: null,
-    sortOrder: 8,
+    sortOrder: 9,
     body: `# Run / Walk Progression
 
 Only progress if the previous week did not cause a next-day crash.
@@ -218,7 +270,7 @@ Only progress if the previous week did not cause a next-day crash.
     slug: "hand-ot",
     title: "Hand / OT",
     parentSlug: null,
-    sortOrder: 9,
+    sortOrder: 10,
     body: `# Left-Hand / OT Tasks
 
 Do 10–20 min most days. Choose 2–3 per session:
@@ -238,7 +290,7 @@ Track **quality**, not just speed.`,
     slug: "speech",
     title: "Speech / saliva",
     parentSlug: null,
-    sortOrder: 10,
+    sortOrder: 11,
     body: `# Speech / Saliva Tasks
 
 2–3×/week, 10–15 min.
@@ -255,7 +307,7 @@ If saliva/swallowing feels clinically relevant, prioritize in-person logopedics 
     slug: "football",
     title: "Football / coordination",
     parentSlug: null,
-    sortOrder: 11,
+    sortOrder: 12,
     body: `# Football / Coordination
 
 1–2×/week, low-risk.
@@ -270,7 +322,7 @@ If saliva/swallowing feels clinically relevant, prioritize in-person logopedics 
     slug: "weekly-review",
     title: "Weekly review",
     parentSlug: null,
-    sortOrder: 12,
+    sortOrder: 13,
     body: `# Weekly Review — Every Sunday
 
 - Rehab adherence: __%
@@ -289,7 +341,7 @@ If saliva/swallowing feels clinically relevant, prioritize in-person logopedics 
     slug: "week-12-clinical",
     title: "Week 12 clinical",
     parentSlug: null,
-    sortOrder: 13,
+    sortOrder: 14,
     body: `# Week 12 Final Clinical Checks
 
 ## Repeat functional tests
@@ -314,7 +366,7 @@ If saliva/swallowing feels clinically relevant, prioritize in-person logopedics 
     slug: "adjustment-rules",
     title: "Adjustment rules",
     parentSlug: null,
-    sortOrder: 14,
+    sortOrder: 15,
     body: `# Adjustment Rules
 
 Progress only **one** thing per week: more weight OR duration OR complexity OR speed.

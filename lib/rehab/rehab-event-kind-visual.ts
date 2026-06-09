@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   ClipboardList,
+  Compass,
   Dumbbell,
   Footprints,
   Hand,
@@ -74,6 +75,7 @@ const KIND_ICON: Record<RehabEventKind, LucideIcon> = {
   retest: Stethoscope,
   day0: ListChecks,
   recovery: Leaf,
+  stoic: Compass,
   custom: Activity,
 };
 
@@ -93,6 +95,7 @@ const KIND_LABEL: Record<RehabEventKind, string> = {
   retest: "Retest",
   day0: "Day 0",
   recovery: "Recovery",
+  stoic: "Stoicism",
   custom: "Task",
 };
 
