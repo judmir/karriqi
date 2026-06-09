@@ -32,7 +32,7 @@ import {
   rehabTodaySectionForSchedule,
   type RehabTodaySection,
 } from "@/lib/rehab/rehab-today-utils";
-import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
+import { getEventDescriptionPlainText, parseEventDescription } from "@/lib/calendar/event-subtasks";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import {
   getStoicResponseData,
@@ -401,7 +401,9 @@ function RehabTodayItemRow({
   const timeLabel = rehabEventTimeLabel(event);
   const [expanded, setExpanded] = useState(false);
   const descriptionText = getEventDescriptionPlainText(event.description);
+  const myNotes = parseEventDescription(event.description).myNotes.trim();
   const hasDescription = Boolean(descriptionText);
+  const hasDetails = hasDescription || Boolean(myNotes);
   const stoicResponse = isStoicEvent(event)
     ? summarizeStoicResponse(getStoicResponseData(event.description))
     : "";
@@ -442,7 +444,7 @@ function RehabTodayItemRow({
               </p>
             ) : null}
           </button>
-          {hasDescription ? (
+          {hasDetails ? (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
@@ -465,9 +467,17 @@ function RehabTodayItemRow({
           ) : null}
         </div>
       </div>
-      {expanded && descriptionText ? (
-        <div className="ml-[3.25rem] rounded-md border border-border bg-muted/30 p-3">
-          <RehabMarkdown content={descriptionText} className="prose-xs" />
+      {expanded && (descriptionText || myNotes) ? (
+        <div className="ml-[3.25rem] space-y-3 rounded-md border border-border bg-muted/30 p-3">
+          {descriptionText ? (
+            <RehabMarkdown content={descriptionText} className="prose-xs" />
+          ) : null}
+          {myNotes ? (
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs font-medium">My Notes</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{myNotes}</p>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

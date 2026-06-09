@@ -7,25 +7,49 @@ export type EventSubtask = {
 };
 
 const SUBTASKS_MARKER = /<!-- karriqi-subtasks:([\s\S]+?) -->$/;
+const MY_NOTES_MARKER = /<!-- karriqi-mynotes:([\s\S]+?) -->/;
+
+function stripMyNotesMarker(raw: string): { myNotes: string; rest: string } {
+  const match = raw.match(MY_NOTES_MARKER);
+  if (!match || match.index === undefined) {
+    return { myNotes: "", rest: raw };
+  }
+
+  let myNotes = "";
+  try {
+    const parsed = JSON.parse(match[1]) as unknown;
+    myNotes = typeof parsed === "string" ? parsed : "";
+  } catch {
+    myNotes = match[1];
+  }
+
+  const rest = (
+    raw.slice(0, match.index) + raw.slice(match.index + match[0].length)
+  ).trim();
+
+  return { myNotes, rest };
+}
 
 export function parseEventDescription(raw: string | null | undefined): {
   description: string;
   subtasks: EventSubtask[];
+  myNotes: string;
 } {
   if (!raw) {
-    return { description: "", subtasks: [] };
+    return { description: "", subtasks: [], myNotes: "" };
   }
 
-  const match = raw.match(SUBTASKS_MARKER);
+  const { myNotes, rest } = stripMyNotesMarker(raw);
+  const match = rest.match(SUBTASKS_MARKER);
   if (!match || match.index === undefined) {
-    return { description: raw, subtasks: [] };
+    return { description: rest, subtasks: [], myNotes };
   }
 
-  const description = raw.slice(0, match.index).trimEnd();
+  const description = rest.slice(0, match.index).trimEnd();
   try {
     const parsed = JSON.parse(match[1]) as unknown;
     if (!Array.isArray(parsed)) {
-      return { description, subtasks: [] };
+      return { description, subtasks: [], myNotes };
     }
     const subtasks = parsed
       .filter(
@@ -49,17 +73,19 @@ export function parseEventDescription(raw: string | null | undefined): {
           ? { referenceUrl: item.referenceUrl.trim() }
           : {}),
       }));
-    return { description, subtasks };
+    return { description, subtasks, myNotes };
   } catch {
-    return { description, subtasks: [] };
+    return { description, subtasks: [], myNotes };
   }
 }
 
 export function serializeEventDescription(
   description: string,
   subtasks: EventSubtask[],
+  myNotes = "",
 ): string | null {
   const trimmedDescription = description.trim();
+  const trimmedMyNotes = myNotes.trim();
   const cleanSubtasks = subtasks
     .map((item) => ({
       id: item.id,
@@ -77,16 +103,18 @@ export function serializeEventDescription(
       ...(item.referenceUrl ? { referenceUrl: item.referenceUrl } : {}),
     }));
 
-  if (cleanSubtasks.length === 0) {
-    return trimmedDescription || null;
+  const parts: string[] = [];
+  if (trimmedDescription) {
+    parts.push(trimmedDescription);
+  }
+  if (trimmedMyNotes) {
+    parts.push(`<!-- karriqi-mynotes:${JSON.stringify(trimmedMyNotes)} -->`);
+  }
+  if (cleanSubtasks.length > 0) {
+    parts.push(`<!-- karriqi-subtasks:${JSON.stringify(cleanSubtasks)} -->`);
   }
 
-  const payload = JSON.stringify(cleanSubtasks);
-  if (!trimmedDescription) {
-    return `<!-- karriqi-subtasks:${payload} -->`;
-  }
-
-  return `${trimmedDescription}\n\n<!-- karriqi-subtasks:${payload} -->`;
+  return parts.length > 0 ? parts.join("\n\n") : null;
 }
 
 /** Strips any embedded karriqi metadata markers (subtasks, journal, …). */
