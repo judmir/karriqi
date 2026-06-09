@@ -160,6 +160,7 @@ function EventFormDialogBody({
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [description, setDescription] = useState(initialParsed.description);
+  const [myNotes, setMyNotes] = useState(initialParsed.myNotes);
   const [subtasks, setSubtasks] = useState<EventSubtask[]>(
     initialParsed.subtasks,
   );
@@ -186,6 +187,7 @@ function EventFormDialogBody({
   const hasChanges =
     title !== (event?.title ?? "") ||
     description !== initialParsed.description ||
+    myNotes !== initialParsed.myNotes ||
     !subtasksEqual(subtasks, initialParsed.subtasks) ||
     effectiveAllDay !== (event?.allDay ?? defaultAllDay) ||
     color !== (event?.color ?? "blue") ||
@@ -194,7 +196,11 @@ function EventFormDialogBody({
     recurrenceChanged;
 
   function storedDescription(): string | null {
-    return serializeEventDescription(description, subtasks);
+    return serializeEventDescription(
+      description,
+      subtasks,
+      isRehab ? myNotes : "",
+    );
   }
 
   function updateStart(nextStart: Date) {
@@ -533,6 +539,26 @@ function EventFormDialogBody({
               onChange={setSubtasks}
               disabled={viewOnly}
             />
+            {isRehab ? (
+              <div className="mt-4 shrink-0 space-y-1.5">
+                <label
+                  htmlFor="event-my-notes"
+                  className="text-xs font-medium text-white/50"
+                >
+                  My Notes
+                </label>
+                <textarea
+                  id="event-my-notes"
+                  value={myNotes}
+                  onChange={(e) => setMyNotes(e.target.value)}
+                  placeholder="How did this session feel? Anything to remember for next time…"
+                  readOnly={viewOnly}
+                  disabled={viewOnly}
+                  rows={4}
+                  className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm leading-relaxed text-white/80 outline-none placeholder:text-white/30 focus-visible:border-white/25 disabled:opacity-60"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 

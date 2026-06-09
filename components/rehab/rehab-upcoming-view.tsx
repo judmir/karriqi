@@ -141,10 +141,10 @@ export function RehabUpcomingView() {
   }
 
   async function handleUpdateSubtasks(event: RehabPlanEvent, subtasks: EventSubtask[]) {
-    const { description } = resolveEventSubtasks(event);
+    const { description, myNotes } = resolveEventSubtasks(event);
     await updateEvent({
       id: event.id,
-      description: serializeEventDescription(description, subtasks),
+      description: serializeEventDescription(description, subtasks, myNotes),
     });
   }
 

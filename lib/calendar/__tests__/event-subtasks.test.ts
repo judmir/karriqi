@@ -25,7 +25,34 @@ describe("event-subtasks", () => {
     expect(parseEventDescription(stored)).toEqual({
       description: "Notes here",
       subtasks,
+      myNotes: "",
     });
+  });
+
+  it("round-trips my notes with description and subtasks", () => {
+    const stored = serializeEventDescription(
+      "Run/walk session then speech practice.",
+      subtasks,
+      "Legs felt heavy. Speech was clearer than last week.",
+    );
+    expect(parseEventDescription(stored)).toEqual({
+      description: "Run/walk session then speech practice.",
+      subtasks,
+      myNotes: "Legs felt heavy. Speech was clearer than last week.",
+    });
+    expect(getEventDescriptionPlainText(stored)).toBe(
+      "Run/walk session then speech practice.",
+    );
+  });
+
+  it("stores my notes without description", () => {
+    const stored = serializeEventDescription("", [], "Felt good today.");
+    expect(parseEventDescription(stored)).toEqual({
+      description: "",
+      subtasks: [],
+      myNotes: "Felt good today.",
+    });
+    expect(getEventDescriptionPlainText(stored)).toBeNull();
   });
 
   it("stores subtasks-only payloads", () => {
@@ -39,6 +66,7 @@ describe("event-subtasks", () => {
     expect(parseEventDescription(raw)).toEqual({
       description: "Hello",
       subtasks: [],
+      myNotes: "",
     });
   });
 

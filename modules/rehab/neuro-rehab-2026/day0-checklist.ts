@@ -97,7 +97,7 @@ export function countEventSubtasksDone(subtasks: EventSubtask[]): number {
 
 export function resolveEventSubtasks(
   event: Pick<RehabPlanEvent, "description" | "eventKind">,
-): { description: string; subtasks: EventSubtask[] } {
+): { description: string; subtasks: EventSubtask[]; myNotes: string } {
   const parsed = parseEventDescription(event.description);
   if (parsed.subtasks.length > 0) {
     return parsed;
@@ -107,6 +107,7 @@ export function resolveEventSubtasks(
     return {
       description: parsed.description.trim() || DAY0_DESCRIPTION,
       subtasks: defaultDay0Subtasks(),
+      myNotes: parsed.myNotes,
     };
   }
 
