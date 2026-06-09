@@ -223,25 +223,7 @@ export function footballDescriptionForWeek(week: number): string {
   return FOOTBALL_WEEKS_9_12;
 }
 
-export const DAY0_DESCRIPTION = `## Day 0 checklist
-
-### Equipment
-- Apple Watch or wearable ready
-- Polar H10 paired, if using
-- Tripod/phone camera ready
-- Journal/app ready
-- Gym access or dumbbells/bands ready
-- Cones/markers or wall-passing spot ready
-- Waking Up app ready
-- Supplements bought and doses agreed with doctor/pharmacist
-
-### Videos (save as YYYY-MM-DD_week0_task.mp4)
-- 60 sec typing, buttons, shoelaces, bottle caps, coins
-- stair descent, single-leg stance, sit-to-stand, heel raises
-- 6-minute walk, football wall passes, cone dribble
-- reading + spontaneous speech samples
-
-See Wiki: Day 0 for full clinical checklist.`;
+export { DAY0_DESCRIPTION } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 
 export const WEEKLY_REVIEW_DESCRIPTION = `Fill out once this week:
 - Rehab adherence: __%

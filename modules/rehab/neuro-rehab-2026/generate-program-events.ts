@@ -7,8 +7,8 @@ import {
   PROGRAM_WEEKS,
   isRetestWeek,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
+import { buildDay0EventDescription } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
-  DAY0_DESCRIPTION,
   GYM_A_DESCRIPTION,
   GYM_B_DESCRIPTION,
   GYM_C_DESCRIPTION,
@@ -316,7 +316,7 @@ function dailyNonNegotiables(
         day,
         week,
         "Day 0 checklist",
-        DAY0_DESCRIPTION,
+        buildDay0EventDescription(),
         "day0",
         "orange",
       ),

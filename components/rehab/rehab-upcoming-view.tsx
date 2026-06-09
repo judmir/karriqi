@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CalendarClient } from "@/components/calendar/calendar-client";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
+import { RehabEventSubtaskChecklist } from "@/components/rehab/rehab-event-subtask-checklist";
 import { RehabInlineAddTask } from "@/components/rehab/rehab-inline-add-task";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
@@ -16,6 +17,14 @@ import {
 } from "@/components/rehab/rehab-upcoming-view-switcher";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  serializeEventDescription,
+  type EventSubtask,
+} from "@/lib/calendar/event-subtasks";
+import {
+  allEventSubtasksDone,
+  resolveEventSubtasks,
+} from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
   buildUpcomingListSections,
   defaultStartForUpcomingDay,
@@ -44,6 +53,7 @@ export function RehabUpcomingView() {
   const toggleOccurrenceCompleted = useRehabPlanStore(
     (state) => state.toggleOccurrenceCompleted,
   );
+  const updateEvent = useRehabPlanStore((state) => state.updateEvent);
   const deleteOccurrence = useRehabPlanStore((state) => state.deleteOccurrence);
 
   const [view, setView] = useState<RehabUpcomingViewMode>(() =>
@@ -130,6 +140,26 @@ export function RehabUpcomingView() {
     await toggleOccurrenceCompleted(event, completed);
   }
 
+  async function handleUpdateSubtasks(event: RehabPlanEvent, subtasks: EventSubtask[]) {
+    const { description } = resolveEventSubtasks(event);
+    await updateEvent({
+      id: event.id,
+      description: serializeEventDescription(description, subtasks),
+    });
+  }
+
+  async function handleToggleAllSubtasks(
+    event: RehabPlanEvent,
+    subtasks: EventSubtask[],
+    completed: boolean,
+  ) {
+    await handleUpdateSubtasks(event, subtasks);
+    const currentlyCompleted = Boolean(event.completedAt);
+    if (completed !== currentlyCompleted) {
+      await toggleOccurrenceCompleted(event, completed);
+    }
+  }
+
   async function handleDelete(event: RehabPlanEvent) {
     await deleteOccurrence(event, "occurrence");
   }
@@ -171,6 +201,12 @@ export function RehabUpcomingView() {
                   onToggleCompleted={(completed) =>
                     void handleToggleCompleted(event, completed)
                   }
+                  onUpdateSubtasks={(subtasks) =>
+                    void handleUpdateSubtasks(event, subtasks)
+                  }
+                  onToggleAllSubtasks={(subtasks, completed) =>
+                    void handleToggleAllSubtasks(event, subtasks, completed)
+                  }
                   onEdit={() => openEdit(event)}
                   onDelete={() => void handleDelete(event)}
                 />
@@ -206,6 +242,8 @@ export function RehabUpcomingView() {
               overdueCollapsed={overdueCollapsed}
               onToggleOverdue={() => setOverdueCollapsed((value) => !value)}
               onToggleCompleted={handleToggleCompleted}
+              onUpdateSubtasks={handleUpdateSubtasks}
+              onToggleAllSubtasks={handleToggleAllSubtasks}
               onEdit={openEdit}
               onDelete={handleDelete}
               activeAddId={activeAddId}
@@ -266,6 +304,8 @@ function UpcomingSectionBlock({
   overdueCollapsed,
   onToggleOverdue,
   onToggleCompleted,
+  onUpdateSubtasks,
+  onToggleAllSubtasks,
   onEdit,
   onDelete,
   activeAddId,
@@ -275,6 +315,12 @@ function UpcomingSectionBlock({
   overdueCollapsed: boolean;
   onToggleOverdue: () => void;
   onToggleCompleted: (event: RehabPlanEvent, completed: boolean) => void;
+  onUpdateSubtasks: (event: RehabPlanEvent, subtasks: EventSubtask[]) => void;
+  onToggleAllSubtasks: (
+    event: RehabPlanEvent,
+    subtasks: EventSubtask[],
+    completed: boolean,
+  ) => void;
   onEdit: (event: RehabPlanEvent) => void;
   onDelete: (event: RehabPlanEvent) => void | Promise<void>;
   activeAddId: string | null;
@@ -301,6 +347,8 @@ function UpcomingSectionBlock({
           <UpcomingEventList
             events={section.events}
             onToggleCompleted={onToggleCompleted}
+            onUpdateSubtasks={onUpdateSubtasks}
+            onToggleAllSubtasks={onToggleAllSubtasks}
             onEdit={onEdit}
             onDelete={onDelete}
             showAdd={false}
@@ -320,6 +368,8 @@ function UpcomingSectionBlock({
       <UpcomingEventList
         events={section.events}
         onToggleCompleted={onToggleCompleted}
+        onUpdateSubtasks={onUpdateSubtasks}
+        onToggleAllSubtasks={onToggleAllSubtasks}
         onEdit={onEdit}
         onDelete={onDelete}
         addId={addId}
@@ -334,6 +384,8 @@ function UpcomingSectionBlock({
 function UpcomingEventList({
   events,
   onToggleCompleted,
+  onUpdateSubtasks,
+  onToggleAllSubtasks,
   onEdit,
   onDelete,
   addId,
@@ -344,6 +396,12 @@ function UpcomingEventList({
 }: {
   events: RehabPlanEvent[];
   onToggleCompleted: (event: RehabPlanEvent, completed: boolean) => void;
+  onUpdateSubtasks: (event: RehabPlanEvent, subtasks: EventSubtask[]) => void;
+  onToggleAllSubtasks: (
+    event: RehabPlanEvent,
+    subtasks: EventSubtask[],
+    completed: boolean,
+  ) => void;
   onEdit: (event: RehabPlanEvent) => void;
   onDelete: (event: RehabPlanEvent) => void | Promise<void>;
   addId?: string;
@@ -359,6 +417,10 @@ function UpcomingEventList({
           key={event.id}
           event={event}
           onToggleCompleted={(completed) => onToggleCompleted(event, completed)}
+          onUpdateSubtasks={(subtasks) => onUpdateSubtasks(event, subtasks)}
+          onToggleAllSubtasks={(subtasks, completed) =>
+            onToggleAllSubtasks(event, subtasks, completed)
+          }
           onEdit={() => onEdit(event)}
           onDelete={() => void onDelete(event)}
         />
@@ -379,55 +441,93 @@ function UpcomingEventList({
 function UpcomingEventRow({
   event,
   onToggleCompleted,
+  onUpdateSubtasks,
+  onToggleAllSubtasks,
   onEdit,
   onDelete,
   scheduleLabel,
 }: {
   event: RehabPlanEvent;
   onToggleCompleted: (completed: boolean) => void;
+  onUpdateSubtasks: (subtasks: EventSubtask[]) => void;
+  onToggleAllSubtasks: (subtasks: EventSubtask[], completed: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
   scheduleLabel?: string;
 }) {
-  const completed = Boolean(event.completedAt);
+  const { subtasks } = resolveEventSubtasks(event);
+  const hasSubtasks = subtasks.length > 0;
+  const allSubtasksDone = hasSubtasks && allEventSubtasksDone(subtasks);
+  const completed = hasSubtasks ? allSubtasksDone : Boolean(event.completedAt);
   const timeLabel = scheduleLabel ?? rehabEventTimeLabel(event);
 
+  function handleMainToggle(checked: boolean) {
+    if (hasSubtasks) {
+      const next = subtasks.map((item) => ({ ...item, done: checked }));
+      onToggleAllSubtasks(next, checked);
+      return;
+    }
+    onToggleCompleted(checked);
+  }
+
+  function handleSubtaskToggle(next: EventSubtask[]) {
+    onUpdateSubtasks(next);
+    const shouldComplete = allEventSubtasksDone(next);
+    const currentlyCompleted = Boolean(event.completedAt);
+    if (shouldComplete !== currentlyCompleted) {
+      onToggleCompleted(shouldComplete);
+    }
+  }
+
   return (
-    <div className="group flex cursor-pointer items-start gap-3 rounded-lg py-2 pr-1">
-      <Checkbox
-        checked={completed}
-        onCheckedChange={(value) => onToggleCompleted(Boolean(value))}
-        className="mt-0.5 cursor-pointer rounded-full"
-        aria-label={`Mark ${event.title} ${completed ? "incomplete" : "complete"}`}
-      />
-      <RehabEventKindIcon event={event} size="md" className="mt-0.5" />
-      <button
-        type="button"
-        onClick={onEdit}
-        className="min-w-0 flex-1 cursor-pointer text-left"
-      >
-        <p
-          className={cn(
-            "text-sm font-medium leading-snug",
-            completed && "text-muted-foreground line-through",
-          )}
+    <div className="group rounded-lg py-2 pr-1">
+      <div className="flex items-start gap-3">
+        <Checkbox
+          checked={completed}
+          onCheckedChange={(value) => handleMainToggle(Boolean(value))}
+          className="mt-0.5 cursor-pointer rounded-full"
+          aria-label={`Mark ${event.title} ${completed ? "incomplete" : "complete"}`}
+        />
+        <RehabEventKindIcon event={event} size="md" className="mt-0.5" />
+        <button
+          type="button"
+          onClick={onEdit}
+          className="min-w-0 flex-1 cursor-pointer text-left"
         >
-          {event.title}
-        </p>
-        {timeLabel ? (
-          <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
-            {timeLabel}
+          <p
+            className={cn(
+              "text-sm font-medium leading-snug",
+              completed && "text-muted-foreground line-through",
+            )}
+          >
+            {event.title}
           </p>
-        ) : null}
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 cursor-pointer rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
-        aria-label={`Remove ${event.title}`}
-      >
-        <X className="size-4" aria-hidden />
-      </button>
+          {timeLabel ? (
+            <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
+              {timeLabel}
+            </p>
+          ) : null}
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 cursor-pointer rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+          aria-label={`Remove ${event.title}`}
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      </div>
+
+      {hasSubtasks ? (
+        <div className="border-border bg-muted/30 mt-2 ml-[3.25rem] rounded-lg border p-3">
+          <RehabEventSubtaskChecklist
+            event={event}
+            showMasterCheckbox={false}
+            onToggleSubtask={handleSubtaskToggle}
+            onToggleAll={(next, done) => onToggleAllSubtasks(next, done)}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

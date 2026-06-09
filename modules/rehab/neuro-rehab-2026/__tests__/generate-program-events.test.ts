@@ -23,6 +23,7 @@ describe("generateNeuroRehabProgramEvents", () => {
 
     const first = events.find((e) => e.event_kind === "day0");
     expect(first).toBeDefined();
+    expect(first?.description).toContain("karriqi-subtasks");
     const firstDay = startOfDay(new Date(first!.start_at));
     expect(firstDay.getTime()).toBe(startOfDay(PROGRAM_START).getTime());
   });
