@@ -8,10 +8,16 @@ import {
 import type { Database } from "@/types/database";
 import type { CalendarEventColor } from "@/types/calendar";
 import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
-import { REHAB_EVENT_KINDS, type RehabEventKind } from "@/types/rehab";
+import {
+  REHAB_EVENT_KINDS,
+  type RehabEventKind,
+  type RehabSpeechRecording,
+} from "@/types/rehab";
 
 type RehabPlanEventUpdate =
   Database["public"]["Tables"]["rehab_plan_events"]["Update"];
+type RehabSpeechRecordingRow =
+  Database["public"]["Tables"]["rehab_speech_recordings"]["Row"];
 
 type Err = { ok: false; message: string };
 
@@ -29,6 +35,23 @@ function eventKindOrCustom(value: string | undefined): RehabEventKind {
   return value && (REHAB_EVENT_KINDS as readonly string[]).includes(value)
     ? (value as RehabEventKind)
     : "custom";
+}
+
+function mapSpeechRecording(
+  row: RehabSpeechRecordingRow,
+): RehabSpeechRecording {
+  return {
+    id: row.id,
+    eventId: row.rehab_plan_event_id,
+    userId: row.user_id,
+    fileName: row.file_name,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    durationSeconds:
+      row.duration_seconds === null ? null : Number(row.duration_seconds),
+    storagePath: row.storage_path,
+    createdAt: row.created_at,
+  };
 }
 
 export type CreateRehabPlanEventResult =
@@ -205,6 +228,120 @@ export async function deleteRehabPlanEvent(
     .from("rehab_plan_events")
     .delete()
     .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  return ok({ ok: true });
+}
+
+export type CompleteRehabSpeechRecordingUploadResult =
+  | { ok: true; recording: RehabSpeechRecording }
+  | Err;
+
+export async function completeRehabSpeechRecordingUpload(input: {
+  eventId: string;
+  storagePath: string;
+  fileName: string;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  durationSeconds?: number | null;
+}): Promise<CompleteRehabSpeechRecordingUploadResult> {
+  const fileName = input.fileName.trim();
+  const storagePath = input.storagePath.trim();
+  if (!fileName || !storagePath) {
+    return { ok: false, message: "Recording file is missing." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  if (!storagePath.startsWith(`${user.id}/${input.eventId}/`)) {
+    return { ok: false, message: "Invalid recording path." };
+  }
+
+  const { data: event, error: eventError } = await supabase
+    .from("rehab_plan_events")
+    .select("id, event_kind")
+    .eq("id", input.eventId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (eventError || !event) {
+    return { ok: false, message: eventError?.message ?? "Event not found." };
+  }
+  if (event.event_kind !== "speech") {
+    return {
+      ok: false,
+      message: "Recordings can only be added to speech events.",
+    };
+  }
+
+  const { data: recording, error } = await supabase
+    .from("rehab_speech_recordings")
+    .insert({
+      rehab_plan_event_id: input.eventId,
+      user_id: user.id,
+      file_name: fileName,
+      mime_type: input.mimeType ?? null,
+      size_bytes: input.sizeBytes ?? null,
+      duration_seconds: input.durationSeconds ?? null,
+      storage_path: storagePath,
+    })
+    .select(
+      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at",
+    )
+    .single();
+
+  if (error || !recording) {
+    return { ok: false, message: error?.message ?? "Recording save failed." };
+  }
+
+  return ok({ ok: true, recording: mapSpeechRecording(recording) });
+}
+
+export type DeleteRehabSpeechRecordingResult = { ok: true } | Err;
+
+export async function deleteRehabSpeechRecording(input: {
+  id: string;
+}): Promise<DeleteRehabSpeechRecordingResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in." };
+  }
+
+  const { data: recording, error: findError } = await supabase
+    .from("rehab_speech_recordings")
+    .select("id, storage_path")
+    .eq("id", input.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (findError || !recording) {
+    return { ok: false, message: findError?.message ?? "Recording not found." };
+  }
+
+  const { error: storageError } = await supabase.storage
+    .from("rehab-speech-recordings")
+    .remove([recording.storage_path]);
+  if (storageError) {
+    return { ok: false, message: storageError.message };
+  }
+
+  const { error } = await supabase
+    .from("rehab_speech_recordings")
+    .delete()
+    .eq("id", input.id)
     .eq("user_id", user.id);
 
   if (error) {

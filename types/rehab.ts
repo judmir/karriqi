@@ -30,6 +30,7 @@ export type RehabPlanEvent = CalendarEvent & {
   eventKind: RehabEventKind;
   programId: string | null;
   planWeek: number | null;
+  speechRecordings: RehabSpeechRecording[];
   /** Groups a recurring master + its override rows. null for standalone events. */
   seriesId: string | null;
   /** Parsed recurrence rule. Only set on the master row of a series. */
@@ -43,6 +44,18 @@ export type RehabPlanEvent = CalendarEvent & {
    * Real rows (master/override/standalone) leave this undefined.
    */
   recurrenceMasterId?: string;
+};
+
+export type RehabSpeechRecording = {
+  id: string;
+  eventId: string;
+  userId: string;
+  fileName: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  durationSeconds: number | null;
+  storagePath: string;
+  createdAt: string;
 };
 
 export type RehabWikiPage = {

@@ -1,9 +1,11 @@
 import { create } from "zustand";
 
 import {
+  completeRehabSpeechRecordingUpload,
   createRehabPlanEvent,
   deleteRehabPlanEvent,
   deleteRehabSeries,
+  deleteRehabSpeechRecording,
   splitRehabSeries,
   toggleRehabPlanEventCompleted,
   updateRehabPlanEvent,
@@ -14,7 +16,7 @@ import type { RecurrenceRule } from "@/lib/rehab/recurrence";
 import { loadRehabPlanStoreAction } from "@/stores/load-actions";
 import { isStoreStale } from "@/stores/store-utils";
 import type { CalendarEventColor } from "@/types/calendar";
-import type { RehabPlanEvent } from "@/types/rehab";
+import type { RehabPlanEvent, RehabSpeechRecording } from "@/types/rehab";
 
 type RehabPlanStoreState = {
   events: RehabPlanEvent[];
@@ -73,6 +75,20 @@ type RehabPlanStoreActions = {
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
   deleteEvent: (
     id: string,
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
+  completeSpeechRecordingUpload: (input: {
+    eventId: string;
+    storagePath: string;
+    fileName: string;
+    mimeType?: string | null;
+    sizeBytes?: number | null;
+    durationSeconds?: number | null;
+  }) => Promise<
+    | { ok: true; recording: RehabSpeechRecording }
+    | { ok: false; message: string }
+  >;
+  deleteSpeechRecording: (
+    recording: RehabSpeechRecording,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
   toggleCompleted: (
     id: string,
@@ -151,6 +167,7 @@ function buildOptimisticCreate(
     recurrence,
     recurrenceAt: null,
     recurrenceCancelled: false,
+    speechRecordings: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -187,7 +204,9 @@ function buildOptimisticOverride(
     seriesId: occurrence.seriesId,
     recurrence: null,
     recurrenceAt: occurrence.recurrenceAt,
-    recurrenceCancelled: flags.cancelled ?? existing?.recurrenceCancelled ?? false,
+    recurrenceCancelled:
+      flags.cancelled ?? existing?.recurrenceCancelled ?? false,
+    speechRecordings: existing?.speechRecordings ?? [],
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   };
@@ -289,7 +308,13 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       const exists = state.events.some((item) => item.id === event.id);
       const events = exists
         ? state.events.map((item) =>
-            item.id === event.id ? { ...event, completedAt: item.completedAt } : item,
+            item.id === event.id
+              ? {
+                  ...event,
+                  completedAt: item.completedAt,
+                  speechRecordings: item.speechRecordings,
+                }
+              : item,
           )
         : [...state.events, event];
       return { events: sortEvents(events), loadedAt: Date.now() };
@@ -403,8 +428,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       color: input.color ?? prev.color,
       recurrence: nextRecurrence,
       // Converting a plain event into a series: it becomes its own master.
-      seriesId:
-        nextRecurrence && !prev.seriesId ? prev.id : prev.seriesId,
+      seriesId: nextRecurrence && !prev.seriesId ? prev.id : prev.seriesId,
       updatedAt: new Date().toISOString(),
     };
 
@@ -463,6 +487,70 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
         events: sortEvents([...get().events, prev]),
         loadedAt: Date.now(),
       });
+      showStoreError(result.message);
+    }
+    return result;
+  },
+
+  async completeSpeechRecordingUpload(input) {
+    const { events, persistence } = get();
+    const event = events.find((item) => item.id === input.eventId);
+    if (!event) {
+      return { ok: false, message: "Event not found." };
+    }
+    if (!persistence) {
+      return {
+        ok: false,
+        message: "Recording needs persistence to be enabled.",
+      };
+    }
+
+    const result = await completeRehabSpeechRecordingUpload(input);
+    if (!result.ok) {
+      showStoreError(result.message);
+      return result;
+    }
+
+    set((state) => ({
+      events: state.events.map((item) =>
+        item.id === input.eventId
+          ? {
+              ...item,
+              speechRecordings: [result.recording, ...item.speechRecordings],
+            }
+          : item,
+      ),
+      loadedAt: Date.now(),
+    }));
+
+    return result;
+  },
+
+  async deleteSpeechRecording(recording) {
+    const { events, persistence } = get();
+    const prevEvents = events;
+
+    set({
+      events: events.map((event) =>
+        event.id === recording.eventId
+          ? {
+              ...event,
+              speechRecordings: event.speechRecordings.filter(
+                (item) => item.id !== recording.id,
+              ),
+            }
+          : event,
+      ),
+      loadedAt: Date.now(),
+    });
+
+    if (!persistence) {
+      return { ok: true };
+    }
+
+    const result = await deleteRehabSpeechRecording({ id: recording.id });
+    if (!result.ok) {
+      set({ events: prevEvents, loadedAt: Date.now() });
       showStoreError(result.message);
     }
     return result;

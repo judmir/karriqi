@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  CalendarDays,
-  ChevronDown,
-  List,
-} from "lucide-react";
+import { CalendarDays, ChevronDown, List } from "lucide-react";
 import Link from "next/link";
 import { endOfDay, format, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -32,7 +28,10 @@ import {
   rehabTodaySectionForSchedule,
   type RehabTodaySection,
 } from "@/lib/rehab/rehab-today-utils";
-import { getEventDescriptionPlainText, parseEventDescription } from "@/lib/calendar/event-subtasks";
+import {
+  getEventDescriptionPlainText,
+  parseEventDescription,
+} from "@/lib/calendar/event-subtasks";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import {
   getStoicResponseData,
@@ -62,20 +61,26 @@ export function RehabTodayView() {
   );
 
   const events = useMemo(() => {
-    const expanded = expandRehabEvents(allEvents, startOfDay(today), endOfDay(today));
+    const expanded = expandRehabEvents(
+      allEvents,
+      startOfDay(today),
+      endOfDay(today),
+    );
     return filterRehabEventsForDay(expanded, today);
   }, [allEvents, today]);
-  const [collapsed, setCollapsed] = useState<Record<RehabTodaySection, boolean>>(
-    {
-      all_day: false,
-      morning: false,
-      afternoon: false,
-      evening: false,
-      completed: false,
-    },
-  );
+  const [collapsed, setCollapsed] = useState<
+    Record<RehabTodaySection, boolean>
+  >({
+    all_day: false,
+    morning: false,
+    afternoon: false,
+    evening: false,
+    completed: false,
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(
+    null,
+  );
   const [journalOpen, setJournalOpen] = useState(false);
   const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
   const [stoicOpen, setStoicOpen] = useState(false);
@@ -84,12 +89,12 @@ export function RehabTodayView() {
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
   const [highlightEventId, setHighlightEventId] = useState<string | null>(null);
-  const [sectionHighlight, setSectionHighlight] = useState<
-    Exclude<RehabTodaySection, "completed"> | null
-  >(null);
-  const [departedNotice, setDepartedNotice] = useState<DepartedTaskNotice | null>(
-    null,
-  );
+  const [sectionHighlight, setSectionHighlight] = useState<Exclude<
+    RehabTodaySection,
+    "completed"
+  > | null>(null);
+  const [departedNotice, setDepartedNotice] =
+    useState<DepartedTaskNotice | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
 
   const groups = useMemo(() => groupRehabTodayEvents(events), [events]);
@@ -151,7 +156,10 @@ export function RehabTodayView() {
         feedbackTimerRef.current = null;
       }, 2800);
 
-      window.setTimeout(() => scrollToEvent(created.id), targetSection === fromSection ? 0 : 120);
+      window.setTimeout(
+        () => scrollToEvent(created.id),
+        targetSection === fromSection ? 0 : 120,
+      );
     },
     [clearFeedbackTimer, scrollToEvent, today],
   );
@@ -181,7 +189,10 @@ export function RehabTodayView() {
     setDialogOpen(false);
   }
 
-  async function handleToggleCompleted(event: RehabPlanEvent, completed: boolean) {
+  async function handleToggleCompleted(
+    event: RehabPlanEvent,
+    completed: boolean,
+  ) {
     await toggleOccurrenceCompleted(event, completed);
   }
 
@@ -192,60 +203,60 @@ export function RehabTodayView() {
   return (
     <div className="flex w-full flex-col gap-6 px-4 pb-8 md:px-6">
       <div className="flex items-center justify-end gap-1">
-          <Link
-            href={ROUTES.rehabPlan}
-            prefetch={false}
-            aria-label="Open upcoming list"
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-          >
-            <List className="size-4" />
-          </Link>
-          <Link
-            href={`${ROUTES.rehabPlan}?view=calendar`}
-            prefetch={false}
-            aria-label="Open upcoming calendar"
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-          >
-            <CalendarDays className="size-4" />
-          </Link>
-        </div>
+        <Link
+          href={ROUTES.rehabPlan}
+          prefetch={false}
+          aria-label="Open upcoming list"
+          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+        >
+          <List className="size-4" />
+        </Link>
+        <Link
+          href={`${ROUTES.rehabPlan}?view=calendar`}
+          prefetch={false}
+          aria-label="Open upcoming calendar"
+          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+        >
+          <CalendarDays className="size-4" />
+        </Link>
+      </div>
 
       <div className="flex w-full flex-col">
-          {ACTIVE_SECTIONS.map((section) => (
-            <RehabTodaySectionBlock
-              key={section}
-              section={section}
-              title={REHAB_TODAY_SECTION_LABELS[section]}
-              collapsed={collapsed[section]}
-              onToggleCollapse={() => toggleSection(section)}
-              events={groups[section]}
-              onToggleCompleted={handleToggleCompleted}
-              onEdit={openEdit}
-              addId={`today-${section}`}
-              activeAddId={activeAddId}
-              onActivateAdd={setActiveAddId}
-              defaultStart={defaultStartForRehabSection(section, today)}
-              highlightEventId={highlightEventId}
-              sectionHighlighted={sectionHighlight === section}
-              departedNotice={
-                departedNotice?.fromSection === section ? departedNotice : null
-              }
-              onTaskCreated={(created) => handleTaskCreated(created, section)}
-            />
-          ))}
+        {ACTIVE_SECTIONS.map((section) => (
+          <RehabTodaySectionBlock
+            key={section}
+            section={section}
+            title={REHAB_TODAY_SECTION_LABELS[section]}
+            collapsed={collapsed[section]}
+            onToggleCollapse={() => toggleSection(section)}
+            events={groups[section]}
+            onToggleCompleted={handleToggleCompleted}
+            onEdit={openEdit}
+            addId={`today-${section}`}
+            activeAddId={activeAddId}
+            onActivateAdd={setActiveAddId}
+            defaultStart={defaultStartForRehabSection(section, today)}
+            highlightEventId={highlightEventId}
+            sectionHighlighted={sectionHighlight === section}
+            departedNotice={
+              departedNotice?.fromSection === section ? departedNotice : null
+            }
+            onTaskCreated={(created) => handleTaskCreated(created, section)}
+          />
+        ))}
 
-          {groups.completed.length > 0 ? (
-            <RehabTodaySectionBlock
-              section="completed"
-              title={`Completed ${groups.completed.length}`}
-              collapsed={collapsed.completed}
-              onToggleCollapse={() => toggleSection("completed")}
-              events={groups.completed}
-              onToggleCompleted={handleToggleCompleted}
-              onEdit={openEdit}
-              showAdd={false}
-            />
-          ) : null}
+        {groups.completed.length > 0 ? (
+          <RehabTodaySectionBlock
+            section="completed"
+            title={`Completed ${groups.completed.length}`}
+            collapsed={collapsed.completed}
+            onToggleCollapse={() => toggleSection("completed")}
+            events={groups.completed}
+            onToggleCompleted={handleToggleCompleted}
+            onEdit={openEdit}
+            showAdd={false}
+          />
+        ) : null}
       </div>
 
       <EventFormDialog
@@ -347,7 +358,8 @@ function RehabTodaySectionBlock({
                 “{departedNotice.title}”
               </p>
               <p className="text-muted-foreground mt-1 text-xs leading-snug">
-                Saved for {format(departedNotice.date, "EEE d MMM")} — find it in{" "}
+                Saved for {format(departedNotice.date, "EEE d MMM")} — find it
+                in{" "}
                 <Link
                   href={ROUTES.rehabPlan}
                   prefetch={false}
@@ -425,11 +437,7 @@ function RehabTodayItemRow({
         />
         <RehabEventKindIcon event={event} size="md" className="mt-0.5" />
         <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="w-full text-left"
-          >
+          <button type="button" onClick={onEdit} className="w-full text-left">
             <p
               className={cn(
                 "text-sm font-medium leading-snug",
@@ -474,8 +482,12 @@ function RehabTodayItemRow({
           ) : null}
           {myNotes ? (
             <div className="space-y-1">
-              <p className="text-muted-foreground text-xs font-medium">My Notes</p>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{myNotes}</p>
+              <p className="text-muted-foreground text-xs font-medium">
+                My Notes
+              </p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                {myNotes}
+              </p>
             </div>
           ) : null}
         </div>

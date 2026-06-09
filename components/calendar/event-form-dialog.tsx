@@ -53,6 +53,7 @@ import {
   type RecurrenceRule,
 } from "@/lib/rehab/recurrence";
 import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
+import { RehabSpeechRecordingSection } from "@/components/rehab/rehab-speech-recording-section";
 import {
   useRehabPlanStore,
   type SeriesEditScope,
@@ -145,6 +146,9 @@ function EventFormDialogBody({
   /** Editing an existing occurrence of a recurring series. */
   const isSeriesOccurrence =
     isRehab && isEditing && Boolean(rehabEvent?.recurrenceAt);
+  /** Speech practice events get a voice-recording control inside the modal. */
+  const isSpeechEvent =
+    isRehab && isEditing && rehabEvent?.eventKind === "speech";
   const initialStart = event ? new Date(event.startAt) : defaultStart;
   const initialEnd = event
     ? event.allDay
@@ -514,7 +518,7 @@ function EventFormDialogBody({
             className="mt-0.5 shrink-0 border-white/25"
             aria-label="Completion"
           />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
             <input
               id="event-title"
               value={title}
@@ -539,6 +543,14 @@ function EventFormDialogBody({
               onChange={setSubtasks}
               disabled={viewOnly}
             />
+            {isSpeechEvent && event ? (
+              <RehabSpeechRecordingSection
+                eventId={event.id}
+                eventStartAt={event.startAt}
+                persistence={persistence}
+                readOnly={viewOnly}
+              />
+            ) : null}
             {isRehab ? (
               <div className="mt-4 shrink-0 space-y-1.5">
                 <label

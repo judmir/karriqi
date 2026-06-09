@@ -24,6 +24,7 @@ function mockEvent(
     eventKind: partial.eventKind,
     programId: "neuro-rehab-2026-v1",
     planWeek: null,
+    speechRecordings: [],
     seriesId: null,
     recurrence: null,
     recurrenceAt: null,
@@ -35,7 +36,9 @@ function mockEvent(
 
 describe("clinical content", () => {
   it("keeps a short before/after checklist", () => {
-    const before = REHAB_CLINICAL_ITEMS.filter((item) => item.phase === "before");
+    const before = REHAB_CLINICAL_ITEMS.filter(
+      (item) => item.phase === "before",
+    );
     const after = REHAB_CLINICAL_ITEMS.filter((item) => item.phase === "after");
     expect(before.length).toBeGreaterThan(0);
     expect(after.length).toBeGreaterThan(0);

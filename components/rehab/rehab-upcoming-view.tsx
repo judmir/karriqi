@@ -44,7 +44,9 @@ import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
 
-function initialViewMode(searchParams: URLSearchParams | null): RehabUpcomingViewMode {
+function initialViewMode(
+  searchParams: URLSearchParams | null,
+): RehabUpcomingViewMode {
   return searchParams?.get("view") === "calendar" ? "calendar" : "list";
 }
 
@@ -66,7 +68,9 @@ export function RehabUpcomingView() {
     () => initialViewMode(searchParams) === "calendar",
   );
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(
+    null,
+  );
   const [journalOpen, setJournalOpen] = useState(false);
   const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
   const [stoicOpen, setStoicOpen] = useState(false);
@@ -85,7 +89,9 @@ export function RehabUpcomingView() {
   const expandedEvents = useMemo(() => {
     const now = new Date();
     const windowStart = startOfDay(addDays(now, -14));
-    const windowEnd = endOfDay(addDays(startOfDay(now), maxUpcomingDaysFrom(now)));
+    const windowEnd = endOfDay(
+      addDays(startOfDay(now), maxUpcomingDaysFrom(now)),
+    );
     return expandRehabEvents(allEvents, windowStart, windowEnd);
   }, [allEvents]);
 
@@ -145,11 +151,17 @@ export function RehabUpcomingView() {
     setDialogOpen(false);
   }
 
-  async function handleToggleCompleted(event: RehabPlanEvent, completed: boolean) {
+  async function handleToggleCompleted(
+    event: RehabPlanEvent,
+    completed: boolean,
+  ) {
     await toggleOccurrenceCompleted(event, completed);
   }
 
-  async function handleUpdateSubtasks(event: RehabPlanEvent, subtasks: EventSubtask[]) {
+  async function handleUpdateSubtasks(
+    event: RehabPlanEvent,
+    subtasks: EventSubtask[],
+  ) {
     const { description, myNotes } = resolveEventSubtasks(event);
     await updateEvent({
       id: event.id,
@@ -178,7 +190,10 @@ export function RehabUpcomingView() {
       <div className="border-border shrink-0 space-y-3 border-b px-4 py-3 md:px-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-semibold tracking-tight">Upcoming</h1>
-          <RehabUpcomingViewSwitcher view={view} onViewChange={handleViewChange} />
+          <RehabUpcomingViewSwitcher
+            view={view}
+            onViewChange={handleViewChange}
+          />
         </div>
 
         <div className="relative min-w-0">
@@ -237,43 +252,45 @@ export function RehabUpcomingView() {
         ) : null}
 
         {!searchActive ? (
-        <div
-          className={cn(
-            "min-h-0 flex-1 overflow-y-auto px-4 pb-8 md:px-6",
-            view !== "list" && "hidden",
-          )}
-          aria-hidden={view !== "list"}
-        >
-          {sections.map((section) => (
-            <UpcomingSectionBlock
-              key={sectionKey(section)}
-              section={section}
-              overdueCollapsed={overdueCollapsed}
-              onToggleOverdue={() => setOverdueCollapsed((value) => !value)}
-              onToggleCompleted={handleToggleCompleted}
-              onUpdateSubtasks={handleUpdateSubtasks}
-              onToggleAllSubtasks={handleToggleAllSubtasks}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              activeAddId={activeAddId}
-              onActivateAdd={setActiveAddId}
-            />
-          ))}
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto px-4 pb-8 md:px-6",
+              view !== "list" && "hidden",
+            )}
+            aria-hidden={view !== "list"}
+          >
+            {sections.map((section) => (
+              <UpcomingSectionBlock
+                key={sectionKey(section)}
+                section={section}
+                overdueCollapsed={overdueCollapsed}
+                onToggleOverdue={() => setOverdueCollapsed((value) => !value)}
+                onToggleCompleted={handleToggleCompleted}
+                onUpdateSubtasks={handleUpdateSubtasks}
+                onToggleAllSubtasks={handleToggleAllSubtasks}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+                activeAddId={activeAddId}
+                onActivateAdd={setActiveAddId}
+              />
+            ))}
 
-          {!canShowMore ? null : (
-            <div className="border-border border-t py-4">
-              <button
-                type="button"
-                onClick={() =>
-                  setVisibleDays((current) => nextUpcomingVisibleDays(current))
-                }
-                className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
-              >
-                See more
-              </button>
-            </div>
-          )}
-        </div>
+            {!canShowMore ? null : (
+              <div className="border-border border-t py-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleDays((current) =>
+                      nextUpcomingVisibleDays(current),
+                    )
+                  }
+                  className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+                >
+                  See more
+                </button>
+              </div>
+            )}
+          </div>
         ) : null}
       </div>
 

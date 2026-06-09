@@ -569,6 +569,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      rehab_speech_recordings: {
+        Row: {
+          id: string;
+          rehab_plan_event_id: string;
+          user_id: string;
+          file_name: string;
+          mime_type: string | null;
+          size_bytes: number | null;
+          duration_seconds: number | null;
+          storage_path: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          rehab_plan_event_id: string;
+          user_id: string;
+          file_name: string;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          duration_seconds?: number | null;
+          storage_path: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          rehab_plan_event_id?: string;
+          user_id?: string;
+          file_name?: string;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          duration_seconds?: number | null;
+          storage_path?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       rehab_wiki_pages: {
         Row: {
           slug: string;

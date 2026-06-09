@@ -23,6 +23,7 @@ function makeEvent(overrides: Partial<RehabPlanEvent>): RehabPlanEvent {
     eventKind: "custom",
     programId: null,
     planWeek: null,
+    speechRecordings: [],
     seriesId: null,
     recurrence: null,
     recurrenceAt: null,

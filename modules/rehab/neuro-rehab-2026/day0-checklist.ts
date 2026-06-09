@@ -37,7 +37,11 @@ export const DAY0_SUBTASK_SECTIONS = [
 ] as const;
 
 export const DAY0_SUBTASKS: EventSubtask[] = [
-  { id: "equipment.watch", label: "Apple Watch or wearable ready", done: false },
+  {
+    id: "equipment.watch",
+    label: "Apple Watch or wearable ready",
+    done: false,
+  },
   { id: "equipment.polar", label: "Polar H10 paired, if using", done: false },
   { id: "equipment.camera", label: "Tripod/phone camera ready", done: false },
   { id: "equipment.journal", label: "Journal/app ready", done: false },
@@ -122,12 +126,15 @@ export function groupEventSubtasks(
     return [{ label: null, items: subtasks }];
   }
 
-  const groups = DAY0_SUBTASK_SECTIONS.map((section) => ({
-    label: section.label,
-    items: subtasks.filter((item) => item.id.startsWith(section.prefix)),
-  })).filter((group) => group.items.length > 0);
+  const groups: { label: string | null; items: EventSubtask[] }[] =
+    DAY0_SUBTASK_SECTIONS.map((section) => ({
+      label: section.label,
+      items: subtasks.filter((item) => item.id.startsWith(section.prefix)),
+    })).filter((group) => group.items.length > 0);
 
-  const groupedIds = new Set(groups.flatMap((group) => group.items.map((item) => item.id)));
+  const groupedIds = new Set(
+    groups.flatMap((group) => group.items.map((item) => item.id)),
+  );
   const ungrouped = subtasks.filter((item) => !groupedIds.has(item.id));
   if (ungrouped.length > 0) {
     groups.push({ label: null, items: ungrouped });
