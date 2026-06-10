@@ -13,6 +13,8 @@ import {
 } from "@/modules/rehab/neuro-rehab-2026/constants";
 import {
   STOIC_BLOCKS,
+  STOIC_INTENTION_TITLE,
+  STOIC_WEEKLY_REVIEW_TITLE,
   buildStoicDailyDescription,
   buildStoicWeeklyDescription,
 } from "@/modules/rehab/neuro-rehab-2026/stoic-content";
@@ -162,10 +164,10 @@ function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
         userId,
         blockStart,
         block.startWeek,
-        7,
-        40,
-        3,
-        "Stoic intention",
+        6,
+        0,
+        5,
+        STOIC_INTENTION_TITLE,
         buildStoicDailyDescription(block),
         "stoic",
         "purple",
@@ -186,7 +188,7 @@ function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
       19,
       30,
       10,
-      "Stoic weekly review",
+      STOIC_WEEKLY_REVIEW_TITLE,
       buildStoicWeeklyDescription(),
       "stoic",
       "purple",
@@ -365,10 +367,13 @@ function dailyNonNegotiables(
   isFirstDay: boolean,
 ): RehabPlanEventInsert[] {
   const events: RehabPlanEventInsert[] = [
-    allDay(
+    timed(
       userId,
       day,
       week,
+      8,
+      30,
+      5,
       "Vitamin D (with breakfast)",
       "Take with breakfast if agreed with doctor. See Wiki: Supplements.",
       "supplement",

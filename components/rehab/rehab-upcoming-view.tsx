@@ -39,7 +39,7 @@ import {
 } from "@/lib/rehab/rehab-upcoming-utils";
 import { rehabEventTimeLabel } from "@/lib/rehab/rehab-today-utils";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
-import { isStoicEvent } from "@/lib/rehab/stoic-response";
+import { isStoicDialogEvent } from "@/lib/rehab/stoic-response";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
@@ -132,7 +132,7 @@ export function RehabUpcomingView() {
       setJournalOpen(true);
       return;
     }
-    if (isStoicEvent(event)) {
+    if (isStoicDialogEvent(event)) {
       setStoicEvent(event);
       setStoicOpen(true);
       return;

@@ -35,7 +35,7 @@ import {
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import {
   getStoicResponseData,
-  isStoicEvent,
+  isStoicDialogEvent,
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
@@ -170,7 +170,7 @@ export function RehabTodayView() {
       setJournalOpen(true);
       return;
     }
-    if (isStoicEvent(event)) {
+    if (isStoicDialogEvent(event)) {
       setStoicEvent(event);
       setStoicOpen(true);
       return;
@@ -416,7 +416,7 @@ function RehabTodayItemRow({
   const myNotes = parseEventDescription(event.description).myNotes.trim();
   const hasDescription = Boolean(descriptionText);
   const hasDetails = hasDescription || Boolean(myNotes);
-  const stoicResponse = isStoicEvent(event)
+  const stoicResponse = isStoicDialogEvent(event)
     ? summarizeStoicResponse(getStoicResponseData(event.description))
     : "";
 

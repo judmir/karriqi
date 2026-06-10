@@ -77,6 +77,17 @@ describe("generateNeuroRehabProgramEvents", () => {
     expect((end.getTime() - start.getTime()) / 60000).toBe(36);
   });
 
+  it("schedules Vitamin D at 8:30 each morning", () => {
+    const vitD = events.filter((e) => e.title === "Vitamin D (with breakfast)");
+    expect(vitD.length).toBeGreaterThan(80);
+    for (const event of vitD) {
+      expect(event.all_day).toBe(false);
+      const start = new Date(event.start_at);
+      expect(start.getHours()).toBe(8);
+      expect(start.getMinutes()).toBe(30);
+    }
+  });
+
   it("delivers Stoicism as recurring masters, not one row per day", () => {
     const stoic = events.filter((e) => e.event_kind === "stoic");
     // 6 daily block masters (one per 2-week theme) + 1 weekly Sunday review.
@@ -96,6 +107,11 @@ describe("generateNeuroRehabProgramEvents", () => {
       (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "daily",
     );
     expect(dailyMasters.length).toBe(6);
+    for (const event of dailyMasters) {
+      const start = new Date(event.start_at);
+      expect(start.getHours()).toBe(6);
+      expect(start.getMinutes()).toBe(0);
+    }
 
     const weeklyMasters = stoic.filter(
       (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "weekly",
