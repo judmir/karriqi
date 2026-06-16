@@ -1,4 +1,5 @@
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
+import { softDeletePatch } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function deleteAllProgramEventsForUser(
@@ -12,9 +13,10 @@ export async function deleteAllProgramEventsForUser(
 
   const { error } = await admin
     .from("rehab_plan_events")
-    .delete()
+    .update(softDeletePatch())
     .eq("user_id", userId)
-    .eq("program_id", programId);
+    .eq("program_id", programId)
+    .is("deleted_at", null);
 
   if (error) {
     throw new Error(error.message);

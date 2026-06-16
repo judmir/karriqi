@@ -1,15 +1,22 @@
 import { deleteAllProgramEventsForUser } from "@/lib/rehab/dedupe-rehab-program-events";
 import { parseEventDescription } from "@/lib/calendar/event-subtasks";
+import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
 
 const BATCH_SIZE = 100;
 
-const EXPECTED_NEURO_REHAB_EVENT_COUNT =
-  generateNeuroRehabProgramEvents("count-probe").length;
-
 const GYM_EVENT_KINDS = ["gym_a", "gym_b", "gym_c", "gym_d"] as const;
+
+/**
+ * Stable identity for a program occurrence, independent of string formatting:
+ * the timestamptz round-trip from Postgres ("+00:00") differs textually from the
+ * generated ISO ("Z"), so we key on the parsed instant, not the raw string.
+ */
+function occurrenceKey(eventKind: string, startAt: string): string {
+  return `${eventKind}\u0000${new Date(startAt).getTime()}`;
+}
 
 type MaterializationLock =
   | { status: "claimed" }
@@ -48,21 +55,65 @@ async function releaseMaterializationLock(
     .eq("program_id", NEURO_REHAB_PROGRAM_ID);
 }
 
-async function countProgramEvents(
+type ExistingProgramOccurrences = {
+  count: number;
+  keys: Set<string>;
+};
+
+/**
+ * Load the identity of every program row already stored for this user. Used to
+ * additively top up missing occurrences without ever deleting (or touching) the
+ * rows the user has completed or annotated.
+ */
+async function fetchExistingProgramOccurrences(
   admin: NonNullable<ReturnType<typeof createAdminClient>>,
   userId: string,
-): Promise<number> {
-  const { count, error } = await admin
-    .from("rehab_plan_events")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("program_id", NEURO_REHAB_PROGRAM_ID);
+): Promise<ExistingProgramOccurrences> {
+  const { data, error } = await withoutSoftDeleted(
+    admin
+      .from("rehab_plan_events")
+      .select("event_kind, start_at")
+      .eq("user_id", userId)
+      .eq("program_id", NEURO_REHAB_PROGRAM_ID),
+  );
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return count ?? 0;
+  const keys = new Set<string>();
+  for (const row of data ?? []) {
+    keys.add(occurrenceKey(row.event_kind, row.start_at));
+  }
+
+  return { count: data?.length ?? 0, keys };
+}
+
+/**
+ * Insert only the generated program occurrences that are not already stored.
+ * Existing rows (including the user's completions, notes, and recordings) are
+ * left completely untouched. Returns the number of rows inserted.
+ */
+async function insertMissingProgramEvents(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string,
+  existingKeys: Set<string>,
+): Promise<number> {
+  const missing = generateNeuroRehabProgramEvents(userId).filter(
+    (event) => !existingKeys.has(occurrenceKey(event.event_kind, event.start_at)),
+  );
+
+  let inserted = 0;
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    const batch = missing.slice(i, i + BATCH_SIZE);
+    const { error } = await admin.from("rehab_plan_events").insert(batch);
+    if (error) {
+      throw new Error(error.message);
+    }
+    inserted += batch.length;
+  }
+
+  return inserted;
 }
 
 async function repairGeneratedGymEventDescriptions(
@@ -88,7 +139,8 @@ async function repairGeneratedGymEventDescriptions(
     .select("id, start_at, event_kind, description")
     .eq("user_id", userId)
     .eq("program_id", NEURO_REHAB_PROGRAM_ID)
-    .in("event_kind", [...GYM_EVENT_KINDS]);
+    .in("event_kind", [...GYM_EVENT_KINDS])
+    .is("deleted_at", null);
 
   if (error) {
     throw new Error(error.message);
@@ -133,29 +185,28 @@ export async function materializeNeuroRehabProgramForUser(
     return { ok: false, message: "Server admin client not configured." };
   }
 
-  let count = await countProgramEvents(admin, userId);
-  let reset = false;
+  const existing = await fetchExistingProgramOccurrences(admin, userId);
 
-  if (count === EXPECTED_NEURO_REHAB_EVENT_COUNT) {
+  // Already seeded: NEVER wipe. Additively top up only genuinely missing
+  // occurrences so the user's completions, notes, and recordings are preserved
+  // as a permanent per-day history. (Previously this branch deleted and
+  // re-seeded the whole program whenever the expected count changed — e.g.
+  // after a release that altered the program — destroying all filled-in data.)
+  if (existing.count > 0) {
+    const inserted = await insertMissingProgramEvents(
+      admin,
+      userId,
+      existing.keys,
+    );
     await repairGeneratedGymEventDescriptions(admin, userId);
-    return { ok: true, inserted: 0, skipped: true };
+    return { ok: true, inserted, skipped: inserted === 0 };
   }
 
-  if (count !== 0) {
-    await deleteAllProgramEventsForUser(userId);
-    await releaseMaterializationLock(admin, userId);
-    reset = true;
-    count = 0;
-  }
-
+  // First-time seed: claim a lock so concurrent loads don't double-insert.
   const lock = await claimMaterializationLock(admin, userId);
   if (lock.status === "held") {
-    const currentCount = await countProgramEvents(admin, userId);
-    if (currentCount === EXPECTED_NEURO_REHAB_EVENT_COUNT) {
-      await repairGeneratedGymEventDescriptions(admin, userId);
-      return { ok: true, inserted: 0, skipped: true, reset };
-    }
-    return { ok: true, inserted: 0, skipped: true, reset };
+    // Another request is already seeding this user; let it finish.
+    return { ok: true, inserted: 0, skipped: true };
   }
 
   const rows = generateNeuroRehabProgramEvents(userId);
@@ -172,6 +223,8 @@ export async function materializeNeuroRehabProgramForUser(
       inserted += batch.length;
     }
   } catch (err) {
+    // Safe to clean up: the program table was empty for this user before we
+    // started this first-time seed, so nothing user-authored can be lost here.
     await deleteAllProgramEventsForUser(userId);
     if (lock.status === "claimed") {
       await releaseMaterializationLock(admin, userId);
@@ -182,7 +235,7 @@ export async function materializeNeuroRehabProgramForUser(
     };
   }
 
-  return { ok: true, inserted, skipped: false, reset };
+  return { ok: true, inserted, skipped: false };
 }
 
 /** Wipe and re-seed the full 12-week program for one user. */

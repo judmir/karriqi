@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, ChevronDown, List } from "lucide-react";
+import { CalendarDays, ChevronDown, History, List } from "lucide-react";
 import Link from "next/link";
 import { endOfDay, format, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -35,7 +35,7 @@ import {
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import {
   getStoicResponseData,
-  isStoicEvent,
+  isStoicDialogEvent,
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
@@ -170,7 +170,7 @@ export function RehabTodayView() {
       setJournalOpen(true);
       return;
     }
-    if (isStoicEvent(event)) {
+    if (isStoicDialogEvent(event)) {
       setStoicEvent(event);
       setStoicOpen(true);
       return;
@@ -203,6 +203,14 @@ export function RehabTodayView() {
   return (
     <div className="flex w-full flex-col gap-6 px-4 pb-8 md:px-6">
       <div className="flex items-center justify-end gap-1">
+        <Link
+          href={ROUTES.rehabHistory}
+          prefetch={false}
+          aria-label="Open history"
+          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+        >
+          <History className="size-4" />
+        </Link>
         <Link
           href={ROUTES.rehabPlan}
           prefetch={false}
@@ -416,7 +424,7 @@ function RehabTodayItemRow({
   const myNotes = parseEventDescription(event.description).myNotes.trim();
   const hasDescription = Boolean(descriptionText);
   const hasDetails = hasDescription || Boolean(myNotes);
-  const stoicResponse = isStoicEvent(event)
+  const stoicResponse = isStoicDialogEvent(event)
     ? summarizeStoicResponse(getStoicResponseData(event.description))
     : "";
 

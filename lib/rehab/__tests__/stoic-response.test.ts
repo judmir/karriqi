@@ -5,6 +5,7 @@ import {
   collectStoicResponseHistory,
   getStoicResponseData,
   hasStoicResponse,
+  isStoicDialogEvent,
   isStoicEvent,
   parseStoicResponse,
   serializeStoicResponse,
@@ -99,6 +100,21 @@ describe("stoic-response serialization", () => {
   it("treats only the stoic kind as a stoic event", () => {
     expect(isStoicEvent({ eventKind: "stoic" })).toBe(true);
     expect(isStoicEvent({ eventKind: "journal" })).toBe(false);
+  });
+
+  it("opens the structured dialog only for the weekly review", () => {
+    expect(
+      isStoicDialogEvent({
+        eventKind: "stoic",
+        title: "Stoic intention",
+      }),
+    ).toBe(false);
+    expect(
+      isStoicDialogEvent({
+        eventKind: "stoic",
+        title: "Stoic weekly review",
+      }),
+    ).toBe(true);
   });
 });
 

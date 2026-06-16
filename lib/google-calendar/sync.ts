@@ -27,6 +27,7 @@ import {
   rowUpdatedMs,
   type KarriqiEventRow,
 } from "@/lib/google-calendar/map-events";
+import { softDeleteByIds, withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { isCalendarReadOnly } from "@/lib/calendar/calendar-readonly";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -41,14 +42,11 @@ const DB_WRITE_CHUNK = 100;
 type GoogleEventInsert = Omit<KarriqiEventRow, "id" | "created_at" | "updated_at">;
 type GoogleEventUpdate = GoogleEventInsert & { id: string };
 
-async function chunkedDeleteByIds(
+async function chunkedSoftDeleteByIds(
   admin: NonNullable<ReturnType<typeof createAdminClient>>,
   ids: string[],
 ): Promise<void> {
-  for (let i = 0; i < ids.length; i += DB_WRITE_CHUNK) {
-    const chunk = ids.slice(i, i + DB_WRITE_CHUNK);
-    await admin.from("calendar_events").delete().in("id", chunk);
-  }
+  await softDeleteByIds(admin, "calendar_events", ids, DB_WRITE_CHUNK);
 }
 
 async function chunkedInsertEvents(
@@ -93,12 +91,14 @@ async function fetchLocalEvents(userId: string): Promise<KarriqiEventRow[]> {
     return [];
   }
 
-  const { data } = await admin
-    .from("calendar_events")
-    .select(
-      "id, user_id, title, description, start_at, end_at, all_day, color, google_event_id, google_calendar_id, google_etag, source, created_at, updated_at",
-    )
-    .eq("user_id", userId);
+  const { data } = await withoutSoftDeleted(
+    admin
+      .from("calendar_events")
+      .select(
+        "id, user_id, title, description, start_at, end_at, all_day, color, google_event_id, google_calendar_id, google_etag, source, created_at, updated_at",
+      )
+      .eq("user_id", userId),
+  );
 
   return (data ?? []) as KarriqiEventRow[];
 }
@@ -165,7 +165,7 @@ async function upsertFromGoogle(input: {
   }
 
   if (deleteIds.length > 0) {
-    await chunkedDeleteByIds(admin, deleteIds);
+    await chunkedSoftDeleteByIds(admin, deleteIds);
     deleted = deleteIds.length;
   }
 
@@ -357,14 +357,15 @@ export async function pushCalendarEventToGoogle(input: {
     return;
   }
 
-  const { data: row } = await admin
-    .from("calendar_events")
-    .select(
-      "id, user_id, title, description, start_at, end_at, all_day, color, google_event_id, google_calendar_id, google_etag, source, created_at, updated_at",
-    )
-    .eq("id", input.eventId)
-    .eq("user_id", input.userId)
-    .maybeSingle();
+  const { data: row } = await withoutSoftDeleted(
+    admin
+      .from("calendar_events")
+      .select(
+        "id, user_id, title, description, start_at, end_at, all_day, color, google_event_id, google_calendar_id, google_etag, source, created_at, updated_at",
+      )
+      .eq("id", input.eventId)
+      .eq("user_id", input.userId),
+  ).maybeSingle();
 
   if (!row) {
     return;

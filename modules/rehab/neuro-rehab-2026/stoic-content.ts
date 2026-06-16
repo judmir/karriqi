@@ -1,3 +1,6 @@
+export const STOIC_INTENTION_TITLE = "Stoic intention";
+export const STOIC_WEEKLY_REVIEW_TITLE = "Stoic weekly review";
+
 /**
  * Stoicism layer of the 12-week neuro-rehab program.
  *

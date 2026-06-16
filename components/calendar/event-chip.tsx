@@ -7,7 +7,11 @@ import {
 } from "@/lib/calendar/calendar-utils";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
-import { getRehabEventKind } from "@/lib/rehab/rehab-event-kind-visual";
+import {
+  getRehabEventKind,
+  getRehabEventStatus,
+  rehabEventStatusSurfaceClass,
+} from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -27,6 +31,8 @@ export function EventChip({
   const { appearanceForEvent } = useCalendarSources();
   const appearance = appearanceForEvent(event);
   const rehabKind = getRehabEventKind(event);
+  const status = getRehabEventStatus(event, past);
+  const statusSurface = rehabEventStatusSurfaceClass(status);
 
   return (
     <button
@@ -36,16 +42,15 @@ export function EventChip({
         onClick?.();
       }}
       className={cn(
-        "w-full cursor-pointer truncate rounded-md text-left text-xs text-white transition-opacity",
+        "w-full cursor-pointer truncate rounded-md text-left text-xs transition-opacity",
         event.allDay ? "border px-1.5" : "flex items-center gap-1.5 px-0",
         event.allDay && rehabKind && "flex items-center gap-1.5",
         compact ? "py-0.5" : "py-1",
-        appearance.className,
-        eventPastClass(event),
+        statusSurface ?? cn("text-white", appearance.className, eventPastClass(event)),
         !past && "hover:opacity-90",
         className,
       )}
-      style={appearance.style}
+      style={statusSurface ? undefined : appearance.style}
     >
       {rehabKind ? (
         <RehabEventKindIcon event={event} size="sm" className="shrink-0" />

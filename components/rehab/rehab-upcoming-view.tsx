@@ -1,12 +1,22 @@
 "use client";
 
-import { addDays, endOfDay, startOfDay } from "date-fns";
-import { ChevronDown, Search, X } from "lucide-react";
+import { addDays, endOfDay, isSameDay, startOfDay } from "date-fns";
+import { ChevronDown, History, Search, X } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { CalendarClient } from "@/components/calendar/calendar-client";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
+import { buttonVariants } from "@/components/ui/button";
+import { ROUTES } from "@/config/routes";
 import { RehabEventSubtaskChecklist } from "@/components/rehab/rehab-event-subtask-checklist";
 import { RehabInlineAddTask } from "@/components/rehab/rehab-inline-add-task";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
@@ -39,7 +49,8 @@ import {
 } from "@/lib/rehab/rehab-upcoming-utils";
 import { rehabEventTimeLabel } from "@/lib/rehab/rehab-today-utils";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
-import { isStoicEvent } from "@/lib/rehab/stoic-response";
+import { isStoicDialogEvent } from "@/lib/rehab/stoic-response";
+import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
@@ -77,7 +88,9 @@ export function RehabUpcomingView() {
   const [stoicEvent, setStoicEvent] = useState<RehabPlanEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
-  const [overdueCollapsed, setOverdueCollapsed] = useState(true);
+  const [expandedPastDays, setExpandedPastDays] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [visibleDays, setVisibleDays] = useState(UPCOMING_INITIAL_DAYS);
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,10 +98,10 @@ export function RehabUpcomingView() {
   const trimmedSearch = searchQuery.trim();
   const searchActive = trimmedSearch.length > 0;
 
-  /** Expand recurring masters across the overdue + forward (program) window. */
+  /** Expand recurring masters across the full past-program + forward window. */
   const expandedEvents = useMemo(() => {
     const now = new Date();
-    const windowStart = startOfDay(addDays(now, -14));
+    const windowStart = startOfDay(addDays(PROGRAM_START, -1));
     const windowEnd = endOfDay(
       addDays(startOfDay(now), maxUpcomingDaysFrom(now)),
     );
@@ -106,6 +119,37 @@ export function RehabUpcomingView() {
   );
 
   const canShowMore = hasMoreUpcomingDays(visibleDays);
+
+  const todayBlockRef = useRef<HTMLElement | null>(null);
+  const scrolledToTodayRef = useRef(false);
+
+  const togglePastDay = useCallback((key: string) => {
+    setExpandedPastDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  /** Anchor the initial scroll on today; past days sit above (scroll up). */
+  useEffect(() => {
+    if (scrolledToTodayRef.current) {
+      return;
+    }
+    if (view !== "list" || searchActive) {
+      return;
+    }
+    const el = todayBlockRef.current;
+    if (!el) {
+      return;
+    }
+    el.scrollIntoView({ block: "start" });
+    scrolledToTodayRef.current = true;
+  }, [view, searchActive, sections]);
 
   useEffect(() => {
     if (calendarMounted) {
@@ -132,7 +176,7 @@ export function RehabUpcomingView() {
       setJournalOpen(true);
       return;
     }
-    if (isStoicEvent(event)) {
+    if (isStoicDialogEvent(event)) {
       setStoicEvent(event);
       setStoicOpen(true);
       return;
@@ -190,10 +234,20 @@ export function RehabUpcomingView() {
       <div className="border-border shrink-0 space-y-3 border-b px-4 py-3 md:px-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-semibold tracking-tight">Upcoming</h1>
-          <RehabUpcomingViewSwitcher
-            view={view}
-            onViewChange={handleViewChange}
-          />
+          <div className="flex items-center gap-1">
+            <Link
+              href={ROUTES.rehabHistory}
+              prefetch={false}
+              aria-label="Open history"
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+              <History className="size-4" />
+            </Link>
+            <RehabUpcomingViewSwitcher
+              view={view}
+              onViewChange={handleViewChange}
+            />
+          </div>
         </div>
 
         <div className="relative min-w-0">
@@ -259,21 +313,28 @@ export function RehabUpcomingView() {
             )}
             aria-hidden={view !== "list"}
           >
-            {sections.map((section) => (
-              <UpcomingSectionBlock
-                key={sectionKey(section)}
-                section={section}
-                overdueCollapsed={overdueCollapsed}
-                onToggleOverdue={() => setOverdueCollapsed((value) => !value)}
-                onToggleCompleted={handleToggleCompleted}
-                onUpdateSubtasks={handleUpdateSubtasks}
-                onToggleAllSubtasks={handleToggleAllSubtasks}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-                activeAddId={activeAddId}
-                onActivateAdd={setActiveAddId}
-              />
-            ))}
+            {sections.map((section) => {
+              const key = sectionKey(section);
+              const isToday =
+                !section.isPast &&
+                isSameDay(section.date, startOfDay(new Date()));
+              return (
+                <UpcomingSectionBlock
+                  key={key}
+                  ref={isToday ? todayBlockRef : undefined}
+                  section={section}
+                  expanded={!section.isPast || expandedPastDays.has(key)}
+                  onTogglePast={() => togglePastDay(key)}
+                  onToggleCompleted={handleToggleCompleted}
+                  onUpdateSubtasks={handleUpdateSubtasks}
+                  onToggleAllSubtasks={handleToggleAllSubtasks}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  activeAddId={activeAddId}
+                  onActivateAdd={setActiveAddId}
+                />
+              );
+            })}
 
             {!canShowMore ? null : (
               <div className="border-border border-t py-4">
@@ -325,66 +386,90 @@ export function RehabUpcomingView() {
 }
 
 function sectionKey(section: UpcomingListSection): string {
-  if (section.kind === "overdue") {
-    return "overdue";
-  }
   return `day-${section.date.toISOString()}`;
 }
 
-function UpcomingSectionBlock({
-  section,
-  overdueCollapsed,
-  onToggleOverdue,
-  onToggleCompleted,
-  onUpdateSubtasks,
-  onToggleAllSubtasks,
-  onEdit,
-  onDelete,
-  activeAddId,
-  onActivateAdd,
-}: {
-  section: UpcomingListSection;
-  overdueCollapsed: boolean;
-  onToggleOverdue: () => void;
-  onToggleCompleted: (event: RehabPlanEvent, completed: boolean) => void;
-  onUpdateSubtasks: (event: RehabPlanEvent, subtasks: EventSubtask[]) => void;
-  onToggleAllSubtasks: (
-    event: RehabPlanEvent,
-    subtasks: EventSubtask[],
-    completed: boolean,
-  ) => void;
-  onEdit: (event: RehabPlanEvent) => void;
-  onDelete: (event: RehabPlanEvent) => void | Promise<void>;
-  activeAddId: string | null;
-  onActivateAdd: (id: string | null) => void;
-}) {
-  if (section.kind === "overdue") {
+/** An event on a past day that was never completed counts as "missed". */
+function isEventMissed(event: RehabPlanEvent): boolean {
+  const { subtasks } = resolveEventSubtasks(event);
+  const completed =
+    subtasks.length > 0
+      ? allEventSubtasksDone(subtasks)
+      : Boolean(event.completedAt);
+  return !completed;
+}
+
+const UpcomingSectionBlock = forwardRef<
+  HTMLElement,
+  {
+    section: UpcomingListSection;
+    expanded: boolean;
+    onTogglePast: () => void;
+    onToggleCompleted: (event: RehabPlanEvent, completed: boolean) => void;
+    onUpdateSubtasks: (event: RehabPlanEvent, subtasks: EventSubtask[]) => void;
+    onToggleAllSubtasks: (
+      event: RehabPlanEvent,
+      subtasks: EventSubtask[],
+      completed: boolean,
+    ) => void;
+    onEdit: (event: RehabPlanEvent) => void;
+    onDelete: (event: RehabPlanEvent) => void | Promise<void>;
+    activeAddId: string | null;
+    onActivateAdd: (id: string | null) => void;
+  }
+>(function UpcomingSectionBlock(
+  {
+    section,
+    expanded,
+    onTogglePast,
+    onToggleCompleted,
+    onUpdateSubtasks,
+    onToggleAllSubtasks,
+    onEdit,
+    onDelete,
+    activeAddId,
+    onActivateAdd,
+  },
+  ref,
+) {
+  if (section.isPast) {
+    const missedCount = section.events.filter(isEventMissed).length;
     return (
-      <section className="border-border border-t first:border-t-0">
+      <section ref={ref} className="border-border border-t first:border-t-0">
         <button
           type="button"
-          onClick={onToggleOverdue}
-          className="text-foreground flex w-full items-center justify-between py-4 text-left text-sm font-medium"
+          onClick={onTogglePast}
+          className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between py-4 text-left text-sm font-medium transition-colors"
         >
-          <span>Overdue</span>
+          <span className="flex items-center gap-2">
+            {section.label}
+            {missedCount > 0 ? (
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                {missedCount} missed
+              </span>
+            ) : null}
+          </span>
           <ChevronDown
             className={cn(
-              "text-muted-foreground size-4 shrink-0 transition-transform",
-              overdueCollapsed && "-rotate-90",
+              "size-4 shrink-0 transition-transform",
+              !expanded && "-rotate-90",
             )}
             aria-hidden
           />
         </button>
-        {!overdueCollapsed ? (
-          <UpcomingEventList
-            events={section.events}
-            onToggleCompleted={onToggleCompleted}
-            onUpdateSubtasks={onUpdateSubtasks}
-            onToggleAllSubtasks={onToggleAllSubtasks}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            showAdd={false}
-          />
+        {expanded ? (
+          <div className="bg-muted/40 mb-3 rounded-lg p-2">
+            <UpcomingEventList
+              events={section.events}
+              isPast
+              onToggleCompleted={onToggleCompleted}
+              onUpdateSubtasks={onUpdateSubtasks}
+              onToggleAllSubtasks={onToggleAllSubtasks}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              showAdd={false}
+            />
+          </div>
         ) : null}
       </section>
     );
@@ -395,7 +480,7 @@ function UpcomingSectionBlock({
   const addId = `upcoming-${section.date.toISOString()}`;
 
   return (
-    <section className="border-border border-t first:border-t-0">
+    <section ref={ref} className="border-border border-t first:border-t-0">
       <div className="text-foreground py-4 text-sm font-medium">{label}</div>
       <UpcomingEventList
         events={section.events}
@@ -411,7 +496,7 @@ function UpcomingSectionBlock({
       />
     </section>
   );
-}
+});
 
 function UpcomingEventList({
   events,
@@ -425,6 +510,7 @@ function UpcomingEventList({
   onActivateAdd,
   defaultStart,
   showAdd = true,
+  isPast = false,
 }: {
   events: RehabPlanEvent[];
   onToggleCompleted: (event: RehabPlanEvent, completed: boolean) => void;
@@ -441,6 +527,7 @@ function UpcomingEventList({
   onActivateAdd?: (id: string | null) => void;
   defaultStart?: Date;
   showAdd?: boolean;
+  isPast?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1 pb-4">
@@ -448,6 +535,7 @@ function UpcomingEventList({
         <UpcomingEventRow
           key={event.id}
           event={event}
+          isPast={isPast}
           onToggleCompleted={(completed) => onToggleCompleted(event, completed)}
           onUpdateSubtasks={(subtasks) => onUpdateSubtasks(event, subtasks)}
           onToggleAllSubtasks={(subtasks, completed) =>
@@ -478,6 +566,7 @@ function UpcomingEventRow({
   onEdit,
   onDelete,
   scheduleLabel,
+  isPast = false,
 }: {
   event: RehabPlanEvent;
   onToggleCompleted: (completed: boolean) => void;
@@ -486,11 +575,13 @@ function UpcomingEventRow({
   onEdit: () => void;
   onDelete: () => void;
   scheduleLabel?: string;
+  isPast?: boolean;
 }) {
   const { subtasks } = resolveEventSubtasks(event);
   const hasSubtasks = subtasks.length > 0;
   const allSubtasksDone = hasSubtasks && allEventSubtasksDone(subtasks);
   const completed = hasSubtasks ? allSubtasksDone : Boolean(event.completedAt);
+  const missed = isPast && !completed;
   const timeLabel = scheduleLabel ?? rehabEventTimeLabel(event);
 
   function handleMainToggle(checked: boolean) {
@@ -530,15 +621,23 @@ function UpcomingEventRow({
             className={cn(
               "text-sm font-medium leading-snug",
               completed && "text-muted-foreground line-through",
+              missed && "text-muted-foreground",
             )}
           >
             {event.title}
           </p>
-          {timeLabel ? (
-            <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
-              {timeLabel}
-            </p>
-          ) : null}
+          <div className="mt-0.5 flex items-center gap-2">
+            {missed ? (
+              <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                Missed
+              </span>
+            ) : null}
+            {timeLabel ? (
+              <p className="text-muted-foreground text-xs tabular-nums">
+                {timeLabel}
+              </p>
+            ) : null}
+          </div>
         </button>
         <button
           type="button"

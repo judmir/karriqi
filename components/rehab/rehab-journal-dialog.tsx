@@ -198,6 +198,26 @@ function RehabJournalDialogBody({
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setRatings((prev) => {
+                      const next = { ...prev };
+                      delete next[field.key];
+                      return next;
+                    })
+                  }
+                  aria-pressed={!(field.key in ratings)}
+                  aria-label={`${field.label}: no score`}
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-md text-xs transition-colors",
+                    !(field.key in ratings)
+                      ? "bg-white font-semibold text-black"
+                      : "bg-white/8 text-white/65 hover:bg-white/15 hover:text-white",
+                  )}
+                >
+                  –
+                </button>
               </div>
             </div>
           ))}

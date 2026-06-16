@@ -18,13 +18,18 @@ import {
   eventPastClass,
   formatEventTime,
   HOUR_HEIGHT_PX,
+  isEventPast,
   timedEventStyle,
   VISIBLE_HOURS,
   weekDays,
 } from "@/lib/calendar/calendar-utils";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
-import { getRehabEventKind } from "@/lib/rehab/rehab-event-kind-visual";
+import {
+  getRehabEventKind,
+  getRehabEventStatus,
+  rehabEventStatusSurfaceClass,
+} from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -188,25 +193,28 @@ function TimeGrid({
             return null;
           }
 
-          const appearance = appearanceForEvent(event, "block");
+          const appearance = appearanceForEvent(event);
           const rehabKind = getRehabEventKind(event);
+          const past = isEventPast(event);
+          const status = getRehabEventStatus(event, past);
+          const statusSurface = rehabEventStatusSurfaceClass(status);
 
           return (
             <DraggableEventChip
               key={event.id}
               event={event}
-              style={{ ...style, ...appearance.style }}
+              style={style}
               className={cn(
-                "absolute inset-x-1 cursor-pointer overflow-hidden rounded-md border-0 px-1.5 py-0.5 text-left text-xs text-white",
-                appearance.className,
-                eventPastClass(event),
+                "absolute inset-x-1 cursor-pointer overflow-hidden rounded-md px-1.5 py-0.5 text-left text-xs",
+                statusSurface ??
+                  cn("bg-transparent text-foreground", eventPastClass(event)),
               )}
               onClick={() => onSelectEvent(event)}
             >
               <button
                 type="button"
                 onClick={() => onSelectEvent(event)}
-                className="flex h-full w-full cursor-pointer items-start gap-1.5 text-left text-white"
+                className="flex h-full w-full cursor-pointer items-start gap-1.5 text-left"
               >
                 {rehabKind ? (
                   <RehabEventKindIcon
@@ -214,10 +222,16 @@ function TimeGrid({
                     size="sm"
                     className="mt-0.5 shrink-0"
                   />
-                ) : null}
+                ) : (
+                  <span
+                    aria-hidden
+                    className="mt-1 size-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: appearance.accentColor }}
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{event.title}</div>
-                  <div className="truncate text-white/80">
+                  <div className="truncate opacity-70">
                     {formatEventTime(event)}
                   </div>
                 </div>

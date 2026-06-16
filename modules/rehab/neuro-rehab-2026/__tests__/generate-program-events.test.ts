@@ -36,9 +36,27 @@ describe("generateNeuroRehabProgramEvents", () => {
     expect(events.every((e) => e.user_id === userId)).toBe(true);
   });
 
-  it("includes gym A on Mondays across 12 weeks", () => {
+  it("includes gym A on Wednesdays across 12 weeks", () => {
     const gymA = events.filter((e) => e.event_kind === "gym_a");
     expect(gymA.length).toBe(12);
+    expect(gymA.every((e) => new Date(e.start_at).getDay() === 3)).toBe(true);
+  });
+
+  it("schedules gym on Wed/Sat/Sun and running on Mon/Tue/Thu/Fri", () => {
+    const gymKinds = new Set(["gym_a", "gym_b", "gym_c"]);
+    const gymDays = new Set(
+      events
+        .filter((e) => gymKinds.has(e.event_kind))
+        .map((e) => new Date(e.start_at).getDay()),
+    );
+    expect([...gymDays].sort()).toEqual([0, 3, 6]);
+
+    const runDays = new Set(
+      events
+        .filter((e) => e.event_kind === "run_walk")
+        .map((e) => new Date(e.start_at).getDay()),
+    );
+    expect([...runDays].sort()).toEqual([1, 2, 4, 5]);
   });
 
   it("stores gym exercises as checklist subtasks with reference links", () => {
@@ -65,16 +83,27 @@ describe("generateNeuroRehabProgramEvents", () => {
   });
 
   it("uses shorter gym sessions on retest weeks", () => {
-    const week4Monday = events.find(
+    const week4GymA = events.find(
       (e) =>
         e.event_kind === "gym_a" &&
         e.plan_week === 4 &&
-        new Date(e.start_at).getDay() === 1,
+        new Date(e.start_at).getDay() === 3,
     );
-    expect(week4Monday?.description).toContain("Deload");
-    const start = new Date(week4Monday!.start_at);
-    const end = new Date(week4Monday!.end_at);
+    expect(week4GymA?.description).toContain("Deload");
+    const start = new Date(week4GymA!.start_at);
+    const end = new Date(week4GymA!.end_at);
     expect((end.getTime() - start.getTime()) / 60000).toBe(36);
+  });
+
+  it("schedules Vitamin D at 8:30 each morning", () => {
+    const vitD = events.filter((e) => e.title === "Vitamin D (with breakfast)");
+    expect(vitD.length).toBeGreaterThan(80);
+    for (const event of vitD) {
+      expect(event.all_day).toBe(false);
+      const start = new Date(event.start_at);
+      expect(start.getHours()).toBe(8);
+      expect(start.getMinutes()).toBe(30);
+    }
   });
 
   it("delivers Stoicism as recurring masters, not one row per day", () => {
@@ -96,6 +125,11 @@ describe("generateNeuroRehabProgramEvents", () => {
       (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "daily",
     );
     expect(dailyMasters.length).toBe(6);
+    for (const event of dailyMasters) {
+      const start = new Date(event.start_at);
+      expect(start.getHours()).toBe(6);
+      expect(start.getMinutes()).toBe(0);
+    }
 
     const weeklyMasters = stoic.filter(
       (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "weekly",

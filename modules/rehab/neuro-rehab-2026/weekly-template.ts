@@ -17,12 +17,13 @@ export function weekdayTemplate(
   isRetest: boolean,
 ): WeekdayTemplate {
   // 0=Sun, 1=Mon, ... 6=Sat
+  // Gym: Wed, Sat, Sun (3×/week). Running: Mon, Tue, Thu, Fri.
   switch (dayOfWeek) {
     case 1:
       return {
-        mainKind: "gym_a",
-        mainTitle: isRetest ? "Gym A (deload)" : "Gym A — lower body + left leg",
-        mainDescription: "See Wiki: Gym Workouts — Gym A.",
+        mainKind: "run_walk",
+        mainTitle: "Run/walk",
+        mainDescription: "Easy run/walk session.",
         handMinutes: 10,
         includeSpeech: false,
         includeFootball: false,
@@ -40,9 +41,9 @@ export function weekdayTemplate(
       };
     case 3:
       return {
-        mainKind: "gym_b",
-        mainTitle: isRetest ? "Gym B (deload)" : "Gym B — upper body + core",
-        mainDescription: "See Wiki: Gym Workouts — Gym B.",
+        mainKind: "gym_a",
+        mainTitle: isRetest ? "Gym A (deload)" : "Gym A — lower body + left leg",
+        mainDescription: "See Wiki: Gym Workouts — Gym A.",
         handMinutes: 10,
         includeSpeech: false,
         includeFootball: false,
@@ -60,9 +61,9 @@ export function weekdayTemplate(
       };
     case 5:
       return {
-        mainKind: "gym_c",
-        mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
-        mainDescription: "See Wiki: Gym Workouts — Gym C.",
+        mainKind: "run_walk",
+        mainTitle: "Run/walk",
+        mainDescription: "Easy run/walk session.",
         handMinutes: 10,
         includeSpeech: false,
         includeFootball: false,
@@ -70,18 +71,23 @@ export function weekdayTemplate(
       };
     case 6:
       return {
-        mainKind: isRetest ? "recovery" : "gym_d",
-        mainTitle: isRetest
-          ? "Light recovery / mobility"
-          : "Gym D or football / coordination",
-        mainDescription: isRetest
-          ? "Optional light mobility only."
-          : "Optional Gym D, football coordination, or longer walk.",
+        mainKind: "gym_b",
+        mainTitle: isRetest ? "Gym B (deload)" : "Gym B — upper body + core",
+        mainDescription: "See Wiki: Gym Workouts — Gym B.",
         handMinutes: 10,
         includeSpeech: false,
-        includeFootball: !isRetest,
-        includeGymD: !isRetest,
-        skipMainOnRetest: false,
+        includeFootball: false,
+        includeGymD: false,
+      };
+    case 0:
+      return {
+        mainKind: "gym_c",
+        mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
+        mainDescription: "See Wiki: Gym Workouts — Gym C.",
+        handMinutes: 10,
+        includeSpeech: false,
+        includeFootball: false,
+        includeGymD: false,
       };
     default:
       return {
