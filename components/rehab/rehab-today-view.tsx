@@ -11,6 +11,7 @@ import {
   type RehabInlineTaskCreated,
 } from "@/components/rehab/rehab-inline-add-task";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import { RehabMarkdown } from "@/components/rehab/rehab-markdown";
 import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
@@ -466,11 +467,12 @@ function RehabTodayItemRow({
           <button type="button" onClick={onEdit} className="w-full text-left">
             <p
               className={cn(
-                "text-sm font-medium leading-snug",
+                "flex items-center gap-1.5 text-sm font-medium leading-snug",
                 completed && "text-muted-foreground line-through",
               )}
             >
-              {event.title}
+              <span className="min-w-0 truncate">{event.title}</span>
+              <RehabRecurringIcon event={event} />
             </p>
             {timeLabel ? (
               <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">

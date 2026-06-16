@@ -7,6 +7,7 @@ import {
 } from "@/lib/calendar/calendar-utils";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import {
   getRehabEventKind,
   getRehabEventStatus,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
+import type { RehabPlanEvent } from "@/types/rehab";
 
 export function EventChip({
   event,
@@ -62,6 +64,7 @@ export function EventChip({
         />
       ) : null}
       <span className="min-w-0 truncate">{label}</span>
+      <RehabRecurringIcon event={event as CalendarEvent & Partial<RehabPlanEvent>} className="shrink-0" />
     </button>
   );
 }

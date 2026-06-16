@@ -13,6 +13,7 @@ import {
 import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import {
   getRehabEventKind,
   getRehabEventStatus,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
+import type { RehabPlanEvent } from "@/types/rehab";
 
 export function CalendarAgendaView({
   date,
@@ -93,7 +95,12 @@ export function CalendarAgendaView({
                     />
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{event.title}</div>
+                    <div className="flex items-center gap-1.5 truncate font-medium">
+                      <span className="min-w-0 truncate">{event.title}</span>
+                      <RehabRecurringIcon
+                        event={event as CalendarEvent & Partial<RehabPlanEvent>}
+                      />
+                    </div>
                     <div className="text-sm opacity-70">
                       {formatEventTime(event)}
                     </div>

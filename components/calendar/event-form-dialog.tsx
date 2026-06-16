@@ -68,6 +68,7 @@ import {
 } from "@/lib/rehab/rehab-event-kind-visual";
 import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
 import { RehabEventKindPicker } from "@/components/rehab/rehab-event-kind-picker";
+import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabSpeechRecordingSection } from "@/components/rehab/rehab-speech-recording-section";
 import { allEventSubtasksDone } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
@@ -748,16 +749,29 @@ function EventFormDialogBody({
             }
           />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-            <input
-              id="event-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Task name"
-              autoFocus={!viewOnly && !isPage}
-              readOnly={viewOnly}
-              disabled={viewOnly}
-              className="w-full shrink-0 bg-transparent text-base font-semibold text-white outline-none placeholder:text-white/40 disabled:opacity-60"
-            />
+            <div className="flex shrink-0 items-center gap-2">
+              <input
+                id="event-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Task name"
+                autoFocus={!viewOnly && !isPage}
+                readOnly={viewOnly}
+                disabled={viewOnly}
+                className="min-w-0 flex-1 bg-transparent text-base font-semibold text-white outline-none placeholder:text-white/40 disabled:opacity-60"
+              />
+              {isRehab && (recurrence || isSeriesOccurrence) ? (
+                <RehabRecurringIcon
+                  event={{
+                    recurrence,
+                    seriesId: rehabEvent?.seriesId,
+                    recurrenceAt: rehabEvent?.recurrenceAt,
+                  }}
+                  size="md"
+                  variant="inverse"
+                />
+              ) : null}
+            </div>
             <textarea
               id="event-description"
               value={description}

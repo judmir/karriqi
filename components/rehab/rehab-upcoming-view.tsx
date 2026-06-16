@@ -20,6 +20,7 @@ import { ROUTES } from "@/config/routes";
 import { RehabEventSubtaskChecklist } from "@/components/rehab/rehab-event-subtask-checklist";
 import { RehabInlineAddTask } from "@/components/rehab/rehab-inline-add-task";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
+import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
 import {
@@ -690,12 +691,13 @@ function UpcomingEventRow({
         >
           <p
             className={cn(
-              "text-sm font-medium leading-snug",
+              "flex items-center gap-1.5 text-sm font-medium leading-snug",
               completed && "text-muted-foreground line-through",
               missed && "text-muted-foreground",
             )}
           >
-            {event.title}
+            <span className="min-w-0 truncate">{event.title}</span>
+            <RehabRecurringIcon event={event} />
           </p>
           <div className="mt-0.5 flex items-center gap-2">
             {missed ? (
