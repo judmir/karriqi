@@ -227,6 +227,8 @@ function mainSessionForDay(
   const template = weekdayTemplate(dayOfWeek, week, isRetest);
   const events: RehabPlanEventInsert[] = [];
 
+  // Sunday keeps its weekly review (and retest videos on retest weeks) but is
+  // now also a gym day, so it falls through to the main-session builder below.
   if (dayOfWeek === 0) {
     events.push(
       allDay(
@@ -237,20 +239,6 @@ function mainSessionForDay(
         WEEKLY_REVIEW_DESCRIPTION,
         "weekly_review",
         "purple",
-      ),
-    );
-    events.push(
-      timed(
-        userId,
-        day,
-        week,
-        10,
-        0,
-        45,
-        "Light mobility / recovery",
-        "Easy mobility only. No hard training.",
-        "recovery",
-        "green",
       ),
     );
     if (isRetest) {
@@ -269,7 +257,6 @@ function mainSessionForDay(
         ),
       );
     }
-    return events;
   }
 
   const { mainKind, mainTitle } = template;
@@ -464,8 +451,8 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
     events.push(...dailyNonNegotiables(userId, day, week, isFirstDay));
     events.push(...mainSessionForDay(userId, day, week, dayOfWeek, isRetest));
 
-    // Workout-day creatine reminder (Mon, Wed, Fri, Sat gym)
-    if ([1, 3, 5, 6].includes(dayOfWeek) && dayOfWeek !== 0) {
+    // Workout-day creatine reminder (Wed, Sat, Sun gym)
+    if ([0, 3, 6].includes(dayOfWeek)) {
       events.push(
         timed(
           userId,
@@ -488,9 +475,9 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
 
 export function countEventsByWeekday(events: RehabPlanEventInsert[]): Record<number, number> {
   const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+  const tracked: RehabEventKind[] = ["gym_a", "gym_b", "gym_c", "gym_d", "run_walk"];
   for (const event of events) {
-    if (event.event_kind === "gym_a") counts[1] = (counts[1] ?? 0) + 1;
-    if (event.event_kind === "run_walk") {
+    if (tracked.includes(event.event_kind)) {
       const d = new Date(event.start_at).getDay();
       counts[d] = (counts[d] ?? 0) + 1;
     }
