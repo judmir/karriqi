@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Download, Paperclip, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useInstantNavigate } from "@/hooks/use-instant-navigate";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -152,7 +152,7 @@ export function TodoTaskView({
   assignableUsers: TodoAssignableMember[];
   existingTags: TodoTag[];
 }) {
-  const router = useRouter();
+  const navigate = useInstantNavigate();
 
   const [title, setTitle] = useState(initialItem.title);
   const [category, setCategory] = useState(initialItem.category ?? "");
@@ -286,7 +286,7 @@ export function TodoTaskView({
     }
 
     if (!hasPendingChanges) {
-      router.push(ROUTES.todo);
+      navigate(ROUTES.todo);
       return;
     }
 
@@ -321,7 +321,7 @@ export function TodoTaskView({
       assignedUserId,
     });
     toast.success("Task saved.");
-    router.push(ROUTES.todo);
+    navigate(ROUTES.todo);
   }
 
   async function onAddComment() {
@@ -566,7 +566,7 @@ export function TodoTaskView({
       return;
     }
     removeBoardItemFromStore();
-    router.push(ROUTES.todo);
+    navigate(ROUTES.todo);
   }
 
   return (
