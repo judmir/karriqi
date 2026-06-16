@@ -47,6 +47,7 @@ export function RehabJournalDialog({
   onSaved,
 }: RehabJournalDialogProps) {
   const closeRequestRef = useRef<(() => void | Promise<void>) | null>(null);
+  const skipCloseSaveRef = useRef(false);
 
   return (
     <Dialog
@@ -56,6 +57,11 @@ export function RehabJournalDialog({
           onOpenChange(true);
           return;
         }
+        if (skipCloseSaveRef.current) {
+          skipCloseSaveRef.current = false;
+          onOpenChange(false);
+          return;
+        }
         void closeRequestRef.current?.();
       }}
     >
@@ -63,6 +69,7 @@ export function RehabJournalDialog({
         <RehabJournalDialogBody
           key={event.id}
           closeRequestRef={closeRequestRef}
+          skipCloseSaveRef={skipCloseSaveRef}
           event={event}
           persistence={persistence}
           variant={variant}
@@ -76,6 +83,7 @@ export function RehabJournalDialog({
 
 function RehabJournalDialogBody({
   closeRequestRef,
+  skipCloseSaveRef,
   event,
   persistence,
   variant = "rehab",
@@ -83,6 +91,7 @@ function RehabJournalDialogBody({
   onSaved,
 }: {
   closeRequestRef: React.MutableRefObject<(() => void | Promise<void>) | null>;
+  skipCloseSaveRef: React.MutableRefObject<boolean>;
   event: CalendarEvent;
   persistence: boolean;
   variant?: CalendarClientVariant;
@@ -97,7 +106,7 @@ function RehabJournalDialogBody({
     initial.rehabDone,
   );
   const [notes, setNotes] = useState(() => normalizeJournalNotes(initial.notes));
-  const [pending, setPending] = useState(false);
+  const savingRef = useRef(false);
 
   const dateLabel = format(new Date(event.startAt), "yyyy-MM-dd");
 
@@ -113,32 +122,42 @@ function RehabJournalDialogBody({
     });
   }
 
+  function closeAfterSave() {
+    skipCloseSaveRef.current = true;
+    onOpenChange(false);
+  }
+
   async function handleSave() {
-    if (pending) {
+    if (savingRef.current) {
       return;
     }
+    savingRef.current = true;
+
     const description = serializeJournalDescription({ ratings, rehabDone, notes });
     const updatedAt = new Date().toISOString();
+    const updatedEvent = { ...event, description, updatedAt };
 
     if (!persistence) {
-      onSaved({ ...event, description, updatedAt });
-      onOpenChange(false);
+      onSaved(updatedEvent);
+      closeAfterSave();
       toast.success("Journal saved.");
+      savingRef.current = false;
       return;
     }
 
-    setPending(true);
+    // Store-backed rehab updates apply optimistically; sync Supabase in background.
+    const persistPromise = actions.update({ id: event.id, description });
+    onSaved(updatedEvent);
+    closeAfterSave();
+    toast.success("Journal saved.");
+
     try {
-      const result = await actions.update({ id: event.id, description });
+      const result = await persistPromise;
       if (!result.ok) {
         toast.error(result.message);
-        return;
       }
-      onSaved({ ...event, description, updatedAt });
-      toast.success("Journal saved.");
-      onOpenChange(false);
     } finally {
-      setPending(false);
+      savingRef.current = false;
     }
   }
 
@@ -268,10 +287,9 @@ function RehabJournalDialogBody({
         <button
           type="button"
           onClick={() => void handleSave()}
-          disabled={pending}
-          className="rounded-lg bg-white/10 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/15 disabled:opacity-50"
+          className="rounded-lg bg-white/10 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/15"
         >
-          {pending ? "Saving…" : "Save"}
+          Save
         </button>
       </div>
     </DialogContent>

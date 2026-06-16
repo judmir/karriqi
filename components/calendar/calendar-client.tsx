@@ -447,7 +447,10 @@ export function CalendarClient({
             event={journalEvent}
             persistence={persistence}
             variant={variant}
-            onSaved={() => setJournalOpen(false)}
+            onSaved={(event) => {
+              handleSaved(event);
+              setJournalOpen(false);
+            }}
           />
         </div>
       </CalendarDndProvider>
