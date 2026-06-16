@@ -4,6 +4,7 @@ import {
   Calendar,
   CalendarDays,
   Code2,
+  History,
   LayoutDashboard,
   List,
   ShoppingCart,
@@ -36,6 +37,12 @@ export const rehabNavItems: MainNavItem[] = [
     label: "Upcoming",
     shortLabel: "Upcoming",
     icon: List,
+  },
+  {
+    href: ROUTES.rehabHistory,
+    label: "History",
+    shortLabel: "History",
+    icon: History,
   },
   {
     href: ROUTES.rehabClinical,

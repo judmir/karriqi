@@ -1,8 +1,8 @@
 # READ THIS FIRST
 
-## ⛔ Worktree dev server — BLOCKING, FIRST TOOL CALL
+## Worktree dev server (automated via hooks)
 
-If the workspace path contains `/.cursor/worktrees/`, your **very first tool call** must be `pnpm worktree:dev` (background). Wait for `Ready` / `Local: http://localhost:<PORT>`, then open your first reply with `Worktree preview: http://localhost:<PORT>`. Do this BEFORE any Read / Grep / Glob / Edit / Write. See `.cursor/rules/worktree-dev-server.mdc`.
+In `/.cursor/worktrees/` checkouts, **`.cursor/hooks.json` auto-starts** the dev server on `sessionStart` and gates other tools until it is listening. Your first reply must still include **`Worktree preview: http://localhost:<PORT>`** (from injected context or `.worktree-dev-port`). Manual fallback: `pnpm worktree:dev` — see `.cursor/rules/worktree-dev-server.mdc`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 ## This is NOT the Next.js you know

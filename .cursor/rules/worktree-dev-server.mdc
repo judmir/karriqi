@@ -1,73 +1,62 @@
 ---
-description: BLOCKING in .cursor/worktrees — pnpm worktree:dev is your FIRST tool call, before any Read/Grep/Edit. Preview URL in first reply.
+description: BLOCKING in .cursor/worktrees — hooks auto-start dev server; agent includes preview URL in first reply.
 alwaysApply: true
 ---
 
 # Worktree local dev server
 
-## ⛔ BLOCKING gate — DO THIS BEFORE ANY OTHER TOOL CALL
+## Automation (primary — do not rely on agent memory)
 
-**If the workspace path contains `/.cursor/worktrees/`**, your **very first tool call in the conversation** must be `pnpm worktree:dev`. Not after a Read. Not after a Grep. Not after "let me explore the codebase first". FIRST.
+**Cursor hooks in `.cursor/hooks.json` handle worktree dev for you:**
 
-Concretely, before any of: `Read`, `Write`, `Grep`, `Glob`, `pnpm test`, file edits, or even reconnaissance shell commands — you MUST:
+| Hook | What it does |
+|------|----------------|
+| `sessionStart` | Runs `scripts/worktree-dev-ensure-background.sh`, starts Next.js if needed, injects `Worktree preview: http://localhost:<PORT>` into agent context |
+| `preToolUse` | Blocks Read/Grep/Write/Task/etc. until the dev server is listening (Shell still allowed for `pnpm worktree:dev`) |
 
-1. Run **`pnpm worktree:dev`** in the **background** from the worktree root (or `bash scripts/worktree-dev.sh` — same thing). Set `block_until_ms: 0` and poll with `AwaitShell` using a regex like `Ready|Local:\s+http://localhost`.
-2. Wait until output shows **Ready** or `Local: http://localhost:<PORT>`.
-3. In your **first reply** to the user, include a line starting with **`Worktree preview:`** and the URL (plus LAN if shown). Note that the primary checkout stays on **http://karriqi.test**.
+**You do not need the agent to remember to run `pnpm worktree:dev` first** — the hook starts the server when a composer session opens in a worktree. The agent must still **tell the user** the preview URL in its first reply (read from `WORKTREE_PREVIEW_URL` env or `.worktree-dev-port`).
 
-**Do not skip** because the prime checkout already has a server — each worktree needs its **own** port.
-
-If you already did feature work without this (including a prior turn in the same chat): **stop**, run setup **now**, apologize once, and give the URL. Then continue the user's actual task.
-
-### Self-check before your first tool call
-Ask yourself: "Is my workspace path under `/.cursor/worktrees/`?" If yes and your first planned tool is NOT `pnpm worktree:dev`, change your plan.
-
-**Detection:** `user_info` workspace path, or `pwd` / `git worktree list` showing a path under `.cursor/worktrees/`.
-
-Do this **after** `move_agent_to_root` and `SetActiveBranch` succeed (when applicable).
+If hooks are disabled or auto-start fails, the fallback below applies.
 
 ---
 
-## One command (preferred)
+## Agent fallback (only when hooks fail)
+
+**If the workspace path contains `/.cursor/worktrees/`** and `WORKTREE_DEV_READY` is not `1` / no server is listening:
+
+1. First tool call: `pnpm worktree:dev` (background, `block_until_ms: 0`), poll until **Ready**
+2. First reply must include **`Worktree preview: http://localhost:<PORT>`**
+
+---
+
+## One command
 
 ```bash
 pnpm worktree:dev
 ```
 
+Idempotent ensure (hooks use this internally):
+
+```bash
+pnpm worktree:dev:ensure
+```
+
 `scripts/worktree-dev.sh` will:
 
-1. Bootstrap **`.env.local`** via `scripts/worktree-env-bootstrap.sh` — copy from another worktree or the prime checkout when possible, otherwise from `.env.example`, and generate **`AUTH_PIN_PEPPER`** (`openssl rand -hex 32`) when missing (see `worktree-env-bootstrap.mdc`)
+1. Bootstrap **`.env.local`** via `scripts/worktree-env-bootstrap.sh`
 2. Run `pnpm install` if `node_modules` is missing
-3. **If this branch has schema/migration changes vs `origin/main`** (see `worktree-supabase-local.mdc`): **`ensure` local Supabase** (Docker), verify tables, reset if needed, patch `.env.local` for local keys
-4. **Link cloud Supabase** (idempotent, non-interactive): `scripts/worktree-supabase-link.sh` using `supabase/cloud-project-ref`
+3. **If schema/migrations differ from `origin/main`**: ensure local Supabase (Docker)
+4. **Link cloud Supabase**: `scripts/worktree-supabase-link.sh`
 5. Pick the first free port in **3010–3019**
 6. Start `ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>`
-7. Write the port to `.worktree-dev-port` for reference
-
-Run it **in the background**; poll terminal output until **Ready**.
+7. Write the port to `.worktree-dev-port`
 
 ---
 
-## Manual steps (only if the script fails)
-
-1. **Environment** — run `bash scripts/worktree-env-bootstrap.sh` (creates `.env.local` + `AUTH_PIN_PEPPER`); see `worktree-env-bootstrap.mdc`.
-2. **Dependencies** — `pnpm install` if `node_modules` is missing.
-3. **Port** — first free in 3010–3019 (`lsof -i :3010`, then 3011, …).
-4. **Start server** — background:
-
-   ```bash
-   ENABLE_PWA_IN_DEV=0 pnpm exec next dev --turbopack --port <PORT>
-   ```
-
----
-
-## Tell the user (required)
-
-In the first reply after worktree setup:
+## Tell the user (required in first agent reply)
 
 - **Worktree preview:** `http://localhost:<PORT>`
-- **LAN URL** if Next.js prints one (optional)
-- Primary checkout: **http://karriqi.test** (this worktree: `http://localhost:<PORT>`)
+- Primary checkout: **http://karriqi.test**
 
 Example: **Worktree preview:** http://localhost:3012 — primary checkout stays on http://karriqi.test.
 
@@ -75,29 +64,26 @@ Example: **Worktree preview:** http://localhost:3012 — primary checkout stays 
 
 ## Do not
 
-- Assume the user will run `pnpm dev` themselves unless they ask to take over.
-- Reuse a port already in use on another checkout.
-- Edit files outside the active worktree unless the user asks.
+- Skip mentioning the preview URL because the prime checkout already has a server
+- Reuse a port already in use on another checkout
+- Edit files outside the active worktree unless the user asks
+
+---
+
+## Troubleshooting hooks
+
+1. **Cursor Settings → Hooks** — confirm `sessionStart` and `preToolUse` show as configured
+2. **Hooks output channel** — check for script errors
+3. **Trusted workspace** — project hooks only run in trusted workspaces
+4. **Restart Cursor** after pulling hook changes if they do not load
+5. Manual start: `pnpm worktree:dev:ensure` or `pnpm worktree:dev`
 
 ---
 
 ## Cleanup
 
-Stop the worktree dev server in either of these cases:
-
-1. **After a successful release** (tag pushed to origin) — mandatory; see `release-tag-deploy-workflow.mdc` step 7.
-2. **When abandoning a worktree** — then `git worktree remove` / delete branch per `agent-git-branch-workflow.mdc` if they want no trace.
-
-Shutdown command (reads the port from `.worktree-dev-port` written by `scripts/worktree-dev.sh`):
-
 ```bash
 pnpm worktree:cleanup
 ```
 
-Or manually:
-
-```bash
-bash scripts/worktree-cleanup.sh
-```
-
-This stops Next.js **and** local Supabase (if `.worktree-local-supabase` is set), restoring cloud `.env.local`.
+Stops Next.js and local Supabase (if `.worktree-local-supabase` is set), restores cloud `.env.local`. Mandatory after release — see `release-tag-deploy-workflow.mdc`.

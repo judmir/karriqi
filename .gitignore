@@ -24,6 +24,8 @@
 # misc
 .DS_Store
 .worktree-dev-port
+.worktree-dev.log
+.worktree-dev-start.lock/
 .worktree-local-supabase
 *.pem
 

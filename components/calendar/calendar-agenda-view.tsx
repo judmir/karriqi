@@ -7,12 +7,17 @@ import {
   eventsForDay,
   eventsInRange,
   formatEventTime,
+  isEventPast,
   monthGridDays,
 } from "@/lib/calendar/calendar-utils";
 import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
-import { getRehabEventKind } from "@/lib/rehab/rehab-event-kind-visual";
+import {
+  getRehabEventKind,
+  getRehabEventStatus,
+  rehabEventStatusSurfaceClass,
+} from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/types/calendar";
 
@@ -64,14 +69,18 @@ export function CalendarAgendaView({
             {dayEvents.map((event) => {
               const appearance = appearanceForEvent(event);
               const rehabKind = getRehabEventKind(event);
+              const statusSurface = rehabEventStatusSurfaceClass(
+                getRehabEventStatus(event, isEventPast(event)),
+              );
               return (
               <li key={event.id}>
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event)}
                   className={cn(
-                    "hover:bg-muted/20 flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left text-white transition-colors",
-                    eventPastClass(event),
+                    "flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors",
+                    statusSurface ??
+                      cn("hover:bg-muted/20 text-white", eventPastClass(event)),
                   )}
                 >
                   {rehabKind ? (
@@ -84,8 +93,8 @@ export function CalendarAgendaView({
                     />
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-white">{event.title}</div>
-                    <div className="text-sm text-white/70">
+                    <div className="truncate font-medium">{event.title}</div>
+                    <div className="text-sm opacity-70">
                       {formatEventTime(event)}
                     </div>
             {(() => {

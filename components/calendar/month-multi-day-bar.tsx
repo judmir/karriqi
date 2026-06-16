@@ -6,7 +6,11 @@ import {
 } from "@/lib/calendar/calendar-utils";
 import { useCalendarSources } from "@/components/calendar/calendar-sources-context";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
-import { getRehabEventKind } from "@/lib/rehab/rehab-event-kind-visual";
+import {
+  getRehabEventKind,
+  getRehabEventStatus,
+  rehabEventStatusSurfaceClass,
+} from "@/lib/rehab/rehab-event-kind-visual";
 import type { MonthEventSegment } from "@/lib/calendar/all-day-events";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +27,9 @@ export function MonthMultiDayEventBar({
   const { appearanceForEvent } = useCalendarSources();
   const appearance = appearanceForEvent(event);
   const rehabKind = getRehabEventKind(event);
+  const statusSurface = rehabEventStatusSurfaceClass(
+    getRehabEventStatus(event, past),
+  );
 
   const insetLeft = continuesFromPriorWeek ? 0 : 2;
   const insetRight = continuesToNextWeek ? 0 : 2;
@@ -35,9 +42,9 @@ export function MonthMultiDayEventBar({
         onSelectEvent(event);
       }}
       className={cn(
-        "pointer-events-auto absolute box-border flex h-[18px] cursor-pointer items-center gap-1 truncate border-0 px-1 text-left text-[11px] leading-[16px] text-white transition-opacity sm:text-xs",
-        appearance.className,
-        eventPastClass(event),
+        "pointer-events-auto absolute box-border flex h-[18px] cursor-pointer items-center gap-1 truncate border-0 px-1 text-left text-[11px] leading-[16px] transition-opacity sm:text-xs",
+        statusSurface ??
+          cn("text-white", appearance.className, eventPastClass(event)),
         !past && "hover:opacity-90",
         continuesFromPriorWeek ? "rounded-l-none border-l-0" : "rounded-l-md",
         continuesToNextWeek ? "rounded-r-none border-r-0" : "rounded-r-md",
@@ -46,7 +53,7 @@ export function MonthMultiDayEventBar({
         left: `calc(${(startCol / 7) * 100}% + ${insetLeft}px)`,
         width: `calc(${(span / 7) * 100}% - ${insetLeft + insetRight}px)`,
         top: `${lane * 20}px`,
-        ...appearance.style,
+        ...(statusSurface ? {} : appearance.style),
       }}
       title={event.title}
     >

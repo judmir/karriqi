@@ -46,6 +46,11 @@ export type RehabPlanEvent = CalendarEvent & {
   recurrenceMasterId?: string;
 };
 
+/** Rehab row removed via soft delete (`deleted_at` set). History view only. */
+export type RehabArchivedEvent = RehabPlanEvent & {
+  deletedAt: string;
+};
+
 export type RehabSpeechRecording = {
   id: string;
   eventId: string;

@@ -14,6 +14,8 @@ import {
 } from "@/modules/rehab/neuro-rehab-2026/constants";
 import {
   STOIC_BLOCKS,
+  STOIC_INTENTION_TITLE,
+  STOIC_WEEKLY_REVIEW_TITLE,
   buildStoicDailyDescription,
   buildStoicWeeklyDescription,
 } from "@/modules/rehab/neuro-rehab-2026/stoic-content";
@@ -163,10 +165,10 @@ function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
         userId,
         blockStart,
         block.startWeek,
-        7,
-        40,
-        3,
-        "Stoic intention",
+        6,
+        0,
+        5,
+        STOIC_INTENTION_TITLE,
         buildStoicDailyDescription(block),
         "stoic",
         "purple",
@@ -187,7 +189,7 @@ function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
       19,
       30,
       10,
-      "Stoic weekly review",
+      STOIC_WEEKLY_REVIEW_TITLE,
       buildStoicWeeklyDescription(),
       "stoic",
       "purple",
@@ -228,6 +230,8 @@ function mainSessionForDay(
   const template = weekdayTemplate(dayOfWeek, week, isRetest);
   const events: RehabPlanEventInsert[] = [];
 
+  // Sunday keeps its weekly review (and retest videos on retest weeks) but is
+  // now also a gym day, so it falls through to the main-session builder below.
   if (dayOfWeek === 0) {
     events.push(
       allDay(
@@ -240,52 +244,6 @@ function mainSessionForDay(
         "purple",
       ),
     );
-
-    const { mainKind, mainTitle } = template;
-    let description = template.mainDescription;
-    let duration = isRetest ? 36 : 60;
-
-    if (mainKind === "gym_c") {
-      description = gymDescription(mainKind);
-      if (isRetest) {
-        description = `(Deload ~20%)\n\n${description}`;
-      }
-    } else if (mainKind === "recovery") {
-      duration = 30;
-    }
-
-    events.push(
-      timed(
-        userId,
-        day,
-        week,
-        9,
-        0,
-        duration,
-        mainTitle,
-        description.trim() || null,
-        mainKind,
-        mainKind === "recovery" ? "green" : "blue",
-      ),
-    );
-
-    if (template.handMinutes > 0) {
-      events.push(
-        timed(
-          userId,
-          day,
-          week,
-          15,
-          0,
-          template.handMinutes,
-          `Left-hand / OT (${template.handMinutes} min)`,
-          HAND_OT_DESCRIPTION,
-          "hand",
-          "orange",
-        ),
-      );
-    }
-
     if (isRetest) {
       events.push(
         timed(
@@ -302,7 +260,6 @@ function mainSessionForDay(
         ),
       );
     }
-    return events;
   }
 
   const { mainKind, mainTitle } = template;
@@ -398,10 +355,13 @@ function dailyNonNegotiables(
   isFirstDay: boolean,
 ): RehabPlanEventInsert[] {
   const events: RehabPlanEventInsert[] = [
-    allDay(
+    timed(
       userId,
       day,
       week,
+      8,
+      30,
+      5,
       "Vitamin D (with breakfast)",
       "Take with breakfast if agreed with doctor. See Wiki: Supplements.",
       "supplement",
@@ -497,8 +457,8 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
     events.push(...dailyNonNegotiables(userId, day, week, isFirstDay));
     events.push(...mainSessionForDay(userId, day, week, dayOfWeek, isRetest));
 
-    // Workout-day creatine reminder (Mon, Wed, Fri, Sat gym)
-    if ([1, 3, 5, 6].includes(dayOfWeek) && dayOfWeek !== 0) {
+    // Workout-day creatine reminder (Wed, Sat, Sun gym)
+    if ([0, 3, 6].includes(dayOfWeek)) {
       events.push(
         timed(
           userId,
@@ -521,9 +481,9 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
 
 export function countEventsByWeekday(events: RehabPlanEventInsert[]): Record<number, number> {
   const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+  const tracked: RehabEventKind[] = ["gym_a", "gym_b", "gym_c", "gym_d", "run_walk"];
   for (const event of events) {
-    if (event.event_kind === "gym_a") counts[1] = (counts[1] ?? 0) + 1;
-    if (event.event_kind === "run_walk") {
+    if (tracked.includes(event.event_kind)) {
       const d = new Date(event.start_at).getDay();
       counts[d] = (counts[d] ?? 0) + 1;
     }

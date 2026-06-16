@@ -6,6 +6,7 @@ import { ROUTES } from "@/config/routes";
 import { notifyShoppingListSaved } from "@/lib/notifications/notification-events";
 import { resolveHouseholdOwnerUserId } from "@/lib/shopping/household-owner";
 import { isUuid } from "@/lib/shopping/is-uuid";
+import { softDeletePatch } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 
 export type PurchaseResult =
@@ -254,8 +255,9 @@ export async function deleteShoppingListItem(
 
   const { error } = await supabase
     .from("shopping_list_items")
-    .delete()
-    .eq("id", id);
+    .update(softDeletePatch())
+    .eq("id", id)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -306,8 +308,9 @@ export async function clearShoppingList(): Promise<ShoppingListOpResult> {
 
   const { error } = await supabase
     .from("shopping_list_items")
-    .delete()
-    .eq("user_id", ownerId);
+    .update(softDeletePatch())
+    .eq("user_id", ownerId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };

@@ -16,27 +16,27 @@ export function weekdayTemplate(
   week: number,
   isRetest: boolean,
 ): WeekdayTemplate {
-  // 0=Sun, 1=Mon, ... 6=Sat — gym Wed/Sat/Sun, run Mon/Tue/Thu/Fri
+  // 0=Sun, 1=Mon, ... 6=Sat
+  // Gym: Wed, Sat, Sun (3×/week). Running: Mon, Tue, Thu, Fri.
   switch (dayOfWeek) {
     case 1:
-    case 2:
-    case 4:
-    case 5:
       return {
         mainKind: "run_walk",
-        mainTitle:
-          dayOfWeek === 2 || dayOfWeek === 5
-            ? "Run/walk + speech"
-            : dayOfWeek === 4
-              ? "Run/walk + football control"
-              : "Run/walk",
-        mainDescription:
-          dayOfWeek === 4
-            ? "Easy walk/run then ball-control drills."
-            : "Run/walk session.",
-        handMinutes: dayOfWeek === 2 ? 20 : 10,
-        includeSpeech: dayOfWeek === 2 || dayOfWeek === 5,
-        includeFootball: dayOfWeek === 4,
+        mainTitle: "Run/walk",
+        mainDescription: "Easy run/walk session.",
+        handMinutes: 10,
+        includeSpeech: false,
+        includeFootball: false,
+        includeGymD: false,
+      };
+    case 2:
+      return {
+        mainKind: "run_walk",
+        mainTitle: "Run/walk + speech",
+        mainDescription: "Run/walk session then speech practice.",
+        handMinutes: 20,
+        includeSpeech: true,
+        includeFootball: false,
         includeGymD: false,
       };
     case 3:
@@ -49,15 +49,31 @@ export function weekdayTemplate(
         includeFootball: false,
         includeGymD: false,
       };
+    case 4:
+      return {
+        mainKind: "run_walk",
+        mainTitle: "Run/walk + football control",
+        mainDescription: "Easy walk/run then ball-control drills.",
+        handMinutes: 10,
+        includeSpeech: true,
+        includeFootball: true,
+        includeGymD: false,
+      };
+    case 5:
+      return {
+        mainKind: "run_walk",
+        mainTitle: "Run/walk",
+        mainDescription: "Easy run/walk session.",
+        handMinutes: 10,
+        includeSpeech: false,
+        includeFootball: false,
+        includeGymD: false,
+      };
     case 6:
       return {
-        mainKind: isRetest ? "recovery" : "gym_b",
-        mainTitle: isRetest
-          ? "Light recovery / mobility"
-          : "Gym B — upper body + core",
-        mainDescription: isRetest
-          ? "Optional light mobility only."
-          : "See Wiki: Gym Workouts — Gym B.",
+        mainKind: "gym_b",
+        mainTitle: isRetest ? "Gym B (deload)" : "Gym B — upper body + core",
+        mainDescription: "See Wiki: Gym Workouts — Gym B.",
         handMinutes: 10,
         includeSpeech: false,
         includeFootball: false,
@@ -65,18 +81,13 @@ export function weekdayTemplate(
       };
     case 0:
       return {
-        mainKind: isRetest ? "recovery" : "gym_c",
-        mainTitle: isRetest
-          ? "Recovery + weekly review"
-          : "Gym C — dynamic stability",
-        mainDescription: isRetest
-          ? "Light mobility. Complete weekly review in journal/wiki."
-          : "See Wiki: Gym Workouts — Gym C.",
-        handMinutes: isRetest ? 0 : 10,
+        mainKind: "gym_c",
+        mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
+        mainDescription: "See Wiki: Gym Workouts — Gym C.",
+        handMinutes: 10,
         includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
-        skipMainOnRetest: false,
       };
     default:
       return {

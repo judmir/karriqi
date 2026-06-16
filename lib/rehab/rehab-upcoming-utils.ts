@@ -2,7 +2,6 @@ import {
   addDays,
   differenceInCalendarDays,
   format,
-  isBefore,
   isSameDay,
   parseISO,
   startOfDay,
@@ -12,6 +11,7 @@ import {
 import { eventSpansDay } from "@/lib/calendar/all-day-events";
 import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
 import type { RehabPlanEvent } from "@/types/rehab";
+import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 
 /** Each "See more" reveals this many additional day rows (2 weeks). */
 export const UPCOMING_DAYS_CHUNK = 14;
@@ -22,9 +22,18 @@ export const UPCOMING_INITIAL_DAYS = UPCOMING_DAYS_CHUNK;
 /** @deprecated Use UPCOMING_INITIAL_DAYS */
 export const UPCOMING_NEAR_DAYS = UPCOMING_INITIAL_DAYS;
 
-export type UpcomingListSection =
-  | { kind: "overdue"; events: RehabPlanEvent[] }
-  | { kind: "day"; date: Date; label: string; events: RehabPlanEvent[] };
+/**
+ * One row per calendar day. `isPast` days are before today and rendered
+ * collapsed with a "past" highlight (like the calendar), so the user can
+ * open them to review what was done / missed on that day.
+ */
+export type UpcomingListSection = {
+  kind: "day";
+  date: Date;
+  label: string;
+  events: RehabPlanEvent[];
+  isPast: boolean;
+};
 
 function byStart(a: RehabPlanEvent, b: RehabPlanEvent): number {
   return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
@@ -98,22 +107,26 @@ export function filterUpcomingEventsBySearch(
     .sort(byStart);
 }
 
-function isOverdue(event: RehabPlanEvent, today: Date): boolean {
-  if (event.completedAt) {
-    return false;
-  }
-  return isBefore(eventPrimaryDay(event), today);
-}
-
 export function upcomingDayLabel(date: Date, today: Date): string {
   const tomorrow = addDays(today, 1);
+  const yesterday = addDays(today, -1);
   if (isSameDay(date, today)) {
     return `Today ${format(date, "d MMM")}`;
   }
   if (isSameDay(date, tomorrow)) {
     return `Tomorrow ${format(date, "d MMM")}`;
   }
+  if (isSameDay(date, yesterday)) {
+    return `Yesterday ${format(date, "d MMM")}`;
+  }
   return format(date, "EEE d MMM");
+}
+
+/** Number of past program days (program start → yesterday) available today. */
+export function pastUpcomingDayCount(now: Date = new Date()): number {
+  const today = startOfDay(now);
+  const programStart = startOfDay(PROGRAM_START);
+  return Math.max(0, differenceInCalendarDays(today, programStart));
 }
 
 /** Total day rows available from today through the last stored event day. */
@@ -148,7 +161,12 @@ export function nextUpcomingVisibleDays(
   );
 }
 
-/** Overdue + one row per day for the visible window. */
+/**
+ * One row per calendar day: past program days (with events) first, then today
+ * forward through the visible window. Past days are flagged `isPast` so the UI
+ * can render them collapsed with a past highlight; incomplete events on those
+ * days surface as "missed" rather than being lumped into a single overdue pile.
+ */
 export function buildUpcomingListSections(
   events: RehabPlanEvent[],
   now: Date = new Date(),
@@ -156,19 +174,31 @@ export function buildUpcomingListSections(
 ): UpcomingListSection[] {
   const today = startOfDay(now);
   const sections: UpcomingListSection[] = [];
-  const dayCount = Math.min(visibleDays, maxUpcomingDaysFrom(now, events));
-
-  const overdue = events
-    .filter((event) => isOverdue(event, today))
-    .sort(byStart);
-  if (overdue.length > 0) {
-    sections.push({ kind: "overdue", events: overdue });
+  // Past days: program start → yesterday, oldest first. Skip empty days so the
+  // list only shows days that actually carry state worth revisiting.
+  const pastCount = pastUpcomingDayCount(now);
+  for (let i = pastCount; i >= 1; i--) {
+    const date = addDays(today, -i);
+    const dayEvents = events
+      .filter((event) => eventSpansDay(event, date))
+      .sort(byStart);
+    if (dayEvents.length === 0) {
+      continue;
+    }
+    sections.push({
+      kind: "day",
+      date,
+      label: upcomingDayLabel(date, today),
+      events: dayEvents,
+      isPast: true,
+    });
   }
 
+  const dayCount = Math.min(visibleDays, maxUpcomingDaysFrom(now, events));
   for (let offset = 0; offset < dayCount; offset++) {
     const date = addDays(today, offset);
     const dayEvents = events
-      .filter((event) => eventSpansDay(event, date) && !isOverdue(event, today))
+      .filter((event) => eventSpansDay(event, date))
       .sort(byStart);
 
     sections.push({
@@ -176,6 +206,7 @@ export function buildUpcomingListSections(
       date,
       label: upcomingDayLabel(date, today),
       events: dayEvents,
+      isPast: false,
     });
   }
 

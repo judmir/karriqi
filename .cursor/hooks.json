@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/worktree-dev-session-start.py",
+        "timeout": 200
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/worktree-dev-pretool-gate.py",
+        "timeout": 10
+      }
+    ]
+  }
+}

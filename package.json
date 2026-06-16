@@ -1,11 +1,12 @@
 {
   "name": "karriqi",
-  "version": "0.29.0",
+  "version": "0.32.2",
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "bash scripts/main-dev.sh",
     "worktree:dev": "bash scripts/worktree-dev.sh",
+    "worktree:dev:ensure": "bash scripts/worktree-dev-ensure-background.sh",
     "worktree:cleanup": "bash scripts/worktree-cleanup.sh",
     "worktree:supabase:start": "bash scripts/worktree-supabase-local.sh start",
     "worktree:supabase:ensure": "bash scripts/worktree-supabase-local.sh ensure",
