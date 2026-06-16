@@ -17,14 +17,23 @@ import { medianGapDaysByStaple } from "@/lib/shopping/suggestions";
 import { getSessionUser } from "@/lib/supabase/server";
 import { ensureHouseholdLinked } from "@/lib/household/ensure-household-linked";
 import { fetchAssignableMembers } from "@/lib/todo/fetch-assignable-members";
-import { fetchTodosBoardSummary } from "@/lib/todo/fetch-todos";
+import { fetchTodoTagsForUser } from "@/lib/todo/fetch-todo-tags";
+import {
+  fetchTodoByIdForUser,
+  fetchTodosBoardSummary,
+} from "@/lib/todo/fetch-todos";
 import type { CalendarEvent } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
 import type { RehabPlanListItem } from "@/types/rehab";
 import type { RehabClinicalItem } from "@/types/rehab";
 import type { RuleOf3Day } from "@/types/rule-of-3";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
-import type { TodoAssignableMember, TodoBoardItem } from "@/types/todo";
+import type {
+  TodoAssignableMember,
+  TodoBoardItem,
+  TodoItem,
+  TodoTag,
+} from "@/types/todo";
 
 type SignedOut = { ok: false; reason: "signed_out" | "not_configured" };
 
@@ -36,6 +45,55 @@ export type KanbanStorePayload =
       assignableUsers: TodoAssignableMember[];
       persistence: boolean;
     };
+
+
+export type TodoTaskPayload =
+  | SignedOut
+  | { ok: false; reason: "not_found" }
+  | {
+      ok: true;
+      item: TodoItem;
+      assignableUsers: TodoAssignableMember[];
+      existingTags: TodoTag[];
+      persistence: boolean;
+    };
+
+export async function loadTodoTaskAction(
+  taskId: string,
+): Promise<TodoTaskPayload> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, reason: "not_configured" };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const [itemResult, assignableResult, tagsResult] = await Promise.allSettled([
+    fetchTodoByIdForUser(taskId),
+    fetchAssignableMembers(user),
+    fetchTodoTagsForUser(),
+  ]);
+
+  if (itemResult.status === "rejected") {
+    throw itemResult.reason;
+  }
+
+  const item = itemResult.value;
+  if (!item) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  return {
+    ok: true,
+    item,
+    assignableUsers:
+      assignableResult.status === "fulfilled" ? assignableResult.value : [],
+    existingTags: tagsResult.status === "fulfilled" ? tagsResult.value : [],
+    persistence: true,
+  };
+}
 
 export async function loadKanbanStoreAction(): Promise<KanbanStorePayload> {
   if (!isSupabaseConfigured()) {
