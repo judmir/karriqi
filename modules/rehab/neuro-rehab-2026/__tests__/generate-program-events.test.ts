@@ -42,21 +42,30 @@ describe("generateNeuroRehabProgramEvents", () => {
     expect(gymA.every((e) => new Date(e.start_at).getDay() === 3)).toBe(true);
   });
 
-  it("schedules gym on Wed/Sat/Sun and running on Mon/Tue/Thu/Fri", () => {
+  it("schedules gym on Wed/Fri/Sat and run/walk on Sun/Mon/Tue/Thu/Sat", () => {
     const gymKinds = new Set(["gym_a", "gym_b", "gym_c"]);
     const gymDays = new Set(
       events
         .filter((e) => gymKinds.has(e.event_kind))
         .map((e) => new Date(e.start_at).getDay()),
     );
-    expect([...gymDays].sort()).toEqual([0, 3, 6]);
+    expect([...gymDays].sort()).toEqual([3, 5, 6]);
 
     const runDays = new Set(
       events
         .filter((e) => e.event_kind === "run_walk")
         .map((e) => new Date(e.start_at).getDay()),
     );
-    expect([...runDays].sort()).toEqual([1, 2, 4, 5]);
+    expect([...runDays].sort()).toEqual([0, 1, 2, 4, 6]);
+  });
+
+  it("schedules Gym C on Friday at 18:00", () => {
+    const gymC = events.filter((e) => e.event_kind === "gym_c");
+    expect(gymC.length).toBeGreaterThan(0);
+    expect(gymC.every((e) => new Date(e.start_at).getDay() === 5)).toBe(true);
+    expect(gymC.every((e) => new Date(e.start_at).getHours() === 18)).toBe(
+      true,
+    );
   });
 
   it("stores gym exercises as checklist subtasks with reference links", () => {

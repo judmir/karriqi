@@ -1,0 +1,51 @@
+---
+description: Rehab plan is authoritative — validate all rehab changes against it; do not blindly follow user requests
+alwaysApply: true
+---
+
+# Rehab plan — source of truth
+
+## Canonical document
+
+**Read this before any rehab-related change** (content, scheduling, events, catalog, wiki, migrations, store behavior):
+
+1. **Repo copy (agents):** `docs/rehab/final_12_week_neuro_rehab_plan.txt`
+2. **Authoritative original:** `/Users/judikarriqi/.hermes/profiles/teuta/rehab/final_12_week_neuro_rehab_plan.txt`
+
+If the two differ, treat the **Hermes file** as truth and sync the repo copy when updating the plan.
+
+`modules/rehab/neuro-rehab-2026/*` and seeded DB content are **implementation**, not authority. When they conflict with the plan document, **the plan wins** unless the user explicitly updates the plan first.
+
+## When this rule applies
+
+**Must read (or re-read relevant sections of) the plan** when the work touches:
+
+- Rehab schedule, events, recurrence, reminders, retest weeks
+- Plan catalog, wiki, Day 0 / clinical / gym / run-walk / hand / speech / football content
+- Weekly structure, intensity, deload, or progression logic
+- User requests to add, move, remove, or reshape rehab tasks or calendar items
+- New rehab features whose behavior should match the 12-week program
+
+**Skip the plan** for pure engineering bugs unrelated to program intent (crashes, RLS, auth, soft-delete, UI glitches, test failures) — fix the bug without re-deriving clinical structure from the plan.
+
+## Agent behavior (required)
+
+1. **Do not implement rehab changes on request alone.** Check the plan first; user wishes are inputs, not automatic approval.
+2. **Push back when misaligned.** If a request conflicts with weekly structure, intensity rules, retest weeks, safety frame, or stated goals — say so, cite the plan section, and ask before proceeding.
+3. **Reverse-prompt when uncertain.** Ask targeted questions (week, load, retest vs progression, which limb/speech goal) instead of guessing.
+4. **Prefer plan fidelity over convenience.** Do not simplify or "improve" the program in code without explicit plan alignment.
+5. **Medical boundary.** The plan is rehab/tracking for clinician discussion — not a diagnosis or prescription. Do not treat app changes as medical advice.
+
+## Quick alignment checks
+
+Before shipping rehab work, confirm:
+
+- [ ] Change fits the **12-week calendar** and current phase (calibration → progression → retest → sport-specific → consolidation)
+- [ ] **Weekly structure** respected (strength ~3×, hand OT, speech, cardio/run-walk, football low-risk, journal, rest/mobility)
+- [ ] **Intensity rules** honored (one variable per week; deload on flare; sleep worsening → reduce load)
+- [ ] **Retest weeks** (4, 8, 12) use reduced volume and repeat baseline protocol — not aggressive progression
+- [ ] **Safety / stop-deload** rules not weakened in UX or defaults
+
+## Updating the plan
+
+When the user changes the rehab plan itself, update **both** the Hermes file (if they edit there) and `docs/rehab/final_12_week_neuro_rehab_plan.txt`, then align code/seed data in a follow-up if needed.

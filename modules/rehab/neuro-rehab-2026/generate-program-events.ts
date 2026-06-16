@@ -32,7 +32,7 @@ import {
   footballDescriptionForWeek,
 } from "@/modules/rehab/neuro-rehab-2026/gym-templates";
 import { runWalkPlanForWeek } from "@/modules/rehab/neuro-rehab-2026/run-walk-progression";
-import { weekdayTemplate } from "@/modules/rehab/neuro-rehab-2026/weekly-template";
+import { RUN_EVENT_TITLE, weekdayTemplate } from "@/modules/rehab/neuro-rehab-2026/weekly-template";
 import type { CalendarEventColor } from "@/types/calendar";
 import type { RehabEventKind, RehabPlanEventInsert } from "@/types/rehab";
 
@@ -230,8 +230,7 @@ function mainSessionForDay(
   const template = weekdayTemplate(dayOfWeek, week, isRetest);
   const events: RehabPlanEventInsert[] = [];
 
-  // Sunday keeps its weekly review (and retest videos on retest weeks) but is
-  // now also a gym day, so it falls through to the main-session builder below.
+  // Sunday: easy walk + weekly review (+ retest videos on retest weeks).
   if (dayOfWeek === 0) {
     events.push(
       allDay(
@@ -273,8 +272,14 @@ function mainSessionForDay(
     }
   } else if (mainKind === "run_walk") {
     const plan = runWalkPlanForWeek(week);
-    description = `${plan.description}\n\n${template.includeSpeech ? "Include speech after walk." : ""}`;
-    duration = isRetest ? 30 : 45;
+    if (template.isSundayEasyWalk) {
+      description =
+        "Sunday easy walk only — light mobility, no jogging pressure.\n\nComplete weekly review.";
+      duration = isRetest ? 25 : 30;
+    } else {
+      description = `${plan.description}\n\n${template.includeSpeech ? "Include speech after walk." : ""}`;
+      duration = isRetest ? 30 : 45;
+    }
   } else if (mainKind === "recovery") {
     duration = 30;
   }
@@ -284,10 +289,10 @@ function mainSessionForDay(
       userId,
       day,
       week,
-      9,
-      0,
+      template.mainStartHour,
+      template.mainStartMinute,
       duration,
-      mainTitle,
+      mainKind === "run_walk" ? RUN_EVENT_TITLE : mainTitle,
       description.trim() || null,
       mainKind,
       mainKind === "run_walk" ? "green" : mainKind === "recovery" ? "green" : "blue",
@@ -341,6 +346,23 @@ function mainSessionForDay(
         footballDescriptionForWeek(week),
         "football",
         "purple",
+      ),
+    );
+  }
+
+  if (template.includeEasyWalk) {
+    events.push(
+      timed(
+        userId,
+        day,
+        week,
+        17,
+        0,
+        20,
+        RUN_EVENT_TITLE,
+        "Saturday easy walk — light, no jogging pressure.",
+        "run_walk",
+        "green",
       ),
     );
   }
@@ -457,8 +479,8 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
     events.push(...dailyNonNegotiables(userId, day, week, isFirstDay));
     events.push(...mainSessionForDay(userId, day, week, dayOfWeek, isRetest));
 
-    // Workout-day creatine reminder (Wed, Sat, Sun gym)
-    if ([0, 3, 6].includes(dayOfWeek)) {
+    // Workout-day creatine reminder (Wed, Fri, Sat gym)
+    if ([3, 5, 6].includes(dayOfWeek)) {
       events.push(
         timed(
           userId,

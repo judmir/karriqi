@@ -1,21 +1,28 @@
 import { addDays, differenceInMinutes, getDay, parseISO, startOfDay } from "date-fns";
 
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
-/** Mon, Tue, Thu, Fri */
-export const RUN_WEEKDAYS = [1, 2, 4, 5] as const;
+import {
+  GYM_C_START_HOUR,
+  GYM_C_START_MINUTE,
+  GYM_C_WEEKDAY,
+} from "@/modules/rehab/neuro-rehab-2026/weekly-template";
 
-/** Wed, Sat, Sun */
-export const GYM_WEEKDAYS = [3, 6, 0] as const;
+/** Sun, Mon, Tue, Thu, Sat (Sun + Mon/Tue/Thu + Sat easy walk). */
+export const RUN_WEEKDAYS = [0, 1, 2, 4, 6] as const;
+
+/** Wed, Fri, Sat */
+export const GYM_WEEKDAYS = [3, 5, 6] as const;
 
 const GYM_KINDS = ["gym_a", "gym_b", "gym_c", "gym_d"] as const;
 
 export const MAX_GYM_PER_WEEK = 3;
-export const MAX_RUN_PER_WEEK = 4;
+export const MAX_RUN_PER_WEEK = 5;
 
 export type ScheduleRow = {
   id: string;
   start_at: string;
   end_at: string;
+  title?: string;
   event_kind: string;
   program_id: string | null;
   plan_week?: number | null;
@@ -26,6 +33,7 @@ export type SchedulePatch = {
   id: string;
   start_at: string;
   end_at: string;
+  title?: string;
 };
 
 function isGymKind(kind: string): boolean {
@@ -87,14 +95,19 @@ function atWeekday(
   weekStartSunday: Date,
   weekday: number,
   source: Date,
+  eventKind?: string,
 ): Date {
+  const hour =
+    eventKind === "gym_c" ? GYM_C_START_HOUR : source.getUTCHours();
+  const minute =
+    eventKind === "gym_c" ? GYM_C_START_MINUTE : source.getUTCMinutes();
   return new Date(
     Date.UTC(
       weekStartSunday.getUTCFullYear(),
       weekStartSunday.getUTCMonth(),
       weekStartSunday.getUTCDate() + weekday,
-      source.getUTCHours(),
-      source.getUTCMinutes(),
+      hour,
+      minute,
       source.getUTCSeconds(),
       source.getUTCMilliseconds(),
     ),
@@ -113,7 +126,7 @@ function preferredGymWeekday(kind: string): number {
     case "gym_b":
       return 6;
     case "gym_c":
-      return 0;
+      return GYM_C_WEEKDAY;
     case "gym_d":
       return 6;
     default:
@@ -146,7 +159,12 @@ function assignGymDays(
     usedDays.add(weekday);
     assignments.set(
       row.id,
-      atWeekday(weekStartSunday, weekday, parseISO(row.start_at)),
+      atWeekday(
+        weekStartSunday,
+        weekday,
+        parseISO(row.start_at),
+        row.event_kind,
+      ),
     );
   }
 
@@ -166,7 +184,12 @@ function assignRunDays(
     const weekday = RUN_WEEKDAYS[index % RUN_WEEKDAYS.length]!;
     assignments.set(
       row.id,
-      atWeekday(weekStartSunday, weekday, parseISO(row.start_at)),
+      atWeekday(
+        weekStartSunday,
+        weekday,
+        parseISO(row.start_at),
+        row.event_kind,
+      ),
     );
   });
 
@@ -284,37 +307,41 @@ export function buildWeeklySchedulePatches(rows: ScheduleRow[]): SchedulePatch[]
   return patches;
 }
 
+/** Saturday may combine Gym B + easy walk by design. */
+function allowsGymAndRunSameDay(iso: string): boolean {
+  return new Date(iso).getUTCDay() === 6;
+}
+
 export function countScheduleCollisions(rows: ScheduleRow[]): number {
   const kinds = rows.filter(
     (row) =>
       row.program_id === NEURO_REHAB_PROGRAM_ID &&
       (row.event_kind === "run_walk" || isGymKind(row.event_kind)),
   );
-  const byDay = new Map<string, Set<string>>();
+  const byDay = new Map<string, { kinds: Set<string>; iso: string }>();
   for (const row of kinds) {
     const day = row.start_at.slice(0, 10);
-    const set = byDay.get(day) ?? new Set();
-    set.add(isGymKind(row.event_kind) ? "gym" : "run");
-    byDay.set(day, set);
+    const entry = byDay.get(day) ?? { kinds: new Set<string>(), iso: row.start_at };
+    entry.kinds.add(isGymKind(row.event_kind) ? "gym" : "run");
+    byDay.set(day, entry);
   }
-  return [...byDay.values()].filter((set) => set.has("gym") && set.has("run"))
-    .length;
+  return [...byDay.values()].filter(
+    (entry) =>
+      entry.kinds.has("gym") &&
+      entry.kinds.has("run") &&
+      !allowsGymAndRunSameDay(entry.iso),
+  ).length;
 }
 
 /** Unique per-row temp bump so final weekday patches never hit dedupe unique index. */
 export function buildUniqueTempBumpPatches(rows: ScheduleRow[]): SchedulePatch[] {
-  const anchor = new Date(Date.UTC(2030, 0, 1));
+  // Far-future anchor + minute-spaced slots: safe if a prior partial run left rows on temp dates.
+  const anchor = Date.UTC(2040, 0, 1);
   return rows.map((row, index) => {
     const start = parseISO(row.start_at);
     const end = parseISO(row.end_at);
     const duration = end.getTime() - start.getTime();
-    const tempStart = addDays(anchor, index);
-    tempStart.setUTCHours(
-      start.getUTCHours(),
-      start.getUTCMinutes(),
-      start.getUTCSeconds(),
-      start.getUTCMilliseconds(),
-    );
+    const tempStart = new Date(anchor + index * 120_000);
     const tempEnd = new Date(tempStart.getTime() + duration);
     return {
       id: row.id,

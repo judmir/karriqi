@@ -1,0 +1,464 @@
+FINAL 12-WEEK NEURO-REHAB / TRACKING PLAN
+Judmir Karriqi — Teuta working draft
+Created: 2026-05-30
+
+IMPORTANT SAFETY FRAME
+This is not a diagnosis and not a substitute for medical care. It is a structured rehabilitation, tracking, and clinician-discussion plan based on your documented history and your own goals. Any exercise, supplement, medication, testing, or escalation decision should be cleared with the relevant clinician/physio/OT/logopedics professional.
+
+Seek urgent medical care / emergency services if there is sudden stroke-like weakness or facial droop, sudden severe headache, seizure, chest pain, breathing difficulty, rapidly worsening neurological deficit, new bladder/bowel loss, true choking/aspiration danger, or suicidal thoughts.
+
+DOCUMENTED ANCHORS USED
+- Main corpus: /Users/judikarriqi/Library/CloudStorage/Dropbox/Documents/Judi/Diagnose
+- Main compiled report: Reports/My History Check.pdf
+- Extracted history text: /Users/judikarriqi/.hermes/profiles/teuta/extracted/Reports_My_History_Check.pdf.ocr_merged.txt
+- Teuta notes: health_index.md, timeline.md, tests_inventory.md, doctor_questions.md, open_questions.md
+- Recent bloodwork reviewed: Aware 2025-08-27 and Dr Bakhtari 2025-09-23 where extractable
+- MRI/DICOM folders reviewed: MRI 20.11.2024, MRI1, MRI2
+
+CASE FRAMING FOR THIS PLAN
+The strongest current documented clinical consensus is functional movement disorder / FND, with left-sided movement/coordination symptoms. This plan does not try to overturn that. It keeps clinically important counterweights visible: early left tibial SEP/P40 delay, unilateral left-sided coordination pattern, and rehab observations that some movement-control difficulty appeared ataxic/non-distractible. Practical goal: improve function, document change, reduce confounders, and prepare better clinician conversations.
+
+PRIMARY REHAB GOALS
+1. Left hand: improve dexterity, typing confidence, buttons/shoelaces/bottle caps, guitar/piano-like fine movement.
+2. Left leg: improve heaviness/coordination, stair descent, running tolerance, jumping/landing, football-specific control.
+3. Speech/saliva: track and train speech effort, articulation, breath/voice coordination, saliva/swallow management.
+4. Whole-body control: reduce right-side compensation and rebuild bilateral movement confidence.
+5. Stress/fatigue sensitivity: learn which loads improve function and which trigger flares.
+6. Clinician-useful evidence: create clean baseline and repeatable 4/8/12-week comparisons.
+
+CORE PRINCIPLE
+The tracker is not a diagnostic tool. It is a baseline + trend system. The useful signal comes from combining:
+- wearable data
+- structured daily journal
+- rehab adherence checklist
+- monthly repeatable videos
+- functional tests
+- targeted clinician-ordered labs where prior abnormalities exist
+
+EQUIPMENT
+Essential:
+- Apple Watch or equivalent all-day wearable
+- Polar H10 chest strap for structured workouts/HR accuracy
+- iPhone/phone camera
+- small tripod
+- notebook/app for daily journal
+- resistance bands
+- light dumbbells or gym access
+- cones/markers for football/agility drills
+- stairs route with safe railing
+- metronome app
+
+Useful but optional:
+- therapy putty
+- coins/buttons/shoelaces/bottle caps for fine-motor tasks
+- balance pad
+- BlazePod/reactive lights only later if motivation and budget allow
+- John Reed body composition scan monthly, treated as secondary trend only
+
+SETUP BEFORE WEEK 1: BASELINE WEEK / PHASE 0
+Do this over 3-7 days before the rehab block starts.
+
+A. Wearable setup
+- Apple Watch: sleep, HR, resting HR, activity, workouts.
+- Polar H10: pair with Polar Beat/Flow and allow Apple Health write permissions.
+- Apple Health: central store.
+- Karriqi app / journal: symptom and rehab layer, not a diagnostic engine.
+
+B. Daily journal fields
+Record once daily, ideally evening:
+- Sleep quality 0-10
+- Stress 0-10
+- Fatigue 0-10
+- Left hand difficulty 0-10
+- Left leg difficulty/heaviness 0-10
+- Speech difficulty 0-10
+- Saliva/swallowing difficulty 0-10
+- Vibration/tremor episode: yes/no, trigger, duration
+- Stairs difficulty 0-10
+- Typing difficulty 0-10
+- Running/football notes if done
+- Rehab completed: yes/no/partial
+- Major context: poor sleep, high workload, conflict, travel, caffeine, illness, heavy training, emotional load
+
+C. Baseline functional tests
+Film these in the same place/light/camera angle. Save as Week0.
+1. Hand/fine motor:
+   - 60 sec typing sample
+   - 5 buttons/unbuttons
+   - shoelace tie/untie
+   - open/close bottle cap 5 times
+   - coin pickup/transfer 10 coins
+   - optional: guitar/piano finger pattern 60 sec
+2. Leg/gait:
+   - stair descent one flight, controlled, safe railing nearby
+   - 30 sec single-leg stance each side
+   - 5 sit-to-stand reps
+   - 10 heel raises each side
+   - 6-minute walk or fixed route walk
+3. Football:
+   - 60 sec wall passes count accurate passes
+   - 10 left-foot controlled passes
+   - 10 right-foot controlled passes
+   - slow cone dribble time over short course
+4. Speech:
+   - 1 minute reading sample
+   - 1 minute spontaneous speech about your day
+   - self-rate effort/fatigue/saliva 0-10
+
+D. Targeted baseline blood test discussion with Hausarzt/doctor
+Purpose: confounder check and follow-up of prior abnormalities, not proof of rehab success.
+Suggested request:
+“I am starting a structured 12-week neuro-rehab/training plan. I do not want a broad diagnostic search, but I would like a medically useful baseline and follow-up of previous abnormalities: transferrin saturation was high, FT4 was high with normal TSH, uric acid was borderline/high, and I may start structured training/creatine. Could we repeat a targeted fasting morning panel and decide what needs referral?”
+
+Suggested panel to discuss:
+- CBC / großes Blutbild
+- sodium, potassium, calcium, magnesium
+- creatinine, eGFR, urea
+- ALT/GPT, AST/GOT, GGT, bilirubin
+- fasting glucose, HbA1c
+- CRP or hs-CRP
+- CK, especially if training/creatine starts
+- TSH, FT4, FT3
+- thyroid antibodies: TPO-Ab, Tg-Ab, TRAb
+- fasting morning iron, ferritin, transferrin, transferrin saturation, with CRP same day
+- uric acid
+- vitamin D
+- lipids if doctor agrees: LDL, HDL, triglycerides, ApoB, Lp(a)
+
+Known reasons for this:
+- Aware 2025 showed transferrin saturation 54% high.
+- Aware 2025 showed FT4 24.20 pmol/l high with normal TSH.
+- Uric acid has been borderline/high in prior records.
+- Potassium was low in Aware but normalized in Bakhtari repeat.
+
+E. Body composition
+- Optional John Reed scan at baseline.
+- Repeat monthly only.
+- Treat as rough trend, not main rehab metric.
+
+F. Clinician questions to prepare
+- Neurologist: is tremor polygraphy/surface EMG+accelerometry useful for situational vibration/shaking?
+- Radiology/neurologist: is the 2024 MRI quality/sequences sufficient; is second read enough vs new 3T only if specific question?
+- Phoniatrics/logopedics: evaluation for fluctuating speech, saliva, swallowing/voice coordination.
+- Physio/OT: graded left-sided coordination and sport-specific rehab, not generic low-level exercises only.
+
+WEEKLY TRAINING STRUCTURE
+Default week:
+- 3x strength/coordination sessions, 45-60 min (Wednesday, Friday 18:00, Saturday)
+- 2x fine-motor/OT sessions, 20-30 min (Tuesday longer; other days 10 min touch-ups)
+- 2x speech/logopedics practice, 15-25 min
+- 4x walking/cardio or running progression, 20-45 min (Monday, Tuesday, Thursday, Saturday easy)
+- Sunday: easy walk only + weekly review (light mobility, no gym)
+- 1-2x football-specific low-risk drills, 15-30 min
+- Daily 5-10 min journal/checklist
+
+Intensity rules:
+- Start easier than ego wants.
+- Increase only one variable per week: duration OR complexity OR intensity, not all three.
+- If symptoms flare >2 points for more than 24-48h, reduce next session by 30-50%.
+- Avoid boom-bust cycles.
+- Sleep worsening is a sign to reduce load.
+
+SIMPLE DAILY TEMPLATE
+Morning, 2-5 min:
+- check sleep/recovery trend
+- note energy 0-10
+- choose today’s rehab task
+
+Daytime:
+- complete scheduled session
+- avoid maximal pushing if sleep/recovery poor
+
+Evening, 5 min:
+- fill symptom journal
+- mark rehab done/partial/not done
+- note trigger/context
+
+12-WEEK CALENDAR
+
+WEEK 1 — Calibration and safety
+Goal: establish routine, no aggressive progression.
+- Strength 2-3x: basic bilateral lower-body + upper-body control, slow tempo.
+- Left leg: sit-to-stand, split stance weight shifts, step-ups low height, controlled stair practice.
+- Left hand: buttons, coins, bottle cap, typing sample, slow finger sequencing.
+- Speech: 2 short recordings; breathing + paced reading.
+- Walking: 2 easy walks, no forced running.
+- Football: ball taps/sole rolls/wall passes at slow pace only.
+- Metrics: complete journal 5/7 days; no major flare.
+
+WEEK 2 — Consistency
+Goal: same tasks, slightly smoother execution.
+- Strength 3x: add light resistance bands/dumbbells.
+- Left leg: step-down practice low height, heel raises, balance with support.
+- Left hand: increase fine-motor task duration by 10-20%.
+- Speech: reading + spontaneous sample 2x.
+- Walking: 2-3 easy walks.
+- Football: 1-2 sessions slow cone dribble + wall passes.
+- Metrics: adherence >=70%; identify first stress/sleep/symptom patterns.
+
+WEEK 3 — Controlled progression
+Goal: add coordination complexity.
+- Strength 3x: single-leg supported work, cable rows/presses, loaded carries if safe.
+- Left leg: lateral step, controlled knee alignment, slow eccentric step-down.
+- Left hand: add bimanual tasks, guitar/piano-style finger patterns.
+- Speech: paced speech, breath control, saliva check-ins.
+- Cardio: introduce run-walk only if walking is stable: e.g. 1 min jog / 2 min walk x 6.
+- Football: cone dribble, left/right foot passing, no sprint/contact.
+- Metrics: compare stair descent feeling vs Week 1.
+
+WEEK 4 — First retest week
+Goal: repeat baseline tests and adjust.
+- Reduce training volume by ~20% early week.
+- Repeat hand, leg, speech, football videos using same protocol.
+- Review data: sleep, HRV/recovery, stress, symptom scores, adherence.
+- Strength remains 2-3x moderate.
+- Cardio/running only if no flare.
+- Metrics: Week0 vs Week4 comparison table.
+- Decision: continue progression, hold, or deload.
+
+WEEK 5 — Build phase 1
+Goal: more dynamic left-leg control.
+- Strength 3x: split squats supported, Romanian deadlift pattern, rows/presses, core anti-rotation.
+- Left leg: step-downs, lateral control, mini hops only if safe and symptom-stable.
+- Left hand: timed dexterity tasks, typing endurance, real-life tasks.
+- Speech: add fatigue condition: short speech sample after light walk.
+- Cardio: run-walk progression, do not chase distance yet.
+- Football: controlled passing + dribbling, slight speed increase.
+
+WEEK 6 — Build phase 2
+Goal: improve tolerance without crashing.
+- Strength 3x: small load increase if prior week tolerated.
+- Left leg: dynamic balance, direction changes at walking speed.
+- Left hand: 20-30 min OT/fine motor twice weekly.
+- Speech: 2-3 sessions; monitor saliva/fatigue.
+- Cardio: run-walk or brisk walking 2x.
+- Football: 2 low-risk sessions, no competitive play.
+- Metrics: watch for delayed flares 24h after training.
+
+WEEK 7 — Complexity
+Goal: combine strength + coordination + attention.
+- Strength 3x: add dual-task elements cautiously, e.g. count backwards while stepping.
+- Left leg: stairs down, slow eccentric knee control, lateral shuffle low speed.
+- Left hand: task switching, left-hand precision under light time pressure.
+- Speech: spontaneous speech practice, paced conversation if possible.
+- Cardio: one longer easy walk and one interval session.
+- Football: cone course + wall passes; track accuracy not speed.
+
+WEEK 8 — Second retest week
+Goal: repeat objective tests and prepare clinician summary.
+- Repeat Week0/Week4 videos.
+- Summarize: what improved, unchanged, worse.
+- Compare wearable/journal patterns.
+- If baseline labs were abnormal and doctor advised, consider follow-up timing.
+- Review neurologist/physio/logopedics questions.
+- Training: moderate only, no maximal push.
+- Metrics: Week0 vs Week4 vs Week8.
+
+WEEK 9 — Sport-specific control
+Goal: bridge rehab to real-life football/running/stairs.
+- Strength 3x: maintain progressive strength but avoid fatigue spikes.
+- Left leg: landing mechanics, light plyometric prep only if safe.
+- Cardio: run-walk toward continuous easy running if tolerated.
+- Football: passing, dribbling, turning, light acceleration. No contact.
+- Hand: focus on personally meaningful tasks: typing/guitar/piano/buttons.
+- Speech: longer daily-life speech exposure; track effort.
+
+WEEK 10 — Higher functional integration
+Goal: more natural movement.
+- Strength 2-3x depending on fatigue.
+- Agility: low-amplitude direction changes, cone patterns, rhythm/metronome footwork.
+- Running: maintain below symptom threshold.
+- Football: controlled drills with friend if safe; still non-contact.
+- Speech: conversation practice; monitor saliva/swallow.
+- Metrics: can you do more without next-day crash?
+
+WEEK 11 — Consolidation
+Goal: stabilize gains before final retest.
+- Reduce novelty.
+- Keep best exercises only.
+- Strength 2-3x moderate.
+- Football/running only if stable.
+- Practice exact retest tasks once, but do not overtrain them.
+- Prepare final clinician summary template.
+
+WEEK 12 — Final retest and next-cycle decision
+Goal: compare, summarize, decide.
+- Repeat full video/function protocol.
+- Compare Week0, Week4, Week8, Week12.
+- Generate 1-page summary for neurologist/physio/OT/logopedics:
+  - adherence
+  - improved functions
+  - persistent limitations
+  - symptom triggers
+  - video links
+  - lab follow-up status
+  - questions
+- Decide next cycle:
+  A. Continue and progress
+  B. Repeat with modifications
+  C. Shift focus to speech/hand/leg
+  D. Escalate specific clinician question
+
+MONTHLY VIDEO PROTOCOL
+Use same camera, same room, same order.
+Filename format: YYYY-MM-DD_weekX_task.mp4
+
+Order:
+1. Standing posture, front and side, 30 sec.
+2. Finger-nose each side, 30 sec.
+3. Finger taps left/right, 30 sec.
+4. Open/close fist left/right, 30 sec.
+5. Bottle cap or coin task, 60 sec.
+6. Typing sample screen recording or timed text, 60 sec.
+7. Heel-shin or leg coordination task, if safe, 30 sec each side.
+8. Stair descent one flight, safe railing nearby.
+9. Walk away/toward camera 10-20 m.
+10. Football wall passes 60 sec.
+11. Reading speech sample 60 sec.
+12. Spontaneous speech sample 60 sec.
+
+For vibration/shaking episodes:
+- Film only if safe.
+- Record posture/task, duration, stress/fatigue context, caffeine, sleep, prior workout.
+- Ask neurologist whether surface EMG/accelerometry/tremor polygraphy can capture it.
+
+METRICS DASHBOARD
+Weekly review every Sunday:
+- Rehab adherence: % completed
+- Sleep average duration
+- Sleep regularity
+- Resting HR trend
+- HRV/recovery trend, interpreted cautiously
+- Steps/activity
+- Strength sessions completed
+- Cardio sessions completed
+- Football drills completed
+- Left hand score average
+- Left leg score average
+- Speech score average
+- Saliva/swallow score average
+- Fatigue average
+- Stress average
+- Vibration/tremor episodes count
+- Best functional win of week
+- Biggest trigger of week
+- Adjustment for next week
+
+Success is not “symptoms gone”. Success is:
+- better function
+- fewer crashes
+- more predictable triggers
+- more confidence
+- improved videos/function tests
+- better clinician conversations
+
+SUPPLEMENTS / NUTRITION — CLINICIAN-DISCUSSION ONLY
+Do not start many things at once. Avoid making supplements the plan.
+
+Reasonable to discuss:
+- Vitamin D: prior value low-normal; continue sensible dose and recheck.
+- Creatine: possible for strength/training support; discuss kidney/CK baseline; tell doctor because creatinine interpretation may change.
+- Whey/protein: useful if tolerated and total protein is reasonable.
+- Omega-3: optional; prior omega-3 index appeared good, so not urgent.
+- Magnesium: possible if sleep/cramps, avoid excess.
+
+Be cautious / avoid for now:
+- Ashwagandha until thyroid pattern clarified, because FT4 was high with normal TSH and there are thyroid/liver cautions.
+- Chronic high-dose B6 unless prescribed, because excess B6 can itself cause neuropathy-like symptoms.
+
+Nutrition focus:
+- Mediterranean/anti-inflammatory style.
+- Hydration daily.
+- Adequate protein distributed across meals.
+- Reduce sugary drinks/fructose-heavy drinks.
+- Keep alcohol at zero/very low; you already stopped for >1 year.
+- Since uric acid was borderline/high: do not make it obsessive, but moderate frequent red/processed meat, organ meats, beer/alcohol, high-purine extremes, and dehydration.
+- Track meals simply for 2-4 weeks, not forever.
+
+SLEEP / STRESS RULES
+Current schedule around 22:30-23:00 to 05:40-06:00 is workable.
+Protect it.
+- If sleep worsens, reduce rehab intensity.
+- No hard training late evening.
+- Use 5-10 min downshift: breathing, walk, stretch, low light.
+- Track stress honestly; the point is pattern recognition, not self-blame.
+
+CLINICIAN ROADMAP
+Neurologist / movement-disorder clinician:
+- Confirm FND/FMD working diagnosis and what positive signs support it.
+- Ask how old tibial SEP/P40 delay should be interpreted now.
+- Ask whether tremor polygraphy/surface EMG+accelerometry is useful for situational vibrations.
+- Ask whether 2024 MRI needs second read or whether new 3T only if specific question.
+
+Physio:
+- High-level left-leg coordination, loaded control, eccentric knee control, dynamic stability, plyometrics only when safe, football-specific progression.
+- Avoid generic low-level rehab only.
+
+OT:
+- Left-hand dexterity, bimanual coordination, typing setup, guitar/piano/buttons/shoelaces/bottle-cap tasks.
+
+Speech/logopedics/phoniatrics:
+- In-person evaluation if saliva/swallowing is relevant.
+- Online English therapy can be useful after evaluation, but should not be generic pronunciation-only work.
+- Track monthly reading + spontaneous speech.
+
+Hausarzt/GP:
+- Targeted baseline labs.
+- Follow thyroid/iron/uric acid abnormalities.
+- Coordinate referrals.
+
+MRI SECOND-READ QUESTION
+Use this wording:
+“Could you confirm whether the 2024 MRI quality and sequences are sufficient for my left-sided motor/coordination symptoms, including brainstem, cerebellum, basal ganglia, and sensorimotor pathways? Since the study appears to be 1.5T and non-contrast, is a second read enough, or would a repeat 3T MRI only be useful if there is a specific clinical question?”
+
+TREMOR/VIBRATION QUESTION
+Use this wording:
+“I do not have a constant classic tremor, but I get situational vibration/shaking in certain postures or tasks. Would surface EMG/accelerometry or tremor polygraphy be useful to characterize frequency, regularity, entrainment, co-contraction, loading effect, or functional/organic features if we can provoke it during the test?”
+
+STOP / DELoad RULES
+Stop a session and reassess if:
+- unsafe gait, near fall, or loss of control
+- chest pain, breathing trouble, severe dizziness
+- new neurological deficit
+- true choking/swallowing danger
+- pain that changes mechanics significantly
+- symptom flare >2 points that persists next day
+
+Deload next week if:
+- sleep worsens for 3+ nights
+- HR/recovery trend worsens and fatigue high
+- symptoms flare after most sessions
+- motivation drops because plan feels punishing
+
+FINAL 12-WEEK DELIVERABLES
+At the end you should have:
+1. Week0/4/8/12 videos.
+2. Daily journal dataset.
+3. Wearable trend summary.
+4. Rehab adherence summary.
+5. Functional-test comparison table.
+6. Lab baseline/follow-up notes if performed.
+7. One-page clinician summary.
+8. Clear decision for next cycle.
+
+ONE-PAGE CLINICIAN SUMMARY TEMPLATE
+Patient: Judmir Karriqi
+Period: Week0 to Week12
+Working diagnosis/framing: documented FND/FMD consensus, with left-sided movement/coordination disorder and historical left tibial SEP/P40 delay.
+Main rehab focus: left hand dexterity, left leg coordination/stairs/running/football, speech/saliva, stress/fatigue pacing.
+Adherence: __%
+Improved: ____
+Unchanged: ____
+Worse: ____
+Triggers observed: ____
+Objective videos: Week0/4/8/12 available.
+Labs: baseline done yes/no; key abnormalities: ____
+Questions for clinician:
+1. Does current pattern still fit FND/FMD best?
+2. How should old SEP/P40 delay be interpreted now?
+3. Is tremor polygraphy useful for situational vibration/shaking?
+4. Is MRI second read enough or repeat imaging indicated only for a specific question?
+5. What should next 12-week rehab block prioritize?
+
+BOTTOM LINE
+Run this as a 12-week experiment in function, consistency, and evidence. The goal is not to prove a diagnosis with consumer data. The goal is to get stronger, more coordinated, safer, and more clinically understandable — while keeping diagnostic questions targeted and proportionate.

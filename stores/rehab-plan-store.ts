@@ -17,6 +17,7 @@ import { loadRehabPlanStoreAction } from "@/stores/load-actions";
 import { isStoreStale } from "@/stores/store-utils";
 import type { CalendarEventColor } from "@/types/calendar";
 import type { RehabPlanEvent, RehabSpeechRecording } from "@/types/rehab";
+import { REHAB_EVENT_KINDS, type RehabEventKind } from "@/types/rehab";
 
 type RehabPlanStoreState = {
   events: RehabPlanEvent[];
@@ -33,6 +34,7 @@ type CreateEventInput = {
   endAt: string;
   allDay?: boolean;
   color?: CalendarEventColor;
+  eventKind?: string;
   recurrence?: RecurrenceRule | null;
 };
 
@@ -44,6 +46,7 @@ type UpdateEventInput = {
   endAt?: string;
   allDay?: boolean;
   color?: CalendarEventColor;
+  eventKind?: string;
   recurrence?: RecurrenceRule | null;
 };
 
@@ -55,6 +58,7 @@ type OccurrenceEdit = {
   endAt: string;
   allDay?: boolean;
   color?: CalendarEventColor;
+  eventKind?: string;
 };
 
 export type SeriesEditScope = "occurrence" | "following" | "all";
@@ -143,6 +147,12 @@ function showStoreError(message: string) {
   });
 }
 
+function parseEventKind(value: string | undefined): RehabEventKind {
+  return value && (REHAB_EVENT_KINDS as readonly string[]).includes(value)
+    ? (value as RehabEventKind)
+    : "custom";
+}
+
 function buildOptimisticCreate(
   tempId: string,
   input: CreateEventInput,
@@ -160,7 +170,7 @@ function buildOptimisticCreate(
     color: input.color ?? "blue",
     source: "local",
     completedAt: null,
-    eventKind: "custom",
+    eventKind: parseEventKind(input.eventKind),
     programId: null,
     planWeek: null,
     seriesId: recurrence ? tempId : null,
@@ -198,7 +208,9 @@ function buildOptimisticOverride(
     source: "local",
     completedAt:
       flags.completedAt !== undefined ? flags.completedAt : base.completedAt,
-    eventKind: occurrence.eventKind,
+    eventKind: edit.eventKind
+      ? parseEventKind(edit.eventKind)
+      : occurrence.eventKind,
     programId: null,
     planWeek: null,
     seriesId: occurrence.seriesId,
@@ -426,6 +438,10 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       endAt: input.endAt ?? prev.endAt,
       allDay: input.allDay ?? prev.allDay,
       color: input.color ?? prev.color,
+      eventKind:
+        input.eventKind !== undefined
+          ? parseEventKind(input.eventKind)
+          : prev.eventKind,
       recurrence: nextRecurrence,
       // Converting a plain event into a series: it becomes its own master.
       seriesId: nextRecurrence && !prev.seriesId ? prev.id : prev.seriesId,
@@ -650,7 +666,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
         endAt: edit.endAt,
         allDay: edit.allDay,
         color: edit.color,
-        eventKind: event.eventKind,
+        eventKind: edit.eventKind ?? event.eventKind,
         recurrence: recurrence ?? { freq: "daily", interval: 1 },
       });
       if (!result.ok) {
@@ -688,6 +704,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       endAt: masterEnd.toISOString(),
       allDay: edit.allDay,
       color: edit.color,
+      eventKind: edit.eventKind,
       recurrence,
     });
   },

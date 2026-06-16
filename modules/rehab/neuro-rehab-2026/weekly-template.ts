@@ -1,5 +1,13 @@
 import type { RehabEventKind } from "@/types/rehab";
 
+/** Gym C (dynamic stability) — Friday evening, all weeks. */
+export const GYM_C_WEEKDAY = 5;
+export const GYM_C_START_HOUR = 18;
+export const GYM_C_START_MINUTE = 0;
+
+/** Calendar title for all `run_walk` program events (speech/football stay separate). */
+export const RUN_EVENT_TITLE = "Run";
+
 export type WeekdayTemplate = {
   mainKind: RehabEventKind;
   mainTitle: string;
@@ -8,36 +16,45 @@ export type WeekdayTemplate = {
   includeSpeech: boolean;
   includeFootball: boolean;
   includeGymD: boolean;
-  skipMainOnRetest?: boolean;
+  mainStartHour: number;
+  mainStartMinute: number;
+  /** Saturday: optional easy walk after gym (4th cardio day). */
+  includeEasyWalk?: boolean;
+  /** Sunday: light walk only — no gym. */
+  isSundayEasyWalk?: boolean;
 };
 
 export function weekdayTemplate(
   dayOfWeek: number,
-  week: number,
+  _week: number,
   isRetest: boolean,
 ): WeekdayTemplate {
   // 0=Sun, 1=Mon, ... 6=Sat
-  // Gym: Wed, Sat, Sun (3×/week). Running: Mon, Tue, Thu, Fri.
+  // Gym: Wed (A), Fri 18:00 (C), Sat (B). Run/walk: Sun easy, Mon, Tue, Thu, Sat easy.
   switch (dayOfWeek) {
     case 1:
       return {
         mainKind: "run_walk",
-        mainTitle: "Run/walk",
+        mainTitle: RUN_EVENT_TITLE,
         mainDescription: "Easy run/walk session.",
         handMinutes: 10,
         includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
+        mainStartHour: 9,
+        mainStartMinute: 0,
       };
     case 2:
       return {
         mainKind: "run_walk",
-        mainTitle: "Run/walk + speech",
+        mainTitle: RUN_EVENT_TITLE,
         mainDescription: "Run/walk session then speech practice.",
         handMinutes: 20,
         includeSpeech: true,
         includeFootball: false,
         includeGymD: false,
+        mainStartHour: 9,
+        mainStartMinute: 0,
       };
     case 3:
       return {
@@ -48,26 +65,32 @@ export function weekdayTemplate(
         includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
+        mainStartHour: 9,
+        mainStartMinute: 0,
       };
     case 4:
       return {
         mainKind: "run_walk",
-        mainTitle: "Run/walk + football control",
+        mainTitle: RUN_EVENT_TITLE,
         mainDescription: "Easy walk/run then ball-control drills.",
         handMinutes: 10,
         includeSpeech: true,
         includeFootball: true,
         includeGymD: false,
+        mainStartHour: 9,
+        mainStartMinute: 0,
       };
     case 5:
       return {
-        mainKind: "run_walk",
-        mainTitle: "Run/walk",
-        mainDescription: "Easy run/walk session.",
+        mainKind: "gym_c",
+        mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
+        mainDescription: "See Wiki: Gym Workouts — Gym C.",
         handMinutes: 10,
         includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
+        mainStartHour: GYM_C_START_HOUR,
+        mainStartMinute: GYM_C_START_MINUTE,
       };
     case 6:
       return {
@@ -78,16 +101,23 @@ export function weekdayTemplate(
         includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
+        mainStartHour: 9,
+        mainStartMinute: 0,
+        includeEasyWalk: true,
       };
     case 0:
       return {
-        mainKind: "gym_c",
-        mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
-        mainDescription: "See Wiki: Gym Workouts — Gym C.",
-        handMinutes: 10,
+        mainKind: "run_walk",
+        mainTitle: RUN_EVENT_TITLE,
+        mainDescription:
+          "Sunday easy walk only — light mobility. Complete weekly review in journal/wiki.",
+        handMinutes: 0,
         includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
+        mainStartHour: 9,
+        mainStartMinute: 0,
+        isSundayEasyWalk: true,
       };
     default:
       return {
@@ -98,6 +128,8 @@ export function weekdayTemplate(
         includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
+        mainStartHour: 9,
+        mainStartMinute: 0,
       };
   }
 }

@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
@@ -118,12 +116,9 @@ async function applyDeferredShiftWithBump(
 
 describe.runIf(RUN)("apply neuro rehab reschedule to Supabase", () => {
   it("shifts existing rows and appends missing Day 0 / tail days", async () => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    expect(url).toBeTruthy();
-    expect(serviceKey).toBeTruthy();
+    const { url, serviceKey } = requireSupabaseAdminEnv();
 
-    const admin = createClient<Database>(url!, serviceKey!, {
+    const admin = createClient<Database>(url, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 

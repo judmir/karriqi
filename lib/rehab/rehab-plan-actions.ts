@@ -66,6 +66,7 @@ export async function createRehabPlanEvent(input: {
   endAt: string;
   allDay?: boolean;
   color?: CalendarEventColor;
+  eventKind?: string;
   recurrence?: RecurrenceRule | null;
 }): Promise<CreateRehabPlanEventResult> {
   const title = input.title.trim();
@@ -103,6 +104,7 @@ export async function createRehabPlanEvent(input: {
       end_at: endAt.toISOString(),
       all_day: input.allDay ?? false,
       color: isEventColor(input.color) ? input.color : "blue",
+      event_kind: eventKindOrCustom(input.eventKind),
       recurrence_rule: recurrenceRule,
     })
     .select("id")
@@ -137,6 +139,7 @@ export async function updateRehabPlanEvent(input: {
   endAt?: string;
   allDay?: boolean;
   color?: CalendarEventColor;
+  eventKind?: string;
   recurrence?: RecurrenceRule | null;
 }): Promise<UpdateRehabPlanEventResult> {
   const supabase = await createClient();
@@ -184,6 +187,10 @@ export async function updateRehabPlanEvent(input: {
 
   if (input.color !== undefined && isEventColor(input.color)) {
     patch.color = input.color;
+  }
+
+  if (input.eventKind !== undefined) {
+    patch.event_kind = eventKindOrCustom(input.eventKind);
   }
 
   if (input.recurrence !== undefined) {

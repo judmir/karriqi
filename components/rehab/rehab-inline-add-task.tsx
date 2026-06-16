@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
+import { RehabEventKindPicker } from "@/components/rehab/rehab-event-kind-picker";
 import { RehabTimePicker } from "@/components/rehab/rehab-time-picker";
 import { calendarDateToStorage } from "@/lib/calendar/all-day-events";
 import {
@@ -25,8 +26,11 @@ import {
   toDateInputValue,
 } from "@/lib/calendar/calendar-utils";
 import type { RecurrenceRule } from "@/lib/rehab/recurrence";
+import { rehabEventKindDefaultColor, rehabEventKindPickerVisual } from "@/lib/rehab/rehab-event-kind-visual";
 import { cn } from "@/lib/utils";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
+import type { CalendarEventColor } from "@/types/calendar";
+import type { RehabEventKind } from "@/types/rehab";
 
 function dateButtonLabel(date: Date): string {
   if (isToday(date)) {
@@ -73,6 +77,10 @@ export function RehabInlineAddTask({
   const [dateOpen, setDateOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceRule | null>(null);
+  const [eventKind, setEventKind] = useState<RehabEventKind>("custom");
+  const [color, setColor] = useState<CalendarEventColor>(
+    rehabEventKindDefaultColor("custom"),
+  );
 
   const rootRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -85,6 +93,8 @@ export function RehabInlineAddTask({
     setDateOpen(false);
     setTimeOpen(false);
     setRecurrence(null);
+    setEventKind("custom");
+    setColor(rehabEventKindDefaultColor("custom"));
   }, [defaultStart]);
 
   const cancel = useCallback(() => {
@@ -160,6 +170,8 @@ export function RehabInlineAddTask({
         startAt,
         endAt,
         allDay,
+        color,
+        eventKind,
         recurrence,
       });
 
@@ -182,6 +194,19 @@ export function RehabInlineAddTask({
       onActivate(null);
     } finally {
       setPending(false);
+    }
+  }
+
+  function handleEventKindChange(
+    kind: RehabEventKind,
+    defaultColor: CalendarEventColor,
+  ) {
+    const previousLabel = rehabEventKindPickerVisual(eventKind).label;
+    setEventKind(kind);
+    setColor(defaultColor);
+    const nextLabel = rehabEventKindPickerVisual(kind).label;
+    if (!title.trim() || title.trim() === previousLabel) {
+      setTitle(kind === "custom" ? "" : nextLabel);
     }
   }
 
@@ -285,6 +310,13 @@ export function RehabInlineAddTask({
                   {time || "Time"}
                 </button>
               }
+            />
+
+            <RehabEventKindPicker
+              value={eventKind}
+              onChange={handleEventKindChange}
+              disabled={pending}
+              appearance="inline"
             />
 
             <RehabRepeatField

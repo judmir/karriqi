@@ -62,7 +62,12 @@ import {
   rulesEqual,
   type RecurrenceRule,
 } from "@/lib/rehab/recurrence";
+import {
+  rehabEventKindDefaultColor,
+  rehabEventKindPickerVisual,
+} from "@/lib/rehab/rehab-event-kind-visual";
 import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
+import { RehabEventKindPicker } from "@/components/rehab/rehab-event-kind-picker";
 import { RehabSpeechRecordingSection } from "@/components/rehab/rehab-speech-recording-section";
 import { allEventSubtasksDone } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
@@ -71,7 +76,7 @@ import {
 } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
-import type { RehabPlanEvent } from "@/types/rehab";
+import type { RehabPlanEvent, RehabEventKind } from "@/types/rehab";
 
 type EventFormDialogProps = {
   open: boolean;
@@ -206,8 +211,9 @@ function EventFormDialogBody({
   const isSeriesOccurrence =
     isRehab && isEditing && Boolean(rehabEvent?.recurrenceAt);
   /** Speech practice events get a voice-recording control inside the modal. */
-  const isSpeechEvent =
-    isRehab && isEditing && rehabEvent?.eventKind === "speech";
+  const initialEventKind: RehabEventKind = isRehab
+    ? (rehabEvent?.eventKind ?? "custom")
+    : "custom";
   const initialStart = event ? new Date(event.startAt) : defaultStart;
   const initialEnd = event
     ? event.allDay
@@ -228,7 +234,11 @@ function EventFormDialogBody({
     initialParsed.subtasks,
   );
   const allDay = event?.allDay ?? defaultAllDay;
-  const color: CalendarEventColor = event?.color ?? "blue";
+  const [color, setColor] = useState<CalendarEventColor>(
+    event?.color ?? rehabEventKindDefaultColor(initialEventKind),
+  );
+  const [eventKind, setEventKind] = useState<RehabEventKind>(initialEventKind);
+  const isSpeechEvent = isRehab && isEditing && eventKind === "speech";
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
   const [startTime, setStartTime] = useState(toTimeInputValue(initialStart));
@@ -260,10 +270,24 @@ function EventFormDialogBody({
     myNotes !== initialParsed.myNotes ||
     !subtasksEqual(subtasks, initialParsed.subtasks) ||
     effectiveAllDay !== (event?.allDay ?? defaultAllDay) ||
-    color !== (event?.color ?? "blue") ||
+    color !== (event?.color ?? rehabEventKindDefaultColor(initialEventKind)) ||
+    eventKind !== initialEventKind ||
     toDateInputValue(startDate) !== toDateInputValue(initialStart) ||
     startTime !== toTimeInputValue(initialStart) ||
     recurrenceChanged;
+
+  function handleEventKindChange(
+    kind: RehabEventKind,
+    defaultColor: CalendarEventColor,
+  ) {
+    const previousLabel = rehabEventKindPickerVisual(eventKind).label;
+    setEventKind(kind);
+    setColor(defaultColor);
+    const nextLabel = rehabEventKindPickerVisual(kind).label;
+    if (!title.trim() || title.trim() === previousLabel) {
+      setTitle(kind === "custom" ? "" : nextLabel);
+    }
+  }
 
   useEffect(() => {
     setCompletedOverride(null);
@@ -340,7 +364,7 @@ function EventFormDialogBody({
 
     if (!persistence) {
       const now = new Date().toISOString();
-      onSaved({
+      const base = {
         id: event?.id ?? crypto.randomUUID(),
         userId: event?.userId ?? "local",
         title: trimmedTitle,
@@ -351,7 +375,23 @@ function EventFormDialogBody({
         color,
         createdAt: event?.createdAt ?? now,
         updatedAt: now,
-      });
+      };
+      onSaved(
+        (isRehab
+          ? {
+              ...base,
+              completedAt: rehabEvent?.completedAt ?? null,
+              eventKind,
+              programId: rehabEvent?.programId ?? null,
+              planWeek: rehabEvent?.planWeek ?? null,
+              speechRecordings: rehabEvent?.speechRecordings ?? [],
+              seriesId: rehabEvent?.seriesId ?? null,
+              recurrence: isRehab ? recurrence : null,
+              recurrenceAt: rehabEvent?.recurrenceAt ?? null,
+              recurrenceCancelled: rehabEvent?.recurrenceCancelled ?? false,
+            }
+          : base) as CalendarEvent,
+      );
       onOpenChange(false);
       toast.success("Event saved.");
       return;
@@ -368,7 +408,7 @@ function EventFormDialogBody({
           endAt: range.endAt,
           allDay: effectiveAllDay,
           color,
-          ...(isRehab ? { recurrence } : {}),
+          ...(isRehab ? { recurrence, eventKind } : {}),
         });
         if (!result.ok) {
           toast.error(result.message);
@@ -382,6 +422,7 @@ function EventFormDialogBody({
           endAt: range.endAt,
           allDay: effectiveAllDay,
           color,
+          ...(isRehab ? { eventKind } : {}),
           updatedAt: new Date().toISOString(),
         });
         toast.success("Event updated.");
@@ -393,25 +434,49 @@ function EventFormDialogBody({
           endAt: range.endAt,
           allDay: effectiveAllDay,
           color,
-          ...(isRehab ? { recurrence } : {}),
+          ...(isRehab ? { recurrence, eventKind } : {}),
         });
         if (!result.ok) {
           toast.error(result.message);
           return;
         }
         const now = new Date().toISOString();
-        onSaved({
-          id: result.id,
-          userId: "server",
-          title: trimmedTitle,
-          description: nextDescription,
-          startAt: range.startAt,
-          endAt: range.endAt,
-          allDay: effectiveAllDay,
-          color,
-          createdAt: now,
-          updatedAt: now,
-        });
+        onSaved(
+          (isRehab
+            ? {
+                id: result.id,
+                userId: "server",
+                title: trimmedTitle,
+                description: nextDescription,
+                startAt: range.startAt,
+                endAt: range.endAt,
+                allDay: effectiveAllDay,
+                color,
+                completedAt: null,
+                eventKind,
+                programId: null,
+                planWeek: null,
+                speechRecordings: [],
+                seriesId: recurrence ? result.id : null,
+                recurrence,
+                recurrenceAt: null,
+                recurrenceCancelled: false,
+                createdAt: now,
+                updatedAt: now,
+              }
+            : {
+                id: result.id,
+                userId: "server",
+                title: trimmedTitle,
+                description: nextDescription,
+                startAt: range.startAt,
+                endAt: range.endAt,
+                allDay: effectiveAllDay,
+                color,
+                createdAt: now,
+                updatedAt: now,
+              }) as CalendarEvent,
+        );
         toast.success("Event created.");
       }
       onOpenChange(false);
@@ -445,6 +510,7 @@ function EventFormDialogBody({
           endAt: range.endAt,
           allDay: effectiveAllDay,
           color,
+          eventKind,
         },
         recurrence,
         scope,
@@ -778,6 +844,14 @@ function EventFormDialogBody({
           <p className="px-1.5 pt-1 text-xs text-white/45">
             {describeRecurrence(recurrence)}
           </p>
+        ) : null}
+        {isRehab ? (
+          <RehabEventKindPicker
+            value={eventKind}
+            onChange={handleEventKindChange}
+            disabled={viewOnly}
+            appearance="sidebar"
+          />
         ) : null}
       </aside>
 
