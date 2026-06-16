@@ -13,6 +13,16 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -176,7 +186,7 @@ function EventFormDialogBody({
   const [endTime, setEndTime] = useState(toTimeInputValue(initialEnd));
   const [showTime, setShowTime] = useState(!allDay);
   const [pending, setPending] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const initialRecurrence: RecurrenceRule | null = isRehab
     ? (rehabEvent?.recurrence ?? null)
     : null;
@@ -390,7 +400,7 @@ function EventFormDialogBody({
     }
   }
 
-  async function handleDelete() {
+  function requestDelete() {
     if (!event) {
       return;
     }
@@ -401,13 +411,17 @@ function EventFormDialogBody({
       return;
     }
 
-    if (!confirmDelete) {
-      setConfirmDelete(true);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function confirmDeleteTask() {
+    if (!event) {
       return;
     }
 
     if (!persistence) {
       onDeleted(event.id);
+      setDeleteConfirmOpen(false);
       onOpenChange(false);
       toast.success("Event deleted.");
       return;
@@ -421,6 +435,7 @@ function EventFormDialogBody({
         return;
       }
       onDeleted(event.id);
+      setDeleteConfirmOpen(false);
       onOpenChange(false);
       toast.success("Event deleted.");
     } finally {
@@ -495,14 +510,11 @@ function EventFormDialogBody({
           {isEditing && !viewOnly ? (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={requestDelete}
               disabled={pending}
-              className={cn(
-                "rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white",
-                confirmDelete && "bg-destructive/20 text-destructive",
-              )}
-              aria-label={confirmDelete ? "Confirm delete" : "Delete event"}
-              title={confirmDelete ? "Confirm delete" : "Delete"}
+              className="rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Delete event"
+              title="Delete"
             >
               <Trash2 className="size-4" aria-hidden />
             </button>
@@ -648,6 +660,27 @@ function EventFormDialogBody({
           onCancel={() => setDeleteScopePrompt(false)}
         />
       ) : null}
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={pending}
+              onClick={() => void confirmDeleteTask()}
+            >
+              {pending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DialogContent>
   );
 }

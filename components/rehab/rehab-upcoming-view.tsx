@@ -19,6 +19,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   serializeEventDescription,
   type EventSubtask,
 } from "@/lib/calendar/event-subtasks";
@@ -81,6 +91,8 @@ export function RehabUpcomingView() {
   const [visibleDays, setVisibleDays] = useState(UPCOMING_INITIAL_DAYS);
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [eventToDelete, setEventToDelete] = useState<RehabPlanEvent | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
 
   const trimmedSearch = searchQuery.trim();
   const searchActive = trimmedSearch.length > 0;
@@ -181,8 +193,21 @@ export function RehabUpcomingView() {
     }
   }
 
-  async function handleDelete(event: RehabPlanEvent) {
-    await deleteOccurrence(event, "occurrence");
+  function requestDelete(event: RehabPlanEvent) {
+    setEventToDelete(event);
+  }
+
+  async function confirmDelete() {
+    if (!eventToDelete) {
+      return;
+    }
+    setDeletePending(true);
+    try {
+      await deleteOccurrence(eventToDelete, "occurrence");
+      setEventToDelete(null);
+    } finally {
+      setDeletePending(false);
+    }
   }
 
   return (
@@ -232,7 +257,7 @@ export function RehabUpcomingView() {
                     void handleToggleAllSubtasks(event, subtasks, completed)
                   }
                   onEdit={() => openEdit(event)}
-                  onDelete={() => void handleDelete(event)}
+                  onDelete={() => requestDelete(event)}
                 />
               ))}
             </div>
@@ -269,7 +294,7 @@ export function RehabUpcomingView() {
                 onUpdateSubtasks={handleUpdateSubtasks}
                 onToggleAllSubtasks={handleToggleAllSubtasks}
                 onEdit={openEdit}
-                onDelete={handleDelete}
+                onDelete={requestDelete}
                 activeAddId={activeAddId}
                 onActivateAdd={setActiveAddId}
               />
@@ -320,6 +345,34 @@ export function RehabUpcomingView() {
         onOpenChange={setStoicOpen}
         event={stoicEvent}
       />
+
+      <AlertDialog
+        open={eventToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletePending) {
+            setEventToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deletePending}
+              onClick={() => void confirmDelete()}
+            >
+              {deletePending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bash scripts/main-dev.sh",
     "worktree:dev": "bash scripts/worktree-dev.sh",
+    "worktree:dev:ensure": "bash scripts/worktree-dev-ensure-background.sh",
     "worktree:cleanup": "bash scripts/worktree-cleanup.sh",
     "worktree:supabase:start": "bash scripts/worktree-supabase-local.sh start",
     "worktree:supabase:ensure": "bash scripts/worktree-supabase-local.sh ensure",
