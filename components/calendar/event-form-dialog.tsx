@@ -585,19 +585,25 @@ function EventFormDialogBody({
     if (!event || !rehabEvent) {
       return;
     }
+
     setDeleteScopePrompt(false);
     setPending(true);
+    const eventId = event.id;
+    const deletePromise = deleteOccurrence(rehabEvent as RehabPlanEvent, mode);
+    // deleteOccurrence applies the optimistic store update before its first await.
+    setPending(false);
+    onDeleted(eventId);
+    onOpenChange(false);
+
     try {
-      const result = await deleteOccurrence(rehabEvent as RehabPlanEvent, mode);
+      const result = await deletePromise;
       if (!result.ok) {
         toast.error(result.message);
         return;
       }
-      onDeleted(event.id);
-      onOpenChange(false);
       toast.success(mode === "series" ? "Series deleted." : "Event deleted.");
-    } finally {
-      setPending(false);
+    } catch {
+      toast.error("Could not delete event.");
     }
   }
 

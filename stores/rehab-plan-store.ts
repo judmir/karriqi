@@ -617,11 +617,12 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
   },
 
   async deleteOccurrence(event, mode) {
-    if (mode === "series" && event.seriesId) {
-      return deleteSeriesLocal(set, get, event.seriesId);
+    const seriesId = event.seriesId ?? event.recurrenceMasterId;
+    if (mode === "series" && seriesId) {
+      return deleteSeriesLocal(set, get, seriesId);
     }
     // Single occurrence of a series -> cancel (EXDATE) via an override row.
-    if (event.seriesId && event.recurrenceAt) {
+    if (seriesId && event.recurrenceAt) {
       return upsertOccurrence(set, get, event, {}, { cancelled: true });
     }
     return get().deleteEvent(event.id);

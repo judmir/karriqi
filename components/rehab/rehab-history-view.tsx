@@ -109,6 +109,11 @@ export function RehabHistoryView() {
     await toggleOccurrenceCompleted(event, completed);
   }
 
+  function closeEventDialog() {
+    setSelectedEvent(null);
+    setDialogOpen(false);
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="border-border shrink-0 border-b px-4 py-3 md:px-6">
@@ -171,14 +176,19 @@ export function RehabHistoryView() {
 
       <EventFormDialog
         open={dialogOpen && selectedEvent !== null}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setSelectedEvent(null);
+          }
+        }}
         event={selectedEvent}
         defaultStart={draftStart}
         defaultAllDay={draftAllDay}
         persistence={persistence}
         variant="rehab"
-        onSaved={() => setDialogOpen(false)}
-        onDeleted={() => setDialogOpen(false)}
+        onSaved={closeEventDialog}
+        onDeleted={closeEventDialog}
       />
 
       <RehabJournalDialog

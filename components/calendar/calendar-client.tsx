@@ -290,10 +290,17 @@ export function CalendarClient({
   }
 
   function handleDeleted(id: string) {
-    if (syncRehabStore || !setEvents) {
+    if (syncRehabStore) {
+      setDialogOpen(false);
+      setSelectedEvent(null);
+      return;
+    }
+    if (!setEvents) {
       return;
     }
     setEvents((prev) => prev.filter((item) => item.id !== id));
+    setDialogOpen(false);
+    setSelectedEvent(null);
   }
 
   function handleSelectSlot(day: Date, hour: number) {
@@ -431,7 +438,12 @@ export function CalendarClient({
 
           <EventFormDialog
             open={dialogOpen}
-            onOpenChange={setDialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                setSelectedEvent(null);
+              }
+            }}
             event={selectedEvent}
             defaultStart={draftStart}
             persistence={persistence}

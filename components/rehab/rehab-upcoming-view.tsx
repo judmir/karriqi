@@ -207,12 +207,17 @@ export function RehabUpcomingView() {
     [openRehabEventEdit],
   );
 
-  function handleSaved() {
+  function closeEventDialog() {
+    setSelectedEvent(null);
     setDialogOpen(false);
   }
 
+  function handleSaved() {
+    closeEventDialog();
+  }
+
   function handleDeleted() {
-    setDialogOpen(false);
+    closeEventDialog();
   }
 
   async function handleToggleCompleted(
@@ -390,7 +395,12 @@ export function RehabUpcomingView() {
 
       <EventFormDialog
         open={dialogOpen && selectedEvent !== null}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setSelectedEvent(null);
+          }
+        }}
         event={selectedEvent}
         defaultStart={draftStart}
         defaultAllDay={draftAllDay}
