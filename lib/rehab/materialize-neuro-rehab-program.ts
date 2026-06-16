@@ -103,6 +103,34 @@ async function fetchExistingProgramOccurrences(
 }
 
 /**
+ * Insert program rows, skipping any slot that already has an active row (or that
+ * another concurrent materialization just claimed). Uses ON CONFLICT DO NOTHING
+ * against the partial unique index on active program occurrences.
+ */
+async function insertProgramEventBatches(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  rows: RehabPlanEventInsert[],
+): Promise<number> {
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rowsForDbInsert(rows.slice(i, i + BATCH_SIZE));
+    const { data, error } = await admin
+      .from("rehab_plan_events")
+      .upsert(batch, {
+        onConflict: "user_id,program_id,start_at,event_kind",
+        ignoreDuplicates: true,
+      })
+      .select("id");
+    if (error) {
+      throw new Error(error.message);
+    }
+    inserted += data?.length ?? 0;
+  }
+
+  return inserted;
+}
+
+/**
  * Insert only the generated program occurrences that are not already stored.
  * Existing rows (including the user's completions, notes, and recordings) are
  * left completely untouched. Returns the number of rows inserted.
@@ -116,17 +144,7 @@ async function insertMissingProgramEvents(
     (event) => !existingKeys.has(occurrenceKey(event.event_kind, event.start_at)),
   );
 
-  let inserted = 0;
-  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
-    const batch = rowsForDbInsert(missing.slice(i, i + BATCH_SIZE));
-    const { error } = await admin.from("rehab_plan_events").insert(batch);
-    if (error) {
-      throw new Error(error.message);
-    }
-    inserted += batch.length;
-  }
-
-  return inserted;
+  return insertProgramEventBatches(admin, missing);
 }
 
 async function repairGeneratedGymEventDescriptions(
@@ -224,15 +242,7 @@ export async function materializeNeuroRehabProgramForUser(
   let inserted = 0;
 
   try {
-    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-      const batch = rowsForDbInsert(rows.slice(i, i + BATCH_SIZE));
-      const { error } = await admin.from("rehab_plan_events").insert(batch);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-      inserted += batch.length;
-    }
+    inserted = await insertProgramEventBatches(admin, rows);
   } catch (err) {
     // Safe to clean up: the program table was empty for this user before we
     // started this first-time seed, so nothing user-authored can be lost here.
