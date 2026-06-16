@@ -11,6 +11,7 @@ import {
   deleteCalendarEventFromGoogle,
   pushCalendarEventToGoogle,
 } from "@/lib/google-calendar/sync";
+import { softDeletePatch } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { CalendarEventColor } from "@/types/calendar";
@@ -210,9 +211,10 @@ export async function deleteCalendarEvent(
 
   const { error } = await supabase
     .from("calendar_events")
-    .delete()
+    .update(softDeletePatch())
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };

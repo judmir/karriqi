@@ -1,5 +1,6 @@
 import { deleteAllProgramEventsForUser } from "@/lib/rehab/dedupe-rehab-program-events";
 import { parseEventDescription } from "@/lib/calendar/event-subtasks";
+import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
@@ -68,11 +69,13 @@ async function fetchExistingProgramOccurrences(
   admin: NonNullable<ReturnType<typeof createAdminClient>>,
   userId: string,
 ): Promise<ExistingProgramOccurrences> {
-  const { data, error } = await admin
-    .from("rehab_plan_events")
-    .select("event_kind, start_at")
-    .eq("user_id", userId)
-    .eq("program_id", NEURO_REHAB_PROGRAM_ID);
+  const { data, error } = await withoutSoftDeleted(
+    admin
+      .from("rehab_plan_events")
+      .select("event_kind, start_at")
+      .eq("user_id", userId)
+      .eq("program_id", NEURO_REHAB_PROGRAM_ID),
+  );
 
   if (error) {
     throw new Error(error.message);
@@ -136,7 +139,8 @@ async function repairGeneratedGymEventDescriptions(
     .select("id, start_at, event_kind, description")
     .eq("user_id", userId)
     .eq("program_id", NEURO_REHAB_PROGRAM_ID)
-    .in("event_kind", [...GYM_EVENT_KINDS]);
+    .in("event_kind", [...GYM_EVENT_KINDS])
+    .is("deleted_at", null);
 
   if (error) {
     throw new Error(error.message);

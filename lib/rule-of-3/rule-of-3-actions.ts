@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 
+import { softDeletePatch } from "@/lib/db/soft-delete";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 
 const planDateSchema = z
@@ -71,9 +72,10 @@ export async function saveRuleOf3Item(input: {
   if (title.length === 0) {
     const { error } = await supabase
       .from("rule_of_3_items")
-      .delete()
+      .update(softDeletePatch())
       .eq("day_id", day.dayId)
-      .eq("position", parsed.data.position);
+      .eq("position", parsed.data.position)
+      .is("deleted_at", null);
     if (error) {
       return { ok: false, message: error.message };
     }

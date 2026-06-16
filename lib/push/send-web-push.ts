@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import webPush from "web-push";
 
+import { softDeletePatch, withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function vapidConfigured(): boolean {
@@ -65,10 +66,12 @@ export async function sendWebPushToUserIds(
     };
   }
 
-  const { data: subs, error } = await admin
-    .from("push_subscriptions")
-    .select("id, user_id, endpoint, p256dh, auth")
-    .in("user_id", userIds);
+  const { data: subs, error } = await withoutSoftDeleted(
+    admin
+      .from("push_subscriptions")
+      .select("id, user_id, endpoint, p256dh, auth")
+      .in("user_id", userIds),
+  );
 
   if (error) {
     console.error("[web-push] subscription query failed:", error.message);
@@ -116,7 +119,11 @@ export async function sendWebPushToUserIds(
     } catch (err: unknown) {
       const statusCode = (err as { statusCode?: number }).statusCode;
       if (statusCode === 410) {
-        await admin.from("push_subscriptions").delete().eq("id", sub.id);
+        await admin
+          .from("push_subscriptions")
+          .update(softDeletePatch())
+          .eq("id", sub.id)
+          .is("deleted_at", null);
       } else {
         console.error("[web-push] send failed:", err);
       }

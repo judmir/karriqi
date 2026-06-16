@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { ROUTES } from "@/config/routes";
+import { softDeletePatch } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 import {
@@ -146,7 +147,8 @@ export async function unpairHousehold(
 
   const { error } = await admin
     .from("household_members")
-    .delete()
+    .update(softDeletePatch())
+    .is("deleted_at", null)
     .or(
       `and(owner_user_id.eq.${me.id},member_user_id.eq.${otherUserId}),and(owner_user_id.eq.${otherUserId},member_user_id.eq.${me.id})`,
     );

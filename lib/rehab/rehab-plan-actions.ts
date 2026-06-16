@@ -1,5 +1,6 @@
 "use server";
 
+import { softDeletePatch } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 import {
   serializeRecurrenceRule,
@@ -226,9 +227,10 @@ export async function deleteRehabPlanEvent(
 
   const { error } = await supabase
     .from("rehab_plan_events")
-    .delete()
+    .update(softDeletePatch())
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -340,9 +342,10 @@ export async function deleteRehabSpeechRecording(input: {
 
   const { error } = await supabase
     .from("rehab_speech_recordings")
-    .delete()
+    .update(softDeletePatch())
     .eq("id", input.id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -488,9 +491,10 @@ export async function deleteRehabSeries(
 
   const { error } = await supabase
     .from("rehab_plan_events")
-    .delete()
+    .update(softDeletePatch())
     .eq("user_id", user.id)
-    .eq("series_id", seriesId);
+    .eq("series_id", seriesId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };

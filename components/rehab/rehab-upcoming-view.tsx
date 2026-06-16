@@ -1,7 +1,8 @@
 "use client";
 
 import { addDays, endOfDay, isSameDay, startOfDay } from "date-fns";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, History, Search, X } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   forwardRef,
@@ -14,6 +15,8 @@ import {
 
 import { CalendarClient } from "@/components/calendar/calendar-client";
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
+import { buttonVariants } from "@/components/ui/button";
+import { ROUTES } from "@/config/routes";
 import { RehabEventSubtaskChecklist } from "@/components/rehab/rehab-event-subtask-checklist";
 import { RehabInlineAddTask } from "@/components/rehab/rehab-inline-add-task";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
@@ -231,10 +234,20 @@ export function RehabUpcomingView() {
       <div className="border-border shrink-0 space-y-3 border-b px-4 py-3 md:px-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-semibold tracking-tight">Upcoming</h1>
-          <RehabUpcomingViewSwitcher
-            view={view}
-            onViewChange={handleViewChange}
-          />
+          <div className="flex items-center gap-1">
+            <Link
+              href={ROUTES.rehabHistory}
+              prefetch={false}
+              aria-label="Open history"
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+              <History className="size-4" />
+            </Link>
+            <RehabUpcomingViewSwitcher
+              view={view}
+              onViewChange={handleViewChange}
+            />
+          </div>
         </div>
 
         <div className="relative min-w-0">
