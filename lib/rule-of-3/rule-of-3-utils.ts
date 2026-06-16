@@ -62,6 +62,31 @@ export function hourInTimeZone(
   return Number.parseInt(hour, 10);
 }
 
+/** Local minute (0–59) for `date` in the given IANA timezone. */
+export function minuteInTimeZone(
+  date: Date,
+  timeZone: string = RULE_OF_3_REMINDER_TIMEZONE,
+): number {
+  const minute = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    minute: "numeric",
+  }).format(date);
+  return Number.parseInt(minute, 10);
+}
+
+/** True when `date` falls on the given local hour and minute in the timezone. */
+export function isLocalTimeInTimeZone(
+  date: Date,
+  hour: number,
+  minute: number,
+  timeZone: string = RULE_OF_3_REMINDER_TIMEZONE,
+): boolean {
+  return (
+    hourInTimeZone(date, timeZone) === hour &&
+    minuteInTimeZone(date, timeZone) === minute
+  );
+}
+
 /** True when all three tomorrow slots have a non-empty title. */
 export function isTomorrowPlanningComplete(plannedCount: number): boolean {
   return plannedCount >= RULE_OF_3_POSITIONS.length;

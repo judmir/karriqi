@@ -4,6 +4,7 @@ export const NOTIFICATION_KINDS = {
   todoStale: "todo_stale",
   rehabReminder: "rehab_reminder",
   ruleOf3TomorrowReminder: "rule_of_3_tomorrow_reminder",
+  ruleOf3MorningReminder: "rule_of_3_morning_reminder",
 } as const;
 
 export type NotificationKind =
