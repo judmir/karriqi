@@ -5,7 +5,11 @@ import {
 } from "@/modules/rehab/neuro-rehab-2026/constants";
 import type { RehabPlanEventInsert } from "@/types/rehab";
 
-import type { SchedulePatch, ScheduleRow } from "@/lib/rehab/remap-neuro-rehab-weekly-schedule";
+import {
+  RUN_WEEKDAYS,
+  type SchedulePatch,
+  type ScheduleRow,
+} from "@/lib/rehab/remap-neuro-rehab-weekly-schedule";
 
 const WORKOUT_KINDS = [
   "gym_a",
@@ -17,6 +21,22 @@ const WORKOUT_KINDS = [
 
 function isWorkoutKind(kind: string): boolean {
   return (WORKOUT_KINDS as readonly string[]).includes(kind);
+}
+
+function runSortKey(iso: string): number {
+  const day = new Date(iso).getUTCDay();
+  const idx = (RUN_WEEKDAYS as readonly number[]).indexOf(day);
+  return idx === -1 ? 99 : idx;
+}
+
+function sortRunsByScheduleSlot<T extends { start_at: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const bySlot = runSortKey(a.start_at) - runSortKey(b.start_at);
+    if (bySlot !== 0) {
+      return bySlot;
+    }
+    return a.start_at.localeCompare(b.start_at);
+  });
 }
 
 function isGymKind(kind: string): boolean {
@@ -41,7 +61,7 @@ export type WeeklyWorkoutSyncPlan = {
   deleteIds: string[];
 };
 
-/** Align gym/run rows to the seed template: gym Wed/Sat/Sun, run Mon/Tue/Thu/Fri. */
+/** Align gym/run rows to the seed template: gym Wed/Fri/Sat, run Sun/Mon/Tue/Thu/Sat. */
 export function buildWeeklyWorkoutSyncPlan(
   userId: string,
   existing: ScheduleRow[],
@@ -70,7 +90,7 @@ export function buildWeeklyWorkoutSyncPlan(
   }
 
   for (const runs of expectedRunsByWeek.values()) {
-    runs.sort((a, b) => a.start_at.localeCompare(b.start_at));
+    sortRunsByScheduleSlot(runs);
   }
 
   const existingGymsByWeekKind = new Map<string, ScheduleRow>();
@@ -91,7 +111,7 @@ export function buildWeeklyWorkoutSyncPlan(
   }
 
   for (const runs of existingRunsByWeek.values()) {
-    runs.sort((a, b) => a.start_at.localeCompare(b.start_at));
+    sortRunsByScheduleSlot(runs);
   }
 
   const patches: SchedulePatch[] = [];
@@ -102,11 +122,16 @@ export function buildWeeklyWorkoutSyncPlan(
     const row = existingGymsByWeekKind.get(key);
     if (row) {
       usedIds.add(row.id);
-      if (row.start_at !== target.start_at || row.end_at !== target.end_at) {
+      if (
+        row.start_at !== target.start_at ||
+        row.end_at !== target.end_at ||
+        row.title !== target.title
+      ) {
         patches.push({
           id: row.id,
           start_at: target.start_at,
           end_at: target.end_at,
+          title: target.title,
         });
       }
       continue;
@@ -127,11 +152,16 @@ export function buildWeeklyWorkoutSyncPlan(
       const row = existingRuns[index];
       if (row) {
         usedIds.add(row.id);
-        if (row.start_at !== target.start_at || row.end_at !== target.end_at) {
+        if (
+          row.start_at !== target.start_at ||
+          row.end_at !== target.end_at ||
+          row.title !== target.title
+        ) {
           patches.push({
             id: row.id,
             start_at: target.start_at,
             end_at: target.end_at,
+            title: target.title,
           });
         }
         return;

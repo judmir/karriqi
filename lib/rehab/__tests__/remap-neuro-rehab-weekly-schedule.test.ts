@@ -42,7 +42,7 @@ describe("remap-neuro-rehab-weekly-schedule", () => {
     expect(gymA?.start_at).toBe("2026-06-24T09:00:00.000Z");
   });
 
-  it("drops extra gym/run rows beyond 3 gyms and 4 runs per plan week", () => {
+  it("drops extra gym/run rows beyond 3 gyms and 5 runs per plan week", () => {
     const rows: ScheduleRow[] = [
       ...["gym_a", "gym_b", "gym_c", "gym_d"].map((kind, index) => ({
         id: `gym-${index}`,
@@ -52,7 +52,7 @@ describe("remap-neuro-rehab-weekly-schedule", () => {
         program_id: "neuro-rehab-2026-v1",
         plan_week: 9,
       })),
-      ...[0, 1, 2, 3, 4].map((index) => ({
+      ...[0, 1, 2, 3, 4, 5].map((index) => ({
         id: `run-${index}`,
         start_at: `2026-08-2${index}T09:00:00+00:00`,
         end_at: `2026-08-2${index}T10:00:00+00:00`,
@@ -64,7 +64,7 @@ describe("remap-neuro-rehab-weekly-schedule", () => {
 
     const deleteIds = buildWeeklyScheduleExcessDeleteIds(rows);
     expect(deleteIds).toContain("gym-3");
-    expect(deleteIds).toContain("run-4");
+    expect(deleteIds).toContain("run-5");
     expect(deleteIds).toHaveLength(2);
   });
 });

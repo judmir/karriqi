@@ -210,19 +210,19 @@ Pair the **Introductory Course | Sam Harris** (attention, nervous-system regulat
     sortOrder: 7,
     body: `# Weekly Structure
 
-Default week = 4 gym/strength days + 2 run/walk days + 1 lighter recovery day.
+Default week = 3 gym/strength days (Wed, Fri 18:00, Sat) + 4 run/walk days (Mon, Tue, Thu, Sat easy) + Sunday easy walk and weekly review.
 
-If tired: use 3 gym days, not 4. **Consistency beats intensity.**
+If tired: drop Saturday easy walk or shorten sessions. **Consistency beats intensity.**
 
 | Day | Main task | Extra |
 | --- | --- | --- |
-| Monday | Gym A — lower body + left leg | hand 10 min, meditation, journal |
-| Tuesday | Run/walk + speech | hand 20 min, meditation, journal |
-| Wednesday | Gym B — upper + core | hand 10 min, meditation, journal |
-| Thursday | Run/walk + football | speech 10 min, meditation, journal |
-| Friday | Gym C — dynamic stability | hand 10 min, meditation, journal |
-| Saturday | Gym D or football/coordination | optional walk, meditation, journal |
-| Sunday | Recovery + weekly review | light mobility, plan next week |`,
+| Sunday | Run + weekly review | light mobility, plan next week |
+| Monday | Run | hand 10 min, meditation, journal |
+| Tuesday | Run | hand 20 min, meditation, journal |
+| Wednesday | Gym A — lower body + left leg | hand 10 min, meditation, journal |
+| Thursday | Run | speech 10 min, meditation, journal |
+| Friday | Gym C — dynamic stability (18:00) | hand 10 min, meditation, journal |
+| Saturday | Gym B — upper + core | easy walk 20 min, meditation, journal |`,
   },
   {
     slug: "gym-workouts",

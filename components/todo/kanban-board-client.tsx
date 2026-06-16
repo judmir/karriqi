@@ -20,7 +20,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import {
   type FormEvent,
   type ReactNode,
@@ -35,6 +34,7 @@ import { KanbanCard } from "@/components/todo/kanban-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { todoTaskPath } from "@/config/routes";
+import { useInstantNavigate } from "@/hooks/use-instant-navigate";
 import {
   createTodoItem,
   deleteTodoItem,
@@ -123,7 +123,7 @@ export function KanbanBoardClient({
   persistence: boolean;
   assignableUsers: TodoAssignableMember[];
 }) {
-  const router = useRouter();
+  const navigate = useInstantNavigate();
   const initialColumns = useMemo(
     () => buildColumnMap(initialTodos),
     [initialTodos],
@@ -549,7 +549,7 @@ export function KanbanBoardClient({
                 setOpenComposer((cur) => (cur === status ? null : status))
               }
               onSubmitComposer={(e) => void onAddCard(status, e)}
-              onOpenItem={(item) => router.push(todoTaskPath(item.id))}
+              onOpenItem={(item) => navigate(todoTaskPath(item.id))}
               onDeleteItem={(item) => void onDelete(item)}
               onChangeItemStatus={(item, s) => void onStatusChange(item, s)}
               onAssignItem={(item, userId) => void onAssign(item, userId)}

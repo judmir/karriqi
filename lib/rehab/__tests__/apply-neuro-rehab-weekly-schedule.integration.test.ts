@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { requireSupabaseAdminEnv } from "@/lib/rehab/__tests__/load-integration-env";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
@@ -15,25 +15,6 @@ import { buildWeeklyWorkoutSyncPlan, workoutCoverageGaps } from "@/lib/rehab/syn
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
 
 const RUN = process.env.RUN_WEEKLY_SCHEDULE === "1";
-
-function loadEnvLocal() {
-  try {
-    const content = readFileSync(".env.local", "utf8");
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
-      if (!(key in process.env)) process.env[key] = value;
-    }
-  } catch {
-    // optional
-  }
-}
-
-loadEnvLocal();
 
 async function fetchProgramRows(
   admin: SupabaseClient<Database>,
@@ -72,12 +53,21 @@ async function applySchedulePatches(
   }
 
   const patchIds = new Set(patches.map((patch) => patch.id));
-  const bumpRows = rows.filter((row) => patchIds.has(row.id));
+  const patchedWeeks = new Set(
+    rows
+      .filter((row) => patchIds.has(row.id) && row.plan_week != null)
+      .map((row) => row.plan_week as number),
+  );
+  const bumpRows = rows.filter(
+    (row) =>
+      patchIds.has(row.id) ||
+      (row.plan_week != null && patchedWeeks.has(row.plan_week)),
+  );
   const tempBump = buildUniqueTempBumpPatches(bumpRows);
   for (const patch of tempBump) {
     const { error } = await admin
       .from("rehab_plan_events")
-      .update({ start_at: patch.start_at, end_at: patch.end_at })
+      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}) })
       .eq("id", patch.id);
     expect(error).toBeNull();
   }
@@ -85,26 +75,61 @@ async function applySchedulePatches(
   for (const patch of patches) {
     const { error } = await admin
       .from("rehab_plan_events")
-      .update({ start_at: patch.start_at, end_at: patch.end_at })
+      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}) })
       .eq("id", patch.id);
     expect(error).toBeNull();
   }
 }
 
+
+async function applyStoicUpdates(
+  admin: SupabaseClient<Database>,
+  stoicRows: StoicRow[],
+  updates: import("@/lib/rehab/fix-neuro-rehab-stoic-series").StoicPatch[],
+) {
+  if (updates.length === 0) {
+    return;
+  }
+
+  const updateIds = new Set(updates.map((patch) => patch.id));
+  const bumpCandidates = stoicRows.filter((row) => updateIds.has(row.id));
+  const tempBump = buildUniqueTempBumpPatches(
+    bumpCandidates.map((row) => ({
+      id: row.id,
+      start_at: row.start_at,
+      end_at: row.end_at,
+      event_kind: row.event_kind,
+      program_id: row.program_id,
+    })),
+  );
+  for (const patch of tempBump) {
+    const { error } = await admin
+      .from("rehab_plan_events")
+      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}) })
+      .eq("id", patch.id);
+    expect(error).toBeNull();
+  }
+
+  for (const patch of updates) {
+    const { error: updateError } = await admin
+      .from("rehab_plan_events")
+      .update(patch)
+      .eq("id", patch.id);
+    expect(updateError).toBeNull();
+  }
+}
+
 describe.runIf(RUN)("apply neuro rehab weekly schedule to Supabase", () => {
   it("syncs gym/run slots, fills gaps, and fixes stoic series overlap", async () => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    expect(url).toBeTruthy();
-    expect(serviceKey).toBeTruthy();
+    const { url, serviceKey } = requireSupabaseAdminEnv();
 
-    const admin = createClient<Database>(url!, serviceKey!, {
+    const admin = createClient<Database>(url, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
     const scheduleRows = (await fetchProgramRows(
       admin,
-      "id, start_at, end_at, event_kind, program_id, plan_week, completed_at, user_id",
+      "id, title, start_at, end_at, event_kind, program_id, plan_week, completed_at, user_id",
       ["gym_a", "gym_b", "gym_c", "gym_d", "run_walk"],
     )) as (ScheduleRow & { user_id: string })[];
 
@@ -128,12 +153,7 @@ describe.runIf(RUN)("apply neuro rehab weekly schedule to Supabase", () => {
       expect(error).toBeNull();
     }
 
-    const patchRows = scheduleRows.filter(
-      (row) =>
-        !syncPlan.deleteIds.includes(row.id) &&
-        syncPlan.patches.some((patch) => patch.id === row.id),
-    );
-    await applySchedulePatches(admin, patchRows, syncPlan.patches);
+    await applySchedulePatches(admin, scheduleRows, syncPlan.patches);
 
     if (syncPlan.inserts.length > 0) {
       const { error } = await admin
@@ -143,13 +163,6 @@ describe.runIf(RUN)("apply neuro rehab weekly schedule to Supabase", () => {
     }
 
     const stoicPlan = buildStoicFixPlan(stoicRows as StoicRow[]);
-    for (const patch of stoicPlan.updates) {
-      const { error: updateError } = await admin
-        .from("rehab_plan_events")
-        .update(patch)
-        .eq("id", patch.id);
-      expect(updateError).toBeNull();
-    }
 
     if (stoicPlan.deleteOverrideIds.length > 0) {
       const { error: deleteError } = await admin
@@ -158,6 +171,8 @@ describe.runIf(RUN)("apply neuro rehab weekly schedule to Supabase", () => {
         .in("id", stoicPlan.deleteOverrideIds);
       expect(deleteError).toBeNull();
     }
+
+    await applyStoicUpdates(admin, stoicRows as StoicRow[], stoicPlan.updates);
 
     const afterRows = (await fetchProgramRows(
       admin,

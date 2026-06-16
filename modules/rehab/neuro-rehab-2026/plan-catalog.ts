@@ -312,7 +312,7 @@ This is a rehab/tracking plan to discuss with your doctor/physio/OT/logopedics t
   ),
 
   section("sec.weekly", "sec.root", "Weekly Structure", 50,
-    "Default week = 4 gym/strength days + 2 run/walk days + 1 lighter recovery day. If tired: use 3 gym days, not 4. Consistency beats intensity."),
+    "Default week = 3 gym/strength days (Wed, Fri 18:00, Sat) + 4 run/walk days (Mon, Tue, Thu, Sat easy) + Sunday easy walk and weekly review."),
   guide(
     "guide.weekly.calendar",
     "sec.weekly",
@@ -320,13 +320,13 @@ This is a rehab/tracking plan to discuss with your doctor/physio/OT/logopedics t
     0,
     `| Day | Main task | Extra tasks |
 | --- | --- | --- |
-| Monday | Gym A — lower body + left leg control | hand 10 min, meditation, journal |
-| Tuesday | Run/walk + speech | hand 20 min, meditation, journal |
-| Wednesday | Gym B — upper body + core + coordination | hand 10 min, meditation, journal |
-| Thursday | Run/walk + football ball-control | speech 10 min, meditation, journal |
-| Friday | Gym C — lower body + dynamic stability | hand 10 min, meditation, journal |
-| Saturday | Gym D or football/coordination day | longer walk optional, meditation, journal |
-| Sunday | Recovery + weekly review | light mobility, week review, plan next week |`,
+| Sunday | Run + weekly review | light mobility, week review, plan next week |
+| Monday | Run | hand 10 min, meditation, journal |
+| Tuesday | Run | hand 20 min, meditation, journal |
+| Wednesday | Gym A — lower body + left leg control | hand 10 min, meditation, journal |
+| Thursday | Run | speech 10 min, meditation, journal |
+| Friday | Gym C — dynamic stability (18:00) | hand 10 min, meditation, journal |
+| Saturday | Gym B — upper body + core | easy walk 20 min, meditation, journal |`,
   ),
 
   section("sec.gym", "sec.root", "What To Do In The Gym", 60,
@@ -462,13 +462,13 @@ If saliva/swallowing feels clinically relevant, prioritize in-person logopedics/
     0,
     `Focus: easy start, consistency, no crash.
 
-- Monday: Gym A
+- Monday: run/walk
 - Tuesday: easy walk/run-walk depending on week + speech
-- Wednesday: Gym B
+- Wednesday: Gym A
 - Thursday: easy walk + football control
-- Friday: Gym C
-- Saturday: optional Gym D or light football
-- Sunday: recovery + weekly review`,
+- Friday: Gym C (18:00)
+- Saturday: Gym B + easy walk
+- Sunday: easy walk + weekly review`,
   ),
   guide(
     "guide.phases.w4",
@@ -487,13 +487,13 @@ If saliva/swallowing feels clinically relevant, prioritize in-person logopedics/
     2,
     `Focus: more load, more coordination, still controlled.
 
-- Monday: Gym A, slightly heavier if stable
+- Monday: run/walk, slightly longer if stable
 - Tuesday: run/walk progression + speech
-- Wednesday: Gym B
-- Thursday: football control + easy walk
-- Friday: Gym C
-- Saturday: optional Gym D or coordination day
-- Sunday: recovery + weekly review`,
+- Wednesday: Gym A
+- Thursday: football control + run/walk
+- Friday: Gym C (18:00)
+- Saturday: Gym B + easy walk
+- Sunday: easy walk + weekly review`,
   ),
   guide(
     "guide.phases.w8",
@@ -511,13 +511,13 @@ If saliva/swallowing feels clinically relevant, prioritize in-person logopedics/
     4,
     `Focus: stairs, running, football, real-life hand tasks.
 
-- Monday: Gym A
+- Monday: run/walk
 - Tuesday: run/walk or easy run + speech
-- Wednesday: Gym B
-- Thursday: football coordination + hand tasks
-- Friday: Gym C
-- Saturday: optional Gym D / football / long walk
-- Sunday: recovery + weekly review`,
+- Wednesday: Gym A
+- Thursday: football coordination + run/walk
+- Friday: Gym C (18:00)
+- Saturday: Gym B + easy walk
+- Sunday: easy walk + weekly review`,
   ),
   guide(
     "guide.phases.w12",

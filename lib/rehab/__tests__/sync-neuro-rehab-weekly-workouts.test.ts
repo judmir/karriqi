@@ -9,7 +9,7 @@ import type { ScheduleRow } from "@/lib/rehab/remap-neuro-rehab-weekly-schedule"
 describe("sync-neuro-rehab-weekly-workouts", () => {
   const userId = "user-1";
 
-  it("targets gym on Wed/Sat/Sun and run on Mon/Tue/Thu/Fri from the seed template", () => {
+  it("targets gym on Wed/Fri/Sat and run on Sun/Mon/Tue/Thu/Sat from the seed template", () => {
     const expected = expectedWeeklyWorkouts(userId);
     const week1 = expected.filter((row) => row.plan_week === 1);
     expect(week1.find((row) => row.event_kind === "gym_a")?.start_at).toContain(
@@ -19,9 +19,12 @@ describe("sync-neuro-rehab-weekly-workouts", () => {
       "2026-06-20",
     );
     expect(week1.find((row) => row.event_kind === "gym_c")?.start_at).toContain(
-      "2026-06-14",
+      "2026-06-19",
     );
-    expect(week1.filter((row) => row.event_kind === "run_walk")).toHaveLength(4);
+    expect(
+      new Date(week1.find((row) => row.event_kind === "gym_c")!.start_at).getHours(),
+    ).toBe(18);
+    expect(week1.filter((row) => row.event_kind === "run_walk")).toHaveLength(5);
   });
 
   it("moves legacy Mon–Sat workouts onto the new weekdays and drops gym_d", () => {

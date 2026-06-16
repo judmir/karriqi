@@ -40,11 +40,11 @@ export function RehabEventPageView({
   }, [ensureLoaded]);
 
   const event = useMemo(
-    () => (ready ? resolveRehabPlanEventById(allEvents, eventId) : null),
-    [allEvents, eventId, ready],
+    () => resolveRehabPlanEventById(allEvents, eventId),
+    [allEvents, eventId],
   );
 
-  if (!ready && loading) {
+  if (!event && !ready && loading) {
     return (
       <div
         className="flex min-h-0 flex-1 flex-col overflow-x-hidden px-4 py-6 md:px-6"

@@ -10,6 +10,10 @@ In `/.cursor/worktrees/` checkouts, **`.cursor/hooks.json` auto-starts** the dev
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## Rehab plan (source of truth)
+
+Before rehab scheduling, content, or feature work: read `docs/rehab/final_12_week_neuro_rehab_plan.txt` and follow `.cursor/rules/rehab-plan-source-of-truth.mdc`. Validate user requests against the plan; push back or ask when misaligned. Skip the plan for unrelated bug fixes.
+
 ## Git (agents)
 
 **Mandatory:** follow `.cursor/rules/agent-git-branch-workflow.mdc` — work on `agent/YYYY-MM-DD-…` branches, commit and push logical chunks to `origin`, **never** merge to `main` unless the user explicitly asks.

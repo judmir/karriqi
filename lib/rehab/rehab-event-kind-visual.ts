@@ -132,7 +132,7 @@ const KIND_LABEL: Record<RehabEventKind, string> = {
   gym_b: "Gym",
   gym_c: "Gym",
   gym_d: "Gym",
-  run_walk: "Run / walk",
+  run_walk: "Run",
   hand: "Hand therapy",
   speech: "Speech",
   football: "Football",
@@ -167,5 +167,76 @@ export function rehabEventKindVisual(
     icon: KIND_ICON[kind],
     label: KIND_LABEL[kind],
     hex,
+  };
+}
+
+/** Kinds users can pick when creating or editing a custom rehab event. */
+export const REHAB_EVENT_KIND_PICKER_OPTIONS: RehabEventKind[] = [
+  "run_walk",
+  "gym_a",
+  "hand",
+  "speech",
+  "football",
+  "meditation",
+  "journal",
+  "supplement",
+  "stoic",
+  "recovery",
+  "custom",
+];
+
+const KIND_DEFAULT_COLOR: Record<RehabEventKind, CalendarEventColor> = {
+  gym_a: "blue",
+  gym_b: "blue",
+  gym_c: "blue",
+  gym_d: "blue",
+  run_walk: "green",
+  hand: "orange",
+  speech: "red",
+  football: "orange",
+  meditation: "purple",
+  journal: "red",
+  supplement: "blue",
+  weekly_review: "purple",
+  retest: "purple",
+  day0: "purple",
+  recovery: "green",
+  stoic: "purple",
+  custom: "blue",
+};
+
+export function rehabEventKindPickerOptions(
+  current?: RehabEventKind,
+): RehabEventKind[] {
+  if (!current || REHAB_EVENT_KIND_PICKER_OPTIONS.includes(current)) {
+    return REHAB_EVENT_KIND_PICKER_OPTIONS;
+  }
+  return [current, ...REHAB_EVENT_KIND_PICKER_OPTIONS];
+}
+
+export function rehabEventKindDefaultColor(
+  kind: RehabEventKind,
+): CalendarEventColor {
+  return KIND_DEFAULT_COLOR[kind] ?? "blue";
+}
+
+export type RehabEventKindPickerVisual = {
+  kind: RehabEventKind;
+  icon: LucideIcon;
+  label: string;
+  defaultColor: CalendarEventColor;
+  hex: string;
+};
+
+export function rehabEventKindPickerVisual(
+  kind: RehabEventKind,
+): RehabEventKindPickerVisual {
+  const defaultColor = rehabEventKindDefaultColor(kind);
+  return {
+    kind,
+    icon: KIND_ICON[kind],
+    label: KIND_LABEL[kind],
+    defaultColor,
+    hex: CALENDAR_COLOR_HEX[defaultColor],
   };
 }
