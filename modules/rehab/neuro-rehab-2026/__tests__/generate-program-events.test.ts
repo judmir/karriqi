@@ -77,9 +77,12 @@ describe("generateNeuroRehabProgramEvents", () => {
 
     const retestEvents = events.filter((e) => e.event_kind === "retest");
     expect(retestEvents.length).toBe(3);
-    expect(retestEvents.map((e) => e.plan_week).sort((a, b) => a - b)).toEqual([
-      4, 8, 12,
-    ]);
+    expect(
+      retestEvents
+        .map((e) => e.plan_week)
+        .filter((week): week is number => week != null)
+        .sort((a, b) => a - b),
+    ).toEqual([4, 8, 12]);
   });
 
   it("uses shorter gym sessions on retest weeks", () => {

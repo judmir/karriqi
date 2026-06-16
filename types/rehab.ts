@@ -138,7 +138,7 @@ export type RehabPlanEventInsert = {
   color?: CalendarEventColor;
   event_kind: RehabEventKind;
   program_id: string;
-  plan_week: number;
+  plan_week: number | null;
   /** Recurring master: equals the row's own id. Standalone rows omit this. */
   series_id?: string | null;
   /** Serialized RecurrenceRule JSON for recurring masters. */

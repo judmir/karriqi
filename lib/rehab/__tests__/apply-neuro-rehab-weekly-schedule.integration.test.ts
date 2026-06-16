@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
-import { buildStoicFixPlan } from "@/lib/rehab/fix-neuro-rehab-stoic-series";
+import { buildStoicFixPlan, type StoicRow } from "@/lib/rehab/fix-neuro-rehab-stoic-series";
+import type { Database } from "@/types/database";
 import {
   buildUniqueTempBumpPatches,
   countScheduleCollisions,
@@ -35,7 +36,7 @@ function loadEnvLocal() {
 loadEnvLocal();
 
 async function fetchProgramRows(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient<Database>,
   select: string,
   eventKinds?: string[],
 ) {
@@ -52,7 +53,7 @@ async function fetchProgramRows(
     }
     const { data, error } = await query;
     expect(error).toBeNull();
-    const page = data ?? [];
+    const page = (data ?? []) as unknown as Record<string, unknown>[];
     rows.push(...page);
     if (page.length < pageSize) {
       break;
@@ -62,7 +63,7 @@ async function fetchProgramRows(
 }
 
 async function applySchedulePatches(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient<Database>,
   rows: ScheduleRow[],
   patches: SchedulePatch[],
 ) {
@@ -97,7 +98,7 @@ describe.runIf(RUN)("apply neuro rehab weekly schedule to Supabase", () => {
     expect(url).toBeTruthy();
     expect(serviceKey).toBeTruthy();
 
-    const admin = createClient(url!, serviceKey!, {
+    const admin = createClient<Database>(url!, serviceKey!, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
@@ -141,7 +142,7 @@ describe.runIf(RUN)("apply neuro rehab weekly schedule to Supabase", () => {
       expect(error).toBeNull();
     }
 
-    const stoicPlan = buildStoicFixPlan(stoicRows);
+    const stoicPlan = buildStoicFixPlan(stoicRows as StoicRow[]);
     for (const patch of stoicPlan.updates) {
       const { error: updateError } = await admin
         .from("rehab_plan_events")

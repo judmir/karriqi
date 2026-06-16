@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import { missingProgramSeedRows } from "@/lib/rehab/append-neuro-rehab-program-seed-rows";
+import type { Database } from "@/types/database";
 import {
-  buildReschedulePatches,
   buildUniformShiftPatch,
   buildUniformShiftPatches,
   daysToAlignProgramStart,
@@ -41,7 +41,7 @@ function loadEnvLocal() {
 loadEnvLocal();
 
 async function applyPatches(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient<Database>,
   patches: ReschedulePatch[],
 ) {
   for (const patch of patches) {
@@ -89,7 +89,7 @@ function buildDeferredPatchesAfterBump(rows: RescheduleRow[]): ReschedulePatch[]
 }
 
 async function applyUniformShiftWithBump(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient<Database>,
   rows: RescheduleRow[],
   targetShiftDays: number,
 ): Promise<RescheduleRow[]> {
@@ -105,7 +105,7 @@ async function applyUniformShiftWithBump(
 }
 
 async function applyDeferredShiftWithBump(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient<Database>,
   rows: RescheduleRow[],
 ): Promise<RescheduleRow[]> {
   const tempBump = buildUniformShiftPatches(rows, RESCHEDULE_TEMP_BUMP_DAYS);
@@ -123,7 +123,7 @@ describe.runIf(RUN)("apply neuro rehab reschedule to Supabase", () => {
     expect(url).toBeTruthy();
     expect(serviceKey).toBeTruthy();
 
-    const admin = createClient(url!, serviceKey!, {
+    const admin = createClient<Database>(url!, serviceKey!, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
@@ -143,7 +143,7 @@ describe.runIf(RUN)("apply neuro rehab reschedule to Supabase", () => {
     }
 
     const userId = rows[0]!.user_id;
-    let finalRows = rows;
+    let finalRows: RescheduleRow[] = rows;
 
     if (needsJuneDeferralShift(rows)) {
       if (DRY) {
