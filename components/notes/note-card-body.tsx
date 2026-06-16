@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 
+import { NoteMarkdown } from "@/components/notes/note-markdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { parseChecklistLines, isChecklistNote } from "@/lib/notes/checklist";
-import { notePreview } from "@/lib/notes/filter-notes";
 import { cn } from "@/lib/utils";
 
 export function NoteCardBody({
@@ -73,13 +73,15 @@ export function NoteCardBody({
       ) : null}
 
       {!hasChecklist && introText ? (
-        <p className="text-muted-foreground line-clamp-6 text-sm whitespace-pre-wrap">
-          {notePreview(introText, 280)}
-        </p>
+        <NoteMarkdown
+          content={introText}
+          clamp
+          className="text-muted-foreground text-sm"
+        />
       ) : null}
 
       {hasChecklist && introText ? (
-        <p className="text-muted-foreground text-sm whitespace-pre-wrap">{introText}</p>
+        <NoteMarkdown content={introText} className="text-muted-foreground text-sm" />
       ) : null}
     </>
   );
