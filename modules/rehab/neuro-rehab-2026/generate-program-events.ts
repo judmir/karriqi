@@ -7,6 +7,7 @@ import {
 } from "@/lib/rehab/recurrence";
 import {
   NEURO_REHAB_PROGRAM_ID,
+  PROGRAM_EXTRA_DAYS,
   PROGRAM_START,
   PROGRAM_WEEKS,
   isRetestWeek,
@@ -179,7 +180,7 @@ function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
   // Weekly Sunday Stoic review, starting the first Sunday of the program.
   const firstSundayOffset = (7 - PROGRAM_START.getDay()) % 7;
   const firstSunday = addDays(PROGRAM_START, firstSundayOffset);
-  const programEnd = addDays(PROGRAM_START, PROGRAM_WEEKS * 7 - 1);
+  const programEnd = addDays(PROGRAM_START, PROGRAM_WEEKS * 7 + PROGRAM_EXTRA_DAYS - 1);
   events.push(
     recurringMaster(
       userId,
@@ -444,7 +445,7 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
   // Stoicism layer: a handful of recurring masters (not one row per day).
   events.push(...stoicSeriesEvents(userId));
 
-  const totalDays = PROGRAM_WEEKS * 7;
+  const totalDays = PROGRAM_WEEKS * 7 + PROGRAM_EXTRA_DAYS;
 
   for (let offset = 0; offset < totalDays; offset++) {
     const day = addDays(PROGRAM_START, offset);

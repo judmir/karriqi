@@ -45,7 +45,7 @@ const SEED_ROWS: SeedRow[] = [
     "sec.root",
     "The simple goal",
     0,
-    `For 12 weeks (start **Monday 8 June 2026**), do the same few things consistently:
+    `For 12 weeks (start **Sunday 14 June 2026**), do the same few things consistently:
 
 - train left leg + whole body 3–4×/week
 - train left hand 5–6×/week, short sessions

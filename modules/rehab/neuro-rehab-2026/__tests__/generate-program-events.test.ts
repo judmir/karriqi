@@ -15,11 +15,11 @@ describe("generateNeuroRehabProgramEvents", () => {
   const userId = "test-user";
   const events = generateNeuroRehabProgramEvents(userId);
 
-  it("starts on Monday 8 June 2026", () => {
-    expect(PROGRAM_START.getDay()).toBe(1);
+  it("starts on Sunday 14 June 2026", () => {
+    expect(PROGRAM_START.getDay()).toBe(0);
     expect(PROGRAM_START.getFullYear()).toBe(2026);
     expect(PROGRAM_START.getMonth()).toBe(5);
-    expect(PROGRAM_START.getDate()).toBe(8);
+    expect(PROGRAM_START.getDate()).toBe(14);
 
     const first = events.find((e) => e.event_kind === "day0");
     expect(first).toBeDefined();
@@ -28,7 +28,7 @@ describe("generateNeuroRehabProgramEvents", () => {
     expect(firstDay.getTime()).toBe(startOfDay(PROGRAM_START).getTime());
   });
 
-  it("generates 84 days of program events", () => {
+  it("generates 90 days of program events", () => {
     expect(events.length).toBeGreaterThan(400);
     expect(events.every((e) => e.program_id === NEURO_REHAB_PROGRAM_ID)).toBe(
       true,
@@ -36,9 +36,9 @@ describe("generateNeuroRehabProgramEvents", () => {
     expect(events.every((e) => e.user_id === userId)).toBe(true);
   });
 
-  it("includes gym A on Wednesdays across 12 weeks", () => {
+  it("includes gym A on Wednesdays across 12 weeks + extra days", () => {
     const gymA = events.filter((e) => e.event_kind === "gym_a");
-    expect(gymA.length).toBe(12);
+    expect(gymA.length).toBe(13);
     expect(gymA.every((e) => new Date(e.start_at).getDay() === 3)).toBe(true);
   });
 
@@ -77,9 +77,12 @@ describe("generateNeuroRehabProgramEvents", () => {
 
     const retestEvents = events.filter((e) => e.event_kind === "retest");
     expect(retestEvents.length).toBe(3);
-    expect(retestEvents.map((e) => e.plan_week).sort((a, b) => a - b)).toEqual([
-      4, 8, 12,
-    ]);
+    expect(
+      retestEvents
+        .map((e) => e.plan_week)
+        .filter((week): week is number => week != null)
+        .sort((a, b) => a - b),
+    ).toEqual([4, 8, 12]);
   });
 
   it("uses shorter gym sessions on retest weeks", () => {
@@ -141,9 +144,9 @@ describe("generateNeuroRehabProgramEvents", () => {
     expect(new Date(weeklyMasters[0]!.start_at).getDay()).toBe(0);
   });
 
-  it("spans through week 12 ending late August 2026", () => {
+  it("spans through week 12 ending in September 2026", () => {
     const lastDay = addDays(PROGRAM_START, 12 * 7 - 1);
-    expect(lastDay.getMonth()).toBe(7);
+    expect(lastDay.getMonth()).toBe(8);
     const lastWeekEvents = events.filter((e) => e.plan_week === 12);
     expect(lastWeekEvents.length).toBeGreaterThan(0);
   });

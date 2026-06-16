@@ -44,11 +44,11 @@ function eventOnDay(
 }
 
 describe("buildHistoryDaySections", () => {
-  const today = startOfDay(new Date(2026, 5, 15));
+  const today = startOfDay(new Date(2026, 5, 22));
 
   it("labels yesterday", () => {
     const yesterday = addDays(today, -1);
-    expect(historyDayLabel(yesterday, today)).toBe("Yesterday · 14 Jun");
+    expect(historyDayLabel(yesterday, today)).toBe("Yesterday · 21 Jun");
   });
 
   it("groups past days newest first and counts completions", () => {
@@ -81,7 +81,7 @@ describe("buildHistoryDaySections", () => {
 });
 
 describe("history pagination", () => {
-  const today = startOfDay(new Date(2026, 5, 15));
+  const today = startOfDay(new Date(2026, 5, 21));
 
   it("caps visible days at days since program start", () => {
     expect(maxHistoryDaysFrom(today)).toBe(7);
