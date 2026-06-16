@@ -3,7 +3,11 @@ import { parseEventDescription } from "@/lib/calendar/event-subtasks";
 import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
-import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
+import {
+  clampProgramPlanWeek,
+  NEURO_REHAB_PROGRAM_ID,
+} from "@/modules/rehab/neuro-rehab-2026/constants";
+import type { RehabPlanEventInsert } from "@/types/rehab";
 
 const BATCH_SIZE = 100;
 
@@ -16,6 +20,15 @@ const GYM_EVENT_KINDS = ["gym_a", "gym_b", "gym_c", "gym_d"] as const;
  */
 function occurrenceKey(eventKind: string, startAt: string): string {
   return `${eventKind}\u0000${new Date(startAt).getTime()}`;
+}
+
+function rowsForDbInsert(
+  rows: RehabPlanEventInsert[],
+): RehabPlanEventInsert[] {
+  return rows.map((row) => ({
+    ...row,
+    plan_week: clampProgramPlanWeek(row.plan_week),
+  }));
 }
 
 type MaterializationLock =
@@ -105,7 +118,7 @@ async function insertMissingProgramEvents(
 
   let inserted = 0;
   for (let i = 0; i < missing.length; i += BATCH_SIZE) {
-    const batch = missing.slice(i, i + BATCH_SIZE);
+    const batch = rowsForDbInsert(missing.slice(i, i + BATCH_SIZE));
     const { error } = await admin.from("rehab_plan_events").insert(batch);
     if (error) {
       throw new Error(error.message);
@@ -212,7 +225,7 @@ export async function materializeNeuroRehabProgramForUser(
 
   try {
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-      const batch = rows.slice(i, i + BATCH_SIZE);
+      const batch = rowsForDbInsert(rows.slice(i, i + BATCH_SIZE));
       const { error } = await admin.from("rehab_plan_events").insert(batch);
 
       if (error) {

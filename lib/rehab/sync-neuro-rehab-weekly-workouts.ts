@@ -1,5 +1,8 @@
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
-import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
+import {
+  clampProgramPlanWeek,
+  NEURO_REHAB_PROGRAM_ID,
+} from "@/modules/rehab/neuro-rehab-2026/constants";
 import type { RehabPlanEventInsert } from "@/types/rehab";
 
 import type { SchedulePatch, ScheduleRow } from "@/lib/rehab/remap-neuro-rehab-weekly-schedule";
@@ -112,8 +115,7 @@ export function buildWeeklyWorkoutSyncPlan(
     inserts.push({
       ...target,
       id: crypto.randomUUID(),
-      plan_week:
-        target.plan_week != null && target.plan_week > 12 ? 12 : target.plan_week,
+      plan_week: clampProgramPlanWeek(target.plan_week),
     });
     void key;
   }
@@ -138,8 +140,7 @@ export function buildWeeklyWorkoutSyncPlan(
       inserts.push({
         ...target,
         id: crypto.randomUUID(),
-        plan_week:
-          target.plan_week != null && target.plan_week > 12 ? 12 : target.plan_week,
+        plan_week: clampProgramPlanWeek(target.plan_week),
       });
     });
   }

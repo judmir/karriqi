@@ -2,6 +2,7 @@ import { addDays, startOfDay } from "date-fns";
 
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
 import {
+  clampProgramPlanWeek,
   NEURO_REHAB_PROGRAM_ID,
   PROGRAM_EXTRA_DAYS,
   PROGRAM_START,
@@ -53,7 +54,6 @@ export function missingProgramSeedRows(
     return !existingKeys.has(rowKey(row.event_kind, row.start_at));
   }).map((row) => ({
     ...row,
-    plan_week:
-      row.plan_week != null && row.plan_week > 12 ? 12 : row.plan_week,
+    plan_week: clampProgramPlanWeek(row.plan_week),
   }));
 }
