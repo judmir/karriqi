@@ -13,7 +13,6 @@ export type WeekdayTemplate = {
   mainTitle: string;
   mainDescription: string;
   handMinutes: number;
-  includeSpeech: boolean;
   includeFootball: boolean;
   includeGymD: boolean;
   mainStartHour: number;
@@ -38,7 +37,6 @@ export function weekdayTemplate(
         mainTitle: RUN_EVENT_TITLE,
         mainDescription: "Easy run/walk session.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
         mainStartHour: 9,
@@ -48,9 +46,8 @@ export function weekdayTemplate(
       return {
         mainKind: "run_walk",
         mainTitle: RUN_EVENT_TITLE,
-        mainDescription: "Run/walk session then speech practice.",
+        mainDescription: "Easy run/walk session.",
         handMinutes: 20,
-        includeSpeech: true,
         includeFootball: false,
         includeGymD: false,
         mainStartHour: 9,
@@ -62,7 +59,6 @@ export function weekdayTemplate(
         mainTitle: isRetest ? "Gym A (deload)" : "Gym A — lower body + left leg",
         mainDescription: "See Wiki: Gym Workouts — Gym A.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
         mainStartHour: 9,
@@ -74,7 +70,6 @@ export function weekdayTemplate(
         mainTitle: RUN_EVENT_TITLE,
         mainDescription: "Easy walk/run then ball-control drills.",
         handMinutes: 10,
-        includeSpeech: true,
         includeFootball: true,
         includeGymD: false,
         mainStartHour: 9,
@@ -86,7 +81,6 @@ export function weekdayTemplate(
         mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
         mainDescription: "See Wiki: Gym Workouts — Gym C.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
         mainStartHour: GYM_C_START_HOUR,
@@ -98,7 +92,6 @@ export function weekdayTemplate(
         mainTitle: isRetest ? "Gym B (deload)" : "Gym B — upper body + core",
         mainDescription: "See Wiki: Gym Workouts — Gym B.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
         mainStartHour: 9,
@@ -112,7 +105,6 @@ export function weekdayTemplate(
         mainDescription:
           "Sunday easy walk only — light mobility. Complete weekly review in journal/wiki.",
         handMinutes: 0,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
         mainStartHour: 9,
@@ -125,7 +117,6 @@ export function weekdayTemplate(
         mainTitle: "Recovery + weekly review",
         mainDescription: "Light mobility. Complete weekly review in journal/wiki.",
         handMinutes: 0,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
         mainStartHour: 9,

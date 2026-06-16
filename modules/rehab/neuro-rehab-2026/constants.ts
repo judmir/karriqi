@@ -11,6 +11,11 @@ export const PROGRAM_PLAN_WEEK_MAX = PROGRAM_WEEKS;
 /** Six deferred days (original 8–13 Jun) appended after week 12 in the seed template. */
 export const PROGRAM_EXTRA_DAYS = 6;
 
+/** Daily speech practice slot (local wall-clock, matches generator `atTime`). */
+export const SPEECH_PRACTICE_HOUR = 9;
+export const SPEECH_PRACTICE_MINUTE = 55;
+export const SPEECH_PRACTICE_DURATION_MIN = 15;
+
 export const RETEST_WEEKS = [4, 8, 12] as const;
 
 export type RetestWeek = (typeof RETEST_WEEKS)[number];
