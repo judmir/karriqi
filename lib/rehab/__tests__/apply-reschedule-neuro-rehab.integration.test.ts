@@ -1,3 +1,5 @@
+import { requireSupabaseAdminEnv } from "@/lib/rehab/__tests__/load-integration-env";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
@@ -18,25 +20,6 @@ import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constan
 
 const RUN = process.env.RUN_RESCHEDULE === "1";
 const DRY = process.env.RUN_RESCHEDULE_DRY === "1";
-
-function loadEnvLocal() {
-  try {
-    const content = readFileSync(".env.local", "utf8");
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
-      if (!(key in process.env)) process.env[key] = value;
-    }
-  } catch {
-    // optional for CI unit runs
-  }
-}
-
-loadEnvLocal();
 
 async function applyPatches(
   admin: SupabaseClient<Database>,
