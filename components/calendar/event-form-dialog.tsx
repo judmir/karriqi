@@ -10,7 +10,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,7 @@ import {
 } from "@/lib/rehab/recurrence";
 import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
 import { RehabSpeechRecordingSection } from "@/components/rehab/rehab-speech-recording-section";
+import { allEventSubtasksDone } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
   useRehabPlanStore,
   type SeriesEditScope,
@@ -139,6 +140,9 @@ function EventFormDialogBody({
   const actions = calendarEventActionsFor(variant);
   const editSeries = useRehabPlanStore((s) => s.editSeries);
   const deleteOccurrence = useRehabPlanStore((s) => s.deleteOccurrence);
+  const toggleOccurrenceCompleted = useRehabPlanStore(
+    (s) => s.toggleOccurrenceCompleted,
+  );
   const isEditing = event !== null;
   const viewOnly = readOnly;
   const isRehab = variant === "rehab";
@@ -176,7 +180,9 @@ function EventFormDialogBody({
   const [endTime, setEndTime] = useState(toTimeInputValue(initialEnd));
   const [showTime, setShowTime] = useState(!allDay);
   const [pending, setPending] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [completedOverride, setCompletedOverride] = useState<boolean | null>(
+    null,
+  );
   const initialRecurrence: RecurrenceRule | null = isRehab
     ? (rehabEvent?.recurrence ?? null)
     : null;
@@ -188,6 +194,10 @@ function EventFormDialogBody({
   const effectiveAllDay = allDay || !showTime;
   const recurrenceChanged =
     isRehab && !rulesEqual(recurrence, initialRecurrence);
+  const hasSubtasks = subtasks.length > 0;
+  const isCompleted = hasSubtasks
+    ? allEventSubtasksDone(subtasks)
+    : (completedOverride ?? Boolean(rehabEvent?.completedAt));
   const hasChanges =
     title !== (event?.title ?? "") ||
     description !== initialParsed.description ||
@@ -198,6 +208,10 @@ function EventFormDialogBody({
     toDateInputValue(startDate) !== toDateInputValue(initialStart) ||
     startTime !== toTimeInputValue(initialStart) ||
     recurrenceChanged;
+
+  useEffect(() => {
+    setCompletedOverride(null);
+  }, [event?.id]);
 
   function storedDescription(): string | null {
     return serializeEventDescription(
@@ -401,12 +415,14 @@ function EventFormDialogBody({
       return;
     }
 
-    if (!confirmDelete) {
-      setConfirmDelete(true);
+    if (!window.confirm("Delete this task?")) {
       return;
     }
 
     if (!persistence) {
+      if (isRehab && rehabEvent) {
+        await deleteOccurrence(rehabEvent as RehabPlanEvent, "occurrence");
+      }
       onDeleted(event.id);
       onOpenChange(false);
       toast.success("Event deleted.");
@@ -415,7 +431,10 @@ function EventFormDialogBody({
 
     setPending(true);
     try {
-      const result = await actions.delete(event.id);
+      const result =
+        isRehab && rehabEvent
+          ? await deleteOccurrence(rehabEvent as RehabPlanEvent, "occurrence")
+          : await actions.delete(event.id);
       if (!result.ok) {
         toast.error(result.message);
         return;
@@ -423,6 +442,78 @@ function EventFormDialogBody({
       onDeleted(event.id);
       onOpenChange(false);
       toast.success("Event deleted.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleToggleCompleted(checked: boolean) {
+    if (!isRehab || viewOnly || !event || !rehabEvent) {
+      return;
+    }
+
+    if (hasSubtasks) {
+      const nextSubtasks = subtasks.map((item) => ({ ...item, done: checked }));
+      const nextDescription = serializeEventDescription(
+        description,
+        nextSubtasks,
+        myNotes,
+      );
+
+      if (!persistence) {
+        setSubtasks(nextSubtasks);
+        return;
+      }
+
+      setPending(true);
+      try {
+        const result = await actions.update({
+          id: event.id,
+          description: nextDescription,
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        setSubtasks(nextSubtasks);
+        const currentlyCompleted = Boolean(rehabEvent.completedAt);
+        if (checked !== currentlyCompleted) {
+          const toggleResult = await toggleOccurrenceCompleted(
+            rehabEvent as RehabPlanEvent,
+            checked,
+          );
+          if (!toggleResult.ok) {
+            toast.error(toggleResult.message);
+            return;
+          }
+        }
+        setCompletedOverride(checked);
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+
+    if (!persistence) {
+      if (hasSubtasks) {
+        setSubtasks(subtasks.map((item) => ({ ...item, done: checked })));
+      } else {
+        setCompletedOverride(checked);
+      }
+      return;
+    }
+
+    setPending(true);
+    try {
+      const result = await toggleOccurrenceCompleted(
+        rehabEvent as RehabPlanEvent,
+        checked,
+      );
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      setCompletedOverride(checked);
     } finally {
       setPending(false);
     }
@@ -495,14 +586,11 @@ function EventFormDialogBody({
           {isEditing && !viewOnly ? (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
               disabled={pending}
-              className={cn(
-                "rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white",
-                confirmDelete && "bg-destructive/20 text-destructive",
-              )}
-              aria-label={confirmDelete ? "Confirm delete" : "Delete event"}
-              title={confirmDelete ? "Confirm delete" : "Delete"}
+              className="rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Delete event"
+              title="Delete"
             >
               <Trash2 className="size-4" aria-hidden />
             </button>
@@ -511,12 +599,15 @@ function EventFormDialogBody({
 
         <div className="flex min-h-0 flex-1 gap-3">
           <Checkbox
-            checked={Boolean(
-              event && "completedAt" in event && event.completedAt,
-            )}
-            disabled
-            className="mt-0.5 shrink-0 border-white/25"
-            aria-label="Completion"
+            checked={isCompleted}
+            onCheckedChange={(value) =>
+              void handleToggleCompleted(Boolean(value))
+            }
+            disabled={viewOnly || pending || !isEditing || !isRehab}
+            className="mt-0.5 shrink-0 cursor-pointer border-white/25"
+            aria-label={
+              isCompleted ? "Mark task incomplete" : "Mark task complete"
+            }
           />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
             <input
