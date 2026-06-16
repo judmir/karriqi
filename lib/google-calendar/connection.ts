@@ -1,3 +1,4 @@
+import { softDeletePatch, withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { refreshGoogleAccessToken } from "@/lib/google-calendar/oauth";
 import type { Database } from "@/types/database";
@@ -48,13 +49,14 @@ export async function getGoogleCalendarConnection(
     return null;
   }
 
-  const { data, error } = await admin
-    .from("google_calendar_connections")
-    .select(
-      "user_id, google_email, calendar_id, refresh_token, access_token, access_token_expires_at, sync_token, last_synced_at",
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data, error } = await withoutSoftDeleted(
+    admin
+      .from("google_calendar_connections")
+      .select(
+        "user_id, google_email, calendar_id, refresh_token, access_token, access_token_expires_at, sync_token, last_synced_at",
+      )
+      .eq("user_id", userId),
+  ).maybeSingle();
 
   if (error || !data) {
     return null;
@@ -84,6 +86,7 @@ export async function upsertGoogleCalendarConnection(input: {
       refresh_token: input.refreshToken,
       access_token: input.accessToken,
       access_token_expires_at: input.accessTokenExpiresAt,
+      deleted_at: null,
     },
     { onConflict: "user_id" },
   );
@@ -165,8 +168,9 @@ export async function deleteGoogleCalendarConnection(
 
   const { error } = await admin
     .from("google_calendar_connections")
-    .delete()
-    .eq("user_id", userId);
+    .update(softDeletePatch())
+    .eq("user_id", userId)
+    .is("deleted_at", null);
 
   if (error) {
     throw new Error(error.message);

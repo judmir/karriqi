@@ -1,0 +1,59 @@
+---
+description: Never hard-delete user data — use deleted_at soft delete on all app tables
+alwaysApply: true
+---
+
+# Soft delete (no hard delete on user data)
+
+Karriqi **retains history**. User-facing rows are never removed with Supabase `.delete()`.
+
+## Required pattern
+
+1. **Column:** user data tables have `deleted_at timestamptz` (nullable). `NULL` = active.
+2. **Delete:** `.update(softDeletePatch())` — see `lib/db/soft-delete.ts`.
+3. **Read:** active rows only — `.is('deleted_at', null)` or `withoutSoftDeleted(query)`.
+4. **RLS:** `SELECT` policies include `deleted_at is null`; **drop** `FOR DELETE` policies on user tables.
+5. **Unique constraints:** use partial unique indexes `WHERE deleted_at IS NULL` when tombstones would block re-insert.
+6. **Restore:** `restorePatch()` (`deleted_at: null`) when reconnecting / re-activating (e.g. Google Calendar).
+
+```typescript
+import { softDeletePatch, withoutSoftDeleted } from "@/lib/db/soft-delete";
+
+// ❌ BAD — destroys history
+await supabase.from("rehab_plan_events").delete().eq("id", id);
+
+// ✅ GOOD — tombstone
+await supabase
+  .from("rehab_plan_events")
+  .update(softDeletePatch())
+  .eq("id", id)
+  .is("deleted_at", null);
+
+// ✅ GOOD — reads (service-role bypasses RLS)
+const { data } = await withoutSoftDeleted(
+  admin.from("calendar_events").select("*").eq("user_id", userId),
+);
+```
+
+## New tables / migrations
+
+- Add `deleted_at timestamptz` in the **migration** (`supabase/migrations/`).
+- Update RLS `SELECT` + remove `DELETE` policy in the same migration.
+- Never add `ON DELETE CASCADE` from user content into history you care about without considering tombstones.
+
+## Allowed hard-delete exceptions
+
+Only non-user-history / infra rows:
+
+- `rehab_user_programs` — materialization lock coordination
+- `pin_ip_attempts` — rate-limit counters
+- Supabase **storage** bucket objects (files); the matching DB row is still soft-deleted
+- HTTP cookies, in-memory `Map`/`Set` in client stores
+
+`user_pins` may hard-delete on PIN removal (credential row, `user_id` PK).
+
+## Do not
+
+- Bulk-wipe user tables to “fix” counts or re-seed (see rehab materialization).
+- Use `.delete()` in `lib/**` server actions for todos, rehab, calendar, shopping, rule-of-3, etc.
+- Omit `deleted_at` filters on **admin** (`createAdminClient`) queries — RLS does not apply there.

@@ -1,3 +1,4 @@
+import { STOIC_WEEKLY_REVIEW_TITLE } from "@/modules/rehab/neuro-rehab-2026/stoic-content";
 import type { RehabPlanEvent } from "@/types/rehab";
 
 /**
@@ -39,6 +40,14 @@ export function emptyStoicResponse(): StoicResponseData {
 
 export function isStoicEvent(event: { eventKind: string }): boolean {
   return event.eventKind === "stoic";
+}
+
+/** Weekly review uses the structured Stoic dialog; daily intention uses the default event form. */
+export function isStoicDialogEvent(event: {
+  eventKind: string;
+  title: string;
+}): boolean {
+  return isStoicEvent(event) && event.title === STOIC_WEEKLY_REVIEW_TITLE;
 }
 
 export function isStoicResponseEmpty(data: StoicResponseData): boolean {

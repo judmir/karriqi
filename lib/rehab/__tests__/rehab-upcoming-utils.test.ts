@@ -43,13 +43,14 @@ function mapGenerated(userId = "u") {
 describe("buildUpcomingListSections", () => {
   const today = startOfDay(new Date(2026, 5, 1));
 
-  it("labels today and tomorrow", () => {
+  it("labels today, tomorrow and yesterday", () => {
     expect(upcomingDayLabel(today, today)).toBe("Today 1 Jun");
     expect(upcomingDayLabel(addDays(today, 1), today)).toBe("Tomorrow 2 Jun");
+    expect(upcomingDayLabel(addDays(today, -1), today)).toBe("Yesterday 31 May");
     expect(upcomingDayLabel(addDays(today, 2), today)).toBe("Wed 3 Jun");
   });
 
-  it("shows two weeks of day rows initially", () => {
+  it("shows two weeks of future day rows initially", () => {
     const events = mapGenerated();
     const sections = buildUpcomingListSections(
       events,
@@ -57,8 +58,8 @@ describe("buildUpcomingListSections", () => {
       UPCOMING_INITIAL_DAYS,
     );
 
-    const daySections = sections.filter((section) => section.kind === "day");
-    expect(daySections).toHaveLength(UPCOMING_INITIAL_DAYS);
+    const futureSections = sections.filter((section) => !section.isPast);
+    expect(futureSections).toHaveLength(UPCOMING_INITIAL_DAYS);
   });
 
   it("adds two more weeks on each see more step", () => {
@@ -67,8 +68,8 @@ describe("buildUpcomingListSections", () => {
 
     const events = mapGenerated();
     const sections = buildUpcomingListSections(events, today, afterOne);
-    const daySections = sections.filter((section) => section.kind === "day");
-    expect(daySections).toHaveLength(afterOne);
+    const futureSections = sections.filter((section) => !section.isPast);
+    expect(futureSections).toHaveLength(afterOne);
   });
 
   it("caps at program end", () => {
@@ -78,11 +79,20 @@ describe("buildUpcomingListSections", () => {
     expect(nextUpcomingVisibleDays(maxDays - 1, today)).toBe(maxDays);
   });
 
-  it("puts incomplete past events in overdue", () => {
+  it("renders past program days as their own past sections", () => {
     const events = mapGenerated();
     const sections = buildUpcomingListSections(events, addDays(today, 30));
-    const overdue = sections.find((section) => section.kind === "overdue");
-    expect(overdue?.events.length).toBeGreaterThan(0);
+    const pastSections = sections.filter((section) => section.isPast);
+    expect(pastSections.length).toBeGreaterThan(0);
+    // Past sections only include days that actually carry events.
+    expect(pastSections.every((section) => section.events.length > 0)).toBe(
+      true,
+    );
+    // Past sections come before today/future sections.
+    const firstFutureIndex = sections.findIndex((section) => !section.isPast);
+    expect(
+      sections.slice(0, firstFutureIndex).every((section) => section.isPast),
+    ).toBe(true);
   });
 
   it("keeps completed events visible in their day section", () => {

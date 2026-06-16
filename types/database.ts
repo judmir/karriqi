@@ -524,6 +524,7 @@ export type Database = {
           reminder_sent_at: string | null;
           created_at: string;
           updated_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -545,6 +546,7 @@ export type Database = {
           reminder_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -566,6 +568,7 @@ export type Database = {
           reminder_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -821,6 +824,7 @@ export type Database = {
           last_synced_at: string | null;
           created_at: string;
           updated_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           user_id: string;
@@ -833,6 +837,7 @@ export type Database = {
           last_synced_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          deleted_at?: string | null;
         };
         Update: {
           user_id?: string;
@@ -845,6 +850,7 @@ export type Database = {
           last_synced_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };

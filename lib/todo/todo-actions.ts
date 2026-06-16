@@ -17,6 +17,7 @@ import {
   isTodoPriority,
   normalizeTodoPriority,
 } from "@/lib/todo/priority";
+import { softDeletePatch } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { TodoPriority, TodoStatus } from "@/types/todo";
@@ -407,9 +408,10 @@ export async function deleteTodoItem(input: {
 
   const { error } = await supabase
     .from("todo_items")
-    .delete()
+    .update(softDeletePatch())
     .eq("id", input.id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -606,7 +608,11 @@ export async function deleteTodoSubtask(input: {
     return { ok: false, message: readErr?.message ?? "Subtask not found." };
   }
 
-  const { error } = await supabase.from("todo_subtasks").delete().eq("id", input.id);
+  const { error } = await supabase
+    .from("todo_subtasks")
+    .update(softDeletePatch())
+    .eq("id", input.id)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -736,8 +742,9 @@ export async function deleteTodoAttachment(input: {
 
   const { error: delErr } = await supabase
     .from("todo_attachments")
-    .delete()
-    .eq("id", input.id);
+    .update(softDeletePatch())
+    .eq("id", input.id)
+    .is("deleted_at", null);
 
   if (delErr) {
     return { ok: false, message: delErr.message };
