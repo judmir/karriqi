@@ -11,10 +11,6 @@ import {
 
 import { eventSpansDay } from "@/lib/calendar/all-day-events";
 import { getEventDescriptionPlainText } from "@/lib/calendar/event-subtasks";
-import {
-  PROGRAM_START,
-  PROGRAM_WEEKS,
-} from "@/modules/rehab/neuro-rehab-2026/constants";
 import type { RehabPlanEvent } from "@/types/rehab";
 
 /** Each "See more" reveals this many additional day rows (2 weeks). */
@@ -30,8 +26,6 @@ export type UpcomingListSection =
   | { kind: "overdue"; events: RehabPlanEvent[] }
   | { kind: "day"; date: Date; label: string; events: RehabPlanEvent[] };
 
-const PROGRAM_END = addDays(PROGRAM_START, PROGRAM_WEEKS * 7 - 1);
-
 function byStart(a: RehabPlanEvent, b: RehabPlanEvent): number {
   return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
 }
@@ -45,6 +39,31 @@ function eventPrimaryDay(event: RehabPlanEvent): Date {
     return new Date(year!, month! - 1, day!);
   }
   return startOfDay(parseISO(event.startAt));
+}
+
+function parseUntilDay(until: string): Date {
+  const [year, month, day] = until.slice(0, 10).split("-").map(Number);
+  return new Date(year!, month! - 1, day!);
+}
+
+/** Latest calendar day covered by stored rehab events (DB source of truth). */
+export function programEndFromEvents(events: RehabPlanEvent[]): Date | null {
+  let latest: Date | null = null;
+
+  for (const event of events) {
+    const candidates = [eventPrimaryDay(event)];
+    if (event.recurrence?.until) {
+      candidates.push(parseUntilDay(event.recurrence.until));
+    }
+
+    for (const day of candidates) {
+      if (!latest || day.getTime() > latest.getTime()) {
+        latest = day;
+      }
+    }
+  }
+
+  return latest;
 }
 
 export function upcomingEventScheduleLabel(
@@ -97,25 +116,36 @@ export function upcomingDayLabel(date: Date, today: Date): string {
   return format(date, "EEE d MMM");
 }
 
-/** Total day rows available from today through program end. */
-export function maxUpcomingDaysFrom(now: Date = new Date()): number {
+/** Total day rows available from today through the last stored event day. */
+export function maxUpcomingDaysFrom(
+  now: Date = new Date(),
+  events: RehabPlanEvent[] = [],
+): number {
   const today = startOfDay(now);
-  const throughProgram = differenceInCalendarDays(PROGRAM_END, today) + 1;
-  return Math.max(UPCOMING_DAYS_CHUNK, throughProgram);
+  const programEnd = programEndFromEvents(events);
+  const throughProgram = programEnd
+    ? differenceInCalendarDays(programEnd, today) + 1
+    : UPCOMING_DAYS_CHUNK;
+  return Math.max(UPCOMING_INITIAL_DAYS, throughProgram);
 }
 
 export function hasMoreUpcomingDays(
   visibleDays: number,
   now: Date = new Date(),
+  events: RehabPlanEvent[] = [],
 ): boolean {
-  return visibleDays < maxUpcomingDaysFrom(now);
+  return visibleDays < maxUpcomingDaysFrom(now, events);
 }
 
 export function nextUpcomingVisibleDays(
   current: number,
   now: Date = new Date(),
+  events: RehabPlanEvent[] = [],
 ): number {
-  return Math.min(current + UPCOMING_DAYS_CHUNK, maxUpcomingDaysFrom(now));
+  return Math.min(
+    current + UPCOMING_DAYS_CHUNK,
+    maxUpcomingDaysFrom(now, events),
+  );
 }
 
 /** Overdue + one row per day for the visible window. */
@@ -126,7 +156,7 @@ export function buildUpcomingListSections(
 ): UpcomingListSection[] {
   const today = startOfDay(now);
   const sections: UpcomingListSection[] = [];
-  const dayCount = Math.min(visibleDays, maxUpcomingDaysFrom(now));
+  const dayCount = Math.min(visibleDays, maxUpcomingDaysFrom(now, events));
 
   const overdue = events
     .filter((event) => isOverdue(event, today))

@@ -7,6 +7,7 @@ import {
 } from "@/lib/rehab/recurrence";
 import {
   NEURO_REHAB_PROGRAM_ID,
+  PROGRAM_EXTRA_DAYS,
   PROGRAM_START,
   PROGRAM_WEEKS,
   isRetestWeek,
@@ -177,7 +178,7 @@ function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
   // Weekly Sunday Stoic review, starting the first Sunday of the program.
   const firstSundayOffset = (7 - PROGRAM_START.getDay()) % 7;
   const firstSunday = addDays(PROGRAM_START, firstSundayOffset);
-  const programEnd = addDays(PROGRAM_START, PROGRAM_WEEKS * 7 - 1);
+  const programEnd = addDays(PROGRAM_START, PROGRAM_WEEKS * 7 + PROGRAM_EXTRA_DAYS - 1);
   events.push(
     recurringMaster(
       userId,
@@ -239,20 +240,52 @@ function mainSessionForDay(
         "purple",
       ),
     );
+
+    const { mainKind, mainTitle } = template;
+    let description = template.mainDescription;
+    let duration = isRetest ? 36 : 60;
+
+    if (mainKind === "gym_c") {
+      description = gymDescription(mainKind);
+      if (isRetest) {
+        description = `(Deload ~20%)\n\n${description}`;
+      }
+    } else if (mainKind === "recovery") {
+      duration = 30;
+    }
+
     events.push(
       timed(
         userId,
         day,
         week,
-        10,
+        9,
         0,
-        45,
-        "Light mobility / recovery",
-        "Easy mobility only. No hard training.",
-        "recovery",
-        "green",
+        duration,
+        mainTitle,
+        description.trim() || null,
+        mainKind,
+        mainKind === "recovery" ? "green" : "blue",
       ),
     );
+
+    if (template.handMinutes > 0) {
+      events.push(
+        timed(
+          userId,
+          day,
+          week,
+          15,
+          0,
+          template.handMinutes,
+          `Left-hand / OT (${template.handMinutes} min)`,
+          HAND_OT_DESCRIPTION,
+          "hand",
+          "orange",
+        ),
+      );
+    }
+
     if (isRetest) {
       events.push(
         timed(
@@ -452,7 +485,7 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
   // Stoicism layer: a handful of recurring masters (not one row per day).
   events.push(...stoicSeriesEvents(userId));
 
-  const totalDays = PROGRAM_WEEKS * 7;
+  const totalDays = PROGRAM_WEEKS * 7 + PROGRAM_EXTRA_DAYS;
 
   for (let offset = 0; offset < totalDays; offset++) {
     const day = addDays(PROGRAM_START, offset);

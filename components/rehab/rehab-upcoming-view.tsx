@@ -90,7 +90,7 @@ export function RehabUpcomingView() {
     const now = new Date();
     const windowStart = startOfDay(addDays(now, -14));
     const windowEnd = endOfDay(
-      addDays(startOfDay(now), maxUpcomingDaysFrom(now)),
+      addDays(startOfDay(now), maxUpcomingDaysFrom(now, allEvents)),
     );
     return expandRehabEvents(allEvents, windowStart, windowEnd);
   }, [allEvents]);
@@ -105,7 +105,7 @@ export function RehabUpcomingView() {
     [expandedEvents, trimmedSearch],
   );
 
-  const canShowMore = hasMoreUpcomingDays(visibleDays);
+  const canShowMore = hasMoreUpcomingDays(visibleDays, new Date(), allEvents);
 
   useEffect(() => {
     if (calendarMounted) {
@@ -281,7 +281,7 @@ export function RehabUpcomingView() {
                   type="button"
                   onClick={() =>
                     setVisibleDays((current) =>
-                      nextUpcomingVisibleDays(current),
+                      nextUpcomingVisibleDays(current, new Date(), allEvents),
                     )
                   }
                   className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"

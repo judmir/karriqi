@@ -62,7 +62,11 @@ describe("buildUpcomingListSections", () => {
   });
 
   it("adds two more weeks on each see more step", () => {
-    const afterOne = nextUpcomingVisibleDays(UPCOMING_INITIAL_DAYS, today);
+    const afterOne = nextUpcomingVisibleDays(
+      UPCOMING_INITIAL_DAYS,
+      today,
+      mapGenerated(),
+    );
     expect(afterOne).toBe(UPCOMING_INITIAL_DAYS + UPCOMING_DAYS_CHUNK);
 
     const events = mapGenerated();
@@ -71,11 +75,12 @@ describe("buildUpcomingListSections", () => {
     expect(daySections).toHaveLength(afterOne);
   });
 
-  it("caps at program end", () => {
-    const maxDays = maxUpcomingDaysFrom(today);
-    expect(hasMoreUpcomingDays(maxDays - 1, today)).toBe(true);
-    expect(hasMoreUpcomingDays(maxDays, today)).toBe(false);
-    expect(nextUpcomingVisibleDays(maxDays - 1, today)).toBe(maxDays);
+  it("caps at program end from stored events", () => {
+    const events = mapGenerated();
+    const maxDays = maxUpcomingDaysFrom(today, events);
+    expect(hasMoreUpcomingDays(maxDays - 1, today, events)).toBe(true);
+    expect(hasMoreUpcomingDays(maxDays, today, events)).toBe(false);
+    expect(nextUpcomingVisibleDays(maxDays - 1, today, events)).toBe(maxDays);
   });
 
   it("puts incomplete past events in overdue", () => {
@@ -88,20 +93,20 @@ describe("buildUpcomingListSections", () => {
   it("keeps completed events visible in their day section", () => {
     const events = mapGenerated();
     const target = events.find((event) =>
-      event.startAt.startsWith("2026-06-08"),
+      event.startAt.startsWith("2026-06-14"),
     );
     expect(target).toBeDefined();
 
     const completed = {
       ...target!,
-      completedAt: "2026-06-08T10:00:00.000Z",
+      completedAt: "2026-06-14T10:00:00.000Z",
     };
     const sections = buildUpcomingListSections(
       events.map((event) => (event.id === completed.id ? completed : event)),
-      new Date(2026, 5, 8),
+      new Date(2026, 5, 14),
     );
     const todaySection = sections.find(
-      (section) => section.kind === "day" && section.label === "Today 8 Jun",
+      (section) => section.kind === "day" && section.label === "Today 14 Jun",
     );
 
     expect(

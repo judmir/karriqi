@@ -6,9 +6,6 @@ import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constan
 
 const BATCH_SIZE = 100;
 
-const EXPECTED_NEURO_REHAB_EVENT_COUNT =
-  generateNeuroRehabProgramEvents("count-probe").length;
-
 const GYM_EVENT_KINDS = ["gym_a", "gym_b", "gym_c", "gym_d"] as const;
 
 type MaterializationLock =
@@ -134,28 +131,21 @@ export async function materializeNeuroRehabProgramForUser(
   }
 
   let count = await countProgramEvents(admin, userId);
-  let reset = false;
 
-  if (count === EXPECTED_NEURO_REHAB_EVENT_COUNT) {
+  // Existing rows are the schedule source of truth — never wipe on count drift.
+  if (count > 0) {
     await repairGeneratedGymEventDescriptions(admin, userId);
     return { ok: true, inserted: 0, skipped: true };
-  }
-
-  if (count !== 0) {
-    await deleteAllProgramEventsForUser(userId);
-    await releaseMaterializationLock(admin, userId);
-    reset = true;
-    count = 0;
   }
 
   const lock = await claimMaterializationLock(admin, userId);
   if (lock.status === "held") {
     const currentCount = await countProgramEvents(admin, userId);
-    if (currentCount === EXPECTED_NEURO_REHAB_EVENT_COUNT) {
+    if (currentCount > 0) {
       await repairGeneratedGymEventDescriptions(admin, userId);
-      return { ok: true, inserted: 0, skipped: true, reset };
+      return { ok: true, inserted: 0, skipped: true };
     }
-    return { ok: true, inserted: 0, skipped: true, reset };
+    return { ok: true, inserted: 0, skipped: true };
   }
 
   const rows = generateNeuroRehabProgramEvents(userId);
@@ -182,7 +172,7 @@ export async function materializeNeuroRehabProgramForUser(
     };
   }
 
-  return { ok: true, inserted, skipped: false, reset };
+  return { ok: true, inserted, skipped: false };
 }
 
 /** Wipe and re-seed the full 12-week program for one user. */
