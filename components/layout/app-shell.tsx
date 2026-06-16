@@ -12,6 +12,7 @@ import { MainSectionTitle } from "@/components/layout/main-section-title";
 import { MainNavDesktop, MainNavMobile } from "@/components/layout/main-nav";
 import { useMainLayoutUser } from "@/components/layout/main-layout-user-context";
 import { useAppearance } from "@/components/providers/appearance-provider";
+import { InstantNavigationProvider } from "@/components/providers/instant-navigation-provider";
 import { isCalendarRoute } from "@/config/routes";
 import { useNotificationSubscription } from "@/hooks/use-notification-subscription";
 import { cn } from "@/lib/utils";
@@ -51,8 +52,10 @@ export function AppShell({
             "flex min-h-0 flex-1 flex-col",
           )}
         >
-          <MainSectionTitle />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+          <InstantNavigationProvider>
+            <MainSectionTitle />
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+          </InstantNavigationProvider>
         </div>
       </div>
       <MainNavMobile includeDevNav={includeDevNav} />

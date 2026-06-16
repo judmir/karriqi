@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
 import {
   rehabEventPath,
   type RehabEventReturnTo,
 } from "@/config/routes";
+import { useInstantNavigate } from "@/hooks/use-instant-navigate";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { isStoicEvent } from "@/lib/rehab/stoic-response";
 import type { RehabPlanEvent } from "@/types/rehab";
@@ -18,7 +18,7 @@ type OpenRehabEventEditOptions = {
 };
 
 export function useOpenRehabEventEdit(returnTo: RehabEventReturnTo) {
-  const router = useRouter();
+  const navigate = useInstantNavigate();
   const isMobile = useIsMobile();
 
   return useCallback(
@@ -34,12 +34,12 @@ export function useOpenRehabEventEdit(returnTo: RehabEventReturnTo) {
       }
 
       if (isMobile) {
-        router.push(rehabEventPath(event.id, returnTo));
+        navigate(rehabEventPath(event.id, returnTo));
         return;
       }
 
       handlers.openTaskModal(event);
     },
-    [isMobile, returnTo, router],
+    [isMobile, navigate, returnTo],
   );
 }

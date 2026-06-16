@@ -2,22 +2,26 @@
 
 import { usePathname } from "next/navigation";
 
+import { pathnameFromHref } from "@/components/layout/route-fallbacks";
+import { useInstantNavigation } from "@/components/providers/instant-navigation-provider";
 import { resolvePageTitle } from "@/config/navigation";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
 export function MainSectionTitle({ className }: { className?: string }) {
   const pathname = usePathname();
-  const title = resolvePageTitle(pathname);
+  const { pendingHref } = useInstantNavigation();
+  const displayPath = pendingHref ? pathnameFromHref(pendingHref) : pathname;
+  const title = resolvePageTitle(displayPath);
 
   if (
     !title ||
-    pathname === ROUTES.rehabPlan ||
-    pathname.startsWith(`${ROUTES.rehabPlan}/`) ||
-    pathname === ROUTES.rehabClinical ||
-    pathname.startsWith(`${ROUTES.rehabClinical}/`) ||
-    pathname === ROUTES.rehabPlanList ||
-    pathname.startsWith(`${ROUTES.rehabPlanList}/`)
+    displayPath === ROUTES.rehabPlan ||
+    displayPath.startsWith(`${ROUTES.rehabPlan}/`) ||
+    displayPath === ROUTES.rehabClinical ||
+    displayPath.startsWith(`${ROUTES.rehabClinical}/`) ||
+    displayPath === ROUTES.rehabPlanList ||
+    displayPath.startsWith(`${ROUTES.rehabPlanList}/`)
   ) {
     return null;
   }

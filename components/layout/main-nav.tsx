@@ -45,7 +45,6 @@ function DesktopNavLink({
   const link = (
     <Link
       href={href}
-      prefetch={false}
       aria-label={collapsed ? label : undefined}
       className={cn(
         "group/nav flex h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm transition-colors",
@@ -111,7 +110,6 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      prefetch={false}
       className={cn(
         "flex h-full min-h-0 min-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[0.65rem] font-medium leading-tight transition-colors",
         active
