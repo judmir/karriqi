@@ -1,8 +1,7 @@
 "use client";
 
 import { endOfDay, format, isBefore, parseISO, startOfDay, subDays } from "date-fns";
-import { ChevronDown } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { EventFormDialog } from "@/components/calendar/event-form-dialog";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
@@ -15,7 +14,6 @@ import {
   parseEventDescription,
 } from "@/lib/calendar/event-subtasks";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
-import { loadRehabArchivedEventsAction } from "@/lib/rehab/rehab-history-actions";
 import {
   buildHistoryDaySections,
   hasMoreHistoryDays,
@@ -32,7 +30,7 @@ import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
-import type { RehabArchivedEvent, RehabPlanEvent } from "@/types/rehab";
+import type { RehabPlanEvent } from "@/types/rehab";
 
 export function RehabHistoryView() {
   const allEvents = useRehabPlanStore((state) => state.events);
@@ -42,9 +40,6 @@ export function RehabHistoryView() {
   );
 
   const [visibleDays, setVisibleDays] = useState(HISTORY_INITIAL_DAYS);
-  const [archived, setArchived] = useState<RehabArchivedEvent[]>([]);
-  const [archivedLoading, setArchivedLoading] = useState(true);
-  const [archivedCollapsed, setArchivedCollapsed] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<RehabPlanEvent | null>(
     null,
@@ -55,22 +50,6 @@ export function RehabHistoryView() {
   const [stoicEvent, setStoicEvent] = useState<RehabPlanEvent | null>(null);
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadRehabArchivedEventsAction().then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.ok) {
-        setArchived(result.events);
-      }
-      setArchivedLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const expandedEvents = useMemo(() => {
     const now = new Date();
@@ -135,8 +114,7 @@ export function RehabHistoryView() {
       <div className="border-border shrink-0 border-b px-4 py-3 md:px-6">
         <h1 className="text-lg font-semibold tracking-tight">History</h1>
         <p className="text-muted-foreground mt-1 text-sm leading-snug">
-          Past days with your completions, notes, and details. Removed tasks
-          appear under Archived.
+          Past days with your completions, notes, and details.
         </p>
       </div>
 
@@ -189,14 +167,6 @@ export function RehabHistoryView() {
             </button>
           </div>
         ) : null}
-
-        <ArchivedSection
-          events={archived}
-          loading={archivedLoading}
-          collapsed={archivedCollapsed}
-          onToggleCollapse={() => setArchivedCollapsed((value) => !value)}
-          onEdit={openEdit}
-        />
       </div>
 
       <EventFormDialog
@@ -233,12 +203,10 @@ function HistoryEventRow({
   event,
   onToggleCompleted,
   onEdit,
-  archivedAt,
 }: {
   event: RehabPlanEvent;
   onToggleCompleted: (completed: boolean) => void;
   onEdit: () => void;
-  archivedAt?: string;
 }) {
   const completed = Boolean(event.completedAt);
   const timeLabel = historyEventTimeLabel(event);
@@ -255,7 +223,6 @@ function HistoryEventRow({
       <div className="flex items-start gap-3">
         <Checkbox
           checked={completed}
-          disabled={Boolean(archivedAt)}
           onCheckedChange={(value) => onToggleCompleted(Boolean(value))}
           className="mt-0.5 rounded-full"
           aria-label={`Mark ${event.title} ${completed ? "incomplete" : "complete"}`}
@@ -274,11 +241,6 @@ function HistoryEventRow({
             {timeLabel ? (
               <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
                 {timeLabel}
-              </p>
-            ) : null}
-            {archivedAt ? (
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Removed {format(parseISO(archivedAt), "d MMM yyyy, HH:mm")}
               </p>
             ) : null}
           </button>
@@ -321,61 +283,5 @@ function HistoryEventRow({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function ArchivedSection({
-  events,
-  loading,
-  collapsed,
-  onToggleCollapse,
-  onEdit,
-}: {
-  events: RehabArchivedEvent[];
-  loading: boolean;
-  collapsed: boolean;
-  onToggleCollapse: () => void;
-  onEdit: (event: RehabPlanEvent) => void;
-}) {
-  if (!loading && events.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="border-border mt-2 border-t">
-      <button
-        type="button"
-        onClick={onToggleCollapse}
-        className="text-foreground flex w-full items-center justify-between py-4 text-left text-sm font-medium"
-      >
-        <span>
-          Archived
-          {events.length > 0 ? ` (${events.length})` : ""}
-        </span>
-        <ChevronDown
-          className={cn(
-            "text-muted-foreground size-4 shrink-0 transition-transform",
-            collapsed && "-rotate-90",
-          )}
-          aria-hidden
-        />
-      </button>
-      {!collapsed ? (
-        <div className="flex flex-col gap-1 pb-4">
-          {loading ? (
-            <p className="text-muted-foreground text-sm">Loading archived…</p>
-          ) : null}
-          {events.map((event) => (
-            <HistoryEventRow
-              key={`${event.id}-${event.deletedAt}`}
-              event={event}
-              archivedAt={event.deletedAt}
-              onToggleCompleted={() => {}}
-              onEdit={() => onEdit(event)}
-            />
-          ))}
-        </div>
-      ) : null}
-    </section>
   );
 }

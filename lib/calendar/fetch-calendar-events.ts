@@ -1,3 +1,4 @@
+import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
 import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
@@ -41,12 +42,11 @@ function mapEvent(row: EventRow): CalendarEvent {
 
 export async function fetchCalendarEventsForUser(): Promise<CalendarEvent[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("calendar_events")
-    .select(
+  const { data, error } = await withoutSoftDeleted(
+    supabase.from("calendar_events").select(
       "id, user_id, title, description, start_at, end_at, all_day, color, google_calendar_id, source, created_at, updated_at",
-    )
-    .order("start_at", { ascending: true });
+    ),
+  ).order("start_at", { ascending: true });
 
   if (error) {
     throw new Error(error.message);

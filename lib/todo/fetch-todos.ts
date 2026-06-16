@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import {
   fetchTodoTagsForUser,
   resolveCategoryIcon,
@@ -175,11 +176,11 @@ async function fetchAttachmentsForItems(
     return result;
   }
 
-  const { data, error } = await supabase
-    .from("todo_attachments")
-    .select(
+  const { data, error } = await withoutSoftDeleted(
+    supabase.from("todo_attachments").select(
       "id, todo_item_id, user_id, file_name, mime_type, size_bytes, storage_path, created_at",
-    )
+    ),
+  )
     .in("todo_item_id", itemIds)
     .order("created_at", { ascending: true });
 
@@ -219,10 +220,9 @@ export async function fetchTodosForUser(): Promise<TodoItem[]> {
   const supabase = await createClient();
   const [tagsResult, itemsResult] = await Promise.all([
     fetchTodoTagsForUser().catch(() => [] as Awaited<ReturnType<typeof fetchTodoTagsForUser>>),
-    supabase
-      .from("todo_items")
-      .select(TODO_ITEM_SELECT)
-      .order("list_order", { ascending: true }),
+    withoutSoftDeleted(
+      supabase.from("todo_items").select(TODO_ITEM_SELECT),
+    ).order("list_order", { ascending: true }),
   ]);
 
   const { data, error } = itemsResult;
@@ -243,11 +243,9 @@ export async function fetchTodoByIdForUser(id: string): Promise<TodoItem | null>
   const supabase = await createClient();
   const [tagsResult, itemResult] = await Promise.all([
     fetchTodoTagsForUser().catch(() => [] as Awaited<ReturnType<typeof fetchTodoTagsForUser>>),
-    supabase
-      .from("todo_items")
-      .select(TODO_ITEM_SELECT)
-      .eq("id", id)
-      .maybeSingle(),
+    withoutSoftDeleted(
+      supabase.from("todo_items").select(TODO_ITEM_SELECT).eq("id", id),
+    ).maybeSingle(),
   ]);
 
   const { data, error } = itemResult;

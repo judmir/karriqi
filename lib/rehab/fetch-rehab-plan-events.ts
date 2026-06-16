@@ -9,15 +9,15 @@ import {
   type RehabSpeechRecordingRow,
 } from "@/lib/rehab/rehab-plan-event-map";
 import { filterRehabEventsForDay } from "@/lib/rehab/rehab-today-utils";
+import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 import type { RehabPlanEvent } from "@/types/rehab";
 
 export async function fetchRehabPlanEventsForUser(): Promise<RehabPlanEvent[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("rehab_plan_events")
-    .select(REHAB_PLAN_EVENT_SELECT)
-    .order("start_at", { ascending: true });
+  const { data, error } = await withoutSoftDeleted(
+    supabase.from("rehab_plan_events").select(REHAB_PLAN_EVENT_SELECT),
+  ).order("start_at", { ascending: true });
 
   if (error) {
     throw new Error(error.message);
@@ -30,10 +30,9 @@ export async function fetchRehabPlanEventsForUser(): Promise<RehabPlanEvent[]> {
   >();
 
   if (eventRows.length > 0) {
-    const { data: recordingRows, error: recordingsError } = await supabase
-      .from("rehab_speech_recordings")
-      .select(REHAB_SPEECH_RECORDING_SELECT)
-      .order("created_at", { ascending: false });
+    const { data: recordingRows, error: recordingsError } = await withoutSoftDeleted(
+      supabase.from("rehab_speech_recordings").select(REHAB_SPEECH_RECORDING_SELECT),
+    ).order("created_at", { ascending: false });
 
     if (recordingsError) {
       throw new Error(recordingsError.message);

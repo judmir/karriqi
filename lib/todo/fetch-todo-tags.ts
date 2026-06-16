@@ -1,3 +1,4 @@
+import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 import {
   DEFAULT_TODO_TAG_ICON,
@@ -21,10 +22,9 @@ function mapTag(row: TagRow): TodoTag {
 
 export async function fetchTodoTagsForUser(): Promise<TodoTag[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("todo_tags")
-    .select("id, label, icon")
-    .order("label", { ascending: true });
+  const { data, error } = await withoutSoftDeleted(
+    supabase.from("todo_tags").select("id, label, icon"),
+  ).order("label", { ascending: true });
 
   if (error) {
     throw new Error(error.message);

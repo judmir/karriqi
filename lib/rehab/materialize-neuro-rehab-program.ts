@@ -1,5 +1,4 @@
 import { deleteAllProgramEventsForUser } from "@/lib/rehab/dedupe-rehab-program-events";
-import { parseEventDescription } from "@/lib/calendar/event-subtasks";
 import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
@@ -10,8 +9,6 @@ import {
 import type { RehabPlanEventInsert } from "@/types/rehab";
 
 const BATCH_SIZE = 100;
-
-const GYM_EVENT_KINDS = ["gym_a", "gym_b", "gym_c", "gym_d"] as const;
 
 /**
  * Stable identity for a program occurrence, independent of string formatting:
@@ -74,9 +71,7 @@ type ExistingProgramOccurrences = {
 };
 
 /**
- * Load the identity of every program row already stored for this user. Used to
- * additively top up missing occurrences without ever deleting (or touching) the
- * rows the user has completed or annotated.
+ * Load the identity of every active program row already stored for this user.
  */
 async function fetchExistingProgramOccurrences(
   admin: NonNullable<ReturnType<typeof createAdminClient>>,
@@ -102,11 +97,6 @@ async function fetchExistingProgramOccurrences(
   return { count: data?.length ?? 0, keys };
 }
 
-/**
- * Insert program rows, skipping any slot that already has an active row (or that
- * another concurrent materialization just claimed). Uses ON CONFLICT DO NOTHING
- * against the partial unique index on active program occurrences.
- */
 async function insertProgramEventBatches(
   admin: NonNullable<ReturnType<typeof createAdminClient>>,
   rows: RehabPlanEventInsert[],
@@ -114,93 +104,13 @@ async function insertProgramEventBatches(
   let inserted = 0;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rowsForDbInsert(rows.slice(i, i + BATCH_SIZE));
-    const { data, error } = await admin
-      .from("rehab_plan_events")
-      .upsert(batch, {
-        onConflict: "user_id,program_id,start_at,event_kind",
-        ignoreDuplicates: true,
-      })
-      .select("id");
+    const { error } = await admin.from("rehab_plan_events").insert(batch);
     if (error) {
       throw new Error(error.message);
     }
-    inserted += data?.length ?? 0;
+    inserted += batch.length;
   }
-
   return inserted;
-}
-
-/**
- * Insert only the generated program occurrences that are not already stored.
- * Existing rows (including the user's completions, notes, and recordings) are
- * left completely untouched. Returns the number of rows inserted.
- */
-async function insertMissingProgramEvents(
-  admin: NonNullable<ReturnType<typeof createAdminClient>>,
-  userId: string,
-  existingKeys: Set<string>,
-): Promise<number> {
-  const missing = generateNeuroRehabProgramEvents(userId).filter(
-    (event) => !existingKeys.has(occurrenceKey(event.event_kind, event.start_at)),
-  );
-
-  return insertProgramEventBatches(admin, missing);
-}
-
-async function repairGeneratedGymEventDescriptions(
-  admin: NonNullable<ReturnType<typeof createAdminClient>>,
-  userId: string,
-): Promise<number> {
-  const generatedGymEvents = generateNeuroRehabProgramEvents(userId).filter(
-    (event) =>
-      event.description &&
-      GYM_EVENT_KINDS.includes(
-        event.event_kind as (typeof GYM_EVENT_KINDS)[number],
-      ),
-  );
-  const expectedByKey = new Map(
-    generatedGymEvents.map((event) => [
-      `${event.event_kind}:${event.start_at}`,
-      event.description ?? null,
-    ]),
-  );
-
-  const { data, error } = await admin
-    .from("rehab_plan_events")
-    .select("id, start_at, event_kind, description")
-    .eq("user_id", userId)
-    .eq("program_id", NEURO_REHAB_PROGRAM_ID)
-    .in("event_kind", [...GYM_EVENT_KINDS])
-    .is("deleted_at", null);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  let repaired = 0;
-  for (const row of data ?? []) {
-    const expected = expectedByKey.get(`${row.event_kind}:${row.start_at}`);
-    if (!expected) {
-      continue;
-    }
-
-    const parsed = parseEventDescription(row.description);
-    if (parsed.subtasks.length > 0) {
-      continue;
-    }
-
-    const { error: updateError } = await admin
-      .from("rehab_plan_events")
-      .update({ description: expected })
-      .eq("id", row.id);
-
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-    repaired += 1;
-  }
-
-  return repaired;
 }
 
 export type MaterializeNeuroRehabResult =
@@ -218,23 +128,14 @@ export async function materializeNeuroRehabProgramForUser(
 
   const existing = await fetchExistingProgramOccurrences(admin, userId);
 
-  // Already seeded: NEVER wipe. Additively top up only genuinely missing
-  // occurrences so the user's completions, notes, and recordings are preserved
-  // as a permanent per-day history.
+  // Already seeded: do nothing on page load (no top-up, no repair scan).
   if (existing.count > 0) {
-    const inserted = await insertMissingProgramEvents(
-      admin,
-      userId,
-      existing.keys,
-    );
-    await repairGeneratedGymEventDescriptions(admin, userId);
-    return { ok: true, inserted, skipped: inserted === 0 };
+    return { ok: true, inserted: 0, skipped: true };
   }
 
   // First-time seed: claim a lock so concurrent loads don't double-insert.
   const lock = await claimMaterializationLock(admin, userId);
   if (lock.status === "held") {
-    // Another request is already seeding this user; let it finish.
     return { ok: true, inserted: 0, skipped: true };
   }
 
@@ -244,8 +145,6 @@ export async function materializeNeuroRehabProgramForUser(
   try {
     inserted = await insertProgramEventBatches(admin, rows);
   } catch (err) {
-    // Safe to clean up: the program table was empty for this user before we
-    // started this first-time seed, so nothing user-authored can be lost here.
     await deleteAllProgramEventsForUser(userId);
     if (lock.status === "claimed") {
       await releaseMaterializationLock(admin, userId);
