@@ -10,6 +10,9 @@ import {
   PROGRAM_EXTRA_DAYS,
   PROGRAM_START,
   PROGRAM_WEEKS,
+  SPEECH_PRACTICE_DURATION_MIN,
+  SPEECH_PRACTICE_HOUR,
+  SPEECH_PRACTICE_MINUTE,
   isRetestWeek,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
 import {
@@ -273,7 +276,7 @@ function mainSessionForDay(
     }
   } else if (mainKind === "run_walk") {
     const plan = runWalkPlanForWeek(week);
-    description = `${plan.description}\n\n${template.includeSpeech ? "Include speech after walk." : ""}`;
+    description = plan.description;
     duration = isRetest ? 30 : 45;
   } else if (mainKind === "recovery") {
     duration = 30;
@@ -307,23 +310,6 @@ function mainSessionForDay(
         HAND_OT_DESCRIPTION,
         "hand",
         "orange",
-      ),
-    );
-  }
-
-  if (template.includeSpeech) {
-    events.push(
-      timed(
-        userId,
-        day,
-        week,
-        16,
-        30,
-        15,
-        "Speech practice",
-        SPEECH_DESCRIPTION,
-        "speech",
-        "red",
       ),
     );
   }
@@ -366,6 +352,18 @@ function dailyNonNegotiables(
       "Take with breakfast if agreed with doctor. See Wiki: Supplements.",
       "supplement",
       "blue",
+    ),
+    timed(
+      userId,
+      day,
+      week,
+      SPEECH_PRACTICE_HOUR,
+      SPEECH_PRACTICE_MINUTE,
+      SPEECH_PRACTICE_DURATION_MIN,
+      "Speech practice",
+      SPEECH_DESCRIPTION,
+      "speech",
+      "red",
     ),
     timed(
       userId,

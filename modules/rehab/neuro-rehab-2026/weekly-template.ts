@@ -5,7 +5,6 @@ export type WeekdayTemplate = {
   mainTitle: string;
   mainDescription: string;
   handMinutes: number;
-  includeSpeech: boolean;
   includeFootball: boolean;
   includeGymD: boolean;
   skipMainOnRetest?: boolean;
@@ -25,17 +24,15 @@ export function weekdayTemplate(
         mainTitle: "Run/walk",
         mainDescription: "Easy run/walk session.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
       };
     case 2:
       return {
         mainKind: "run_walk",
-        mainTitle: "Run/walk + speech",
-        mainDescription: "Run/walk session then speech practice.",
+        mainTitle: "Run/walk",
+        mainDescription: "Easy run/walk session.",
         handMinutes: 20,
-        includeSpeech: true,
         includeFootball: false,
         includeGymD: false,
       };
@@ -45,7 +42,6 @@ export function weekdayTemplate(
         mainTitle: isRetest ? "Gym A (deload)" : "Gym A — lower body + left leg",
         mainDescription: "See Wiki: Gym Workouts — Gym A.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
       };
@@ -55,7 +51,6 @@ export function weekdayTemplate(
         mainTitle: "Run/walk + football control",
         mainDescription: "Easy walk/run then ball-control drills.",
         handMinutes: 10,
-        includeSpeech: true,
         includeFootball: true,
         includeGymD: false,
       };
@@ -65,7 +60,6 @@ export function weekdayTemplate(
         mainTitle: "Run/walk",
         mainDescription: "Easy run/walk session.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
       };
@@ -75,7 +69,6 @@ export function weekdayTemplate(
         mainTitle: isRetest ? "Gym B (deload)" : "Gym B — upper body + core",
         mainDescription: "See Wiki: Gym Workouts — Gym B.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
       };
@@ -85,7 +78,6 @@ export function weekdayTemplate(
         mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
         mainDescription: "See Wiki: Gym Workouts — Gym C.",
         handMinutes: 10,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
       };
@@ -95,7 +87,6 @@ export function weekdayTemplate(
         mainTitle: "Recovery + weekly review",
         mainDescription: "Light mobility. Complete weekly review in journal/wiki.",
         handMinutes: 0,
-        includeSpeech: false,
         includeFootball: false,
         includeGymD: false,
       };

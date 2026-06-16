@@ -109,6 +109,17 @@ describe("generateNeuroRehabProgramEvents", () => {
     }
   });
 
+  it("schedules speech practice daily at 09:55", () => {
+    const speech = events.filter((e) => e.event_kind === "speech");
+    expect(speech).toHaveLength(90);
+    for (const event of speech) {
+      const start = new Date(event.start_at);
+      expect(start.getHours()).toBe(9);
+      expect(start.getMinutes()).toBe(55);
+      expect(event.title).toBe("Speech practice");
+    }
+  });
+
   it("delivers Stoicism as recurring masters, not one row per day", () => {
     const stoic = events.filter((e) => e.event_kind === "stoic");
     // 6 daily block masters (one per 2-week theme) + 1 weekly Sunday review.

@@ -17,6 +17,8 @@
     "reschedule:neuro-rehab": "RUN_RESCHEDULE=1 vitest run lib/rehab/__tests__/apply-reschedule-neuro-rehab.integration.test.ts",
     "reschedule:neuro-rehab:dry-run": "RUN_RESCHEDULE=1 RUN_RESCHEDULE_DRY=1 vitest run lib/rehab/__tests__/apply-reschedule-neuro-rehab.integration.test.ts",
     "remap:neuro-rehab-weekly": "RUN_WEEKLY_SCHEDULE=1 vitest run lib/rehab/__tests__/apply-neuro-rehab-weekly-schedule.integration.test.ts",
+    "sync:neuro-rehab-speech": "RUN_SPEECH_SCHEDULE=1 vitest run lib/rehab/__tests__/apply-neuro-rehab-speech-schedule.integration.test.ts",
+    "sync:neuro-rehab-speech:dry-run": "RUN_SPEECH_SCHEDULE=1 RUN_SPEECH_SCHEDULE_DRY=1 vitest run lib/rehab/__tests__/apply-neuro-rehab-speech-schedule.integration.test.ts",
     "dev:pwa": "bash scripts/main-dev.sh --pwa",
     "setup:local-host": "bash scripts/setup-karriqi-dev-host.sh",
     "build": "next build --webpack",
