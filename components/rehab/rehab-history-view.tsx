@@ -29,6 +29,7 @@ import {
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
 import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
+import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { RehabArchivedEvent, RehabPlanEvent } from "@/types/rehab";
@@ -98,22 +99,29 @@ export function RehabHistoryView() {
 
   const canLoadEarlier = hasMoreHistoryDays(visibleDays);
 
-  const openEdit = useCallback((event: RehabPlanEvent) => {
-    if (event.eventKind === "journal") {
-      setJournalEvent(event);
-      setJournalOpen(true);
-      return;
-    }
-    if (isStoicEvent(event)) {
-      setStoicEvent(event);
-      setStoicOpen(true);
-      return;
-    }
-    setSelectedEvent(event);
-    setDraftAllDay(event.allDay);
-    setDraftStart(new Date(event.startAt));
-    setDialogOpen(true);
-  }, []);
+  const openRehabEventEdit = useOpenRehabEventEdit("history");
+
+  const openEdit = useCallback(
+    (event: RehabPlanEvent) => {
+      openRehabEventEdit(event, {
+        openTaskModal: (next) => {
+          setSelectedEvent(next);
+          setDraftAllDay(next.allDay);
+          setDraftStart(new Date(next.startAt));
+          setDialogOpen(true);
+        },
+        openJournalModal: (next) => {
+          setJournalEvent(next);
+          setJournalOpen(true);
+        },
+        openStoicModal: (next) => {
+          setStoicEvent(next);
+          setStoicOpen(true);
+        },
+      });
+    },
+    [openRehabEventEdit],
+  );
 
   async function handleToggleCompleted(
     event: RehabPlanEvent,

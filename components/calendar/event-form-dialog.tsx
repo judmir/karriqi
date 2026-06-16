@@ -133,7 +133,51 @@ export function EventFormDialog({
   );
 }
 
+
+export type EventFormLayout = "dialog" | "page";
+
+export function EventFormPage({
+  event,
+  defaultStart,
+  persistence,
+  readOnly = false,
+  variant = "rehab",
+  defaultAllDay = false,
+  onSaved,
+  onDeleted,
+  onClose,
+}: Omit<EventFormDialogProps, "open" | "onOpenChange"> & {
+  onClose: () => void;
+}) {
+  const closeRequestRef = useRef<(() => void | Promise<void>) | null>(null);
+
+  return (
+    <EventFormDialogBody
+      key={
+        event?.id ??
+        `${defaultStart.toISOString()}:${defaultAllDay ? "1" : "0"}`
+      }
+      layout="page"
+      closeRequestRef={closeRequestRef}
+      event={event}
+      defaultStart={defaultStart}
+      persistence={persistence}
+      readOnly={readOnly}
+      variant={variant}
+      defaultAllDay={defaultAllDay}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      onSaved={onSaved}
+      onDeleted={onDeleted}
+    />
+  );
+}
+
 function EventFormDialogBody({
+  layout = "dialog",
   closeRequestRef,
   event,
   defaultStart,
@@ -145,6 +189,7 @@ function EventFormDialogBody({
   onSaved,
   onDeleted,
 }: Omit<EventFormDialogProps, "open"> & {
+  layout?: EventFormLayout;
   closeRequestRef: React.MutableRefObject<(() => void | Promise<void>) | null>;
 }) {
   const actions = calendarEventActionsFor(variant);
@@ -573,22 +618,26 @@ function EventFormDialogBody({
 
   closeRequestRef.current = handleClose;
 
-  return (
-    <DialogContent
-      showCloseButton={false}
-      className="grid max-h-[min(90vh,42rem)] min-h-[32rem] overflow-hidden border-white/10 bg-[#1f1f1f] p-0 text-white shadow-2xl sm:max-w-[48rem] md:grid-cols-[minmax(0,1fr)_15rem] md:items-stretch"
-    >
-      <DialogTitle className="sr-only">
-        {viewOnly ? "Event details" : isEditing ? "Edit event" : "New event"}
-      </DialogTitle>
-      <DialogDescription className="sr-only">
-        {viewOnly
-          ? "This calendar is view-only."
-          : isEditing
-            ? "Update this task."
-            : "Create a new task."}
-      </DialogDescription>
+  const isPage = layout === "page";
+  const shellClassName = cn(
+    "grid w-full overflow-x-hidden border-white/10 bg-[#1f1f1f] p-0 text-white",
+    isPage
+      ? "min-h-0 flex-1 overflow-y-auto md:grid-cols-[minmax(0,1fr)_15rem] md:items-stretch"
+      : "max-h-[min(90vh,42rem)] min-h-[32rem] overflow-hidden shadow-2xl sm:max-w-[48rem] md:grid-cols-[minmax(0,1fr)_15rem] md:items-stretch",
+  );
+  const titleText = viewOnly
+    ? "Event details"
+    : isEditing
+      ? "Edit event"
+      : "New event";
+  const descriptionText = viewOnly
+    ? "This calendar is view-only."
+    : isEditing
+      ? "Update this task."
+      : "Create a new task.";
 
+  const formBody = (
+    <>
       <section className="order-2 flex min-h-0 flex-col px-5 py-5 md:order-1 md:px-6">
         <div className="mb-4 flex shrink-0 items-center justify-between">
           <button
@@ -632,7 +681,7 @@ function EventFormDialogBody({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Task name"
-              autoFocus={!viewOnly}
+              autoFocus={!viewOnly && !isPage}
               readOnly={viewOnly}
               disabled={viewOnly}
               className="w-full shrink-0 bg-transparent text-base font-semibold text-white outline-none placeholder:text-white/40 disabled:opacity-60"
@@ -644,7 +693,7 @@ function EventFormDialogBody({
               placeholder="Description"
               readOnly={viewOnly}
               disabled={viewOnly}
-              className="mt-3 min-h-0 flex-1 resize-none overflow-y-auto bg-transparent text-sm leading-relaxed text-white/55 outline-none placeholder:text-white/30 disabled:opacity-60"
+              className={cn("mt-3 min-h-0 flex-1 resize-none overflow-y-auto bg-transparent leading-relaxed text-white/55 outline-none placeholder:text-white/30 disabled:opacity-60", isPage ? "text-base" : "text-sm")}
             />
             <EventSubtasksEditor
               subtasks={subtasks}
@@ -675,7 +724,7 @@ function EventFormDialogBody({
                   readOnly={viewOnly}
                   disabled={viewOnly}
                   rows={4}
-                  className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm leading-relaxed text-white/80 outline-none placeholder:text-white/30 focus-visible:border-white/25 disabled:opacity-60"
+                  className={cn("w-full resize-y rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 leading-relaxed text-white/80 outline-none placeholder:text-white/30 focus-visible:border-white/25 disabled:opacity-60", isPage ? "text-base" : "text-sm")}
                 />
               </div>
             ) : null}
@@ -777,6 +826,24 @@ function EventFormDialogBody({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  );
+
+  if (isPage) {
+    return (
+      <div className={shellClassName}>
+        <h1 className="sr-only">{titleText}</h1>
+        <p className="sr-only">{descriptionText}</p>
+        {formBody}
+      </div>
+    );
+  }
+
+  return (
+    <DialogContent showCloseButton={false} className={shellClassName}>
+      <DialogTitle className="sr-only">{titleText}</DialogTitle>
+      <DialogDescription className="sr-only">{descriptionText}</DialogDescription>
+      {formBody}
     </DialogContent>
   );
 }

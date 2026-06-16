@@ -35,9 +35,10 @@ import {
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import {
   getStoicResponseData,
-  isStoicDialogEvent,
+  isStoicEvent,
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
+import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
@@ -164,22 +165,29 @@ export function RehabTodayView() {
     [clearFeedbackTimer, scrollToEvent, today],
   );
 
-  const openEdit = useCallback((event: RehabPlanEvent) => {
-    if (event.eventKind === "journal") {
-      setJournalEvent(event);
-      setJournalOpen(true);
-      return;
-    }
-    if (isStoicDialogEvent(event)) {
-      setStoicEvent(event);
-      setStoicOpen(true);
-      return;
-    }
-    setSelectedEvent(event);
-    setDraftAllDay(event.allDay);
-    setDraftStart(new Date(event.startAt));
-    setDialogOpen(true);
-  }, []);
+  const openRehabEventEdit = useOpenRehabEventEdit("today");
+
+  const openEdit = useCallback(
+    (event: RehabPlanEvent) => {
+      openRehabEventEdit(event, {
+        openTaskModal: (next) => {
+          setSelectedEvent(next);
+          setDraftAllDay(next.allDay);
+          setDraftStart(new Date(next.startAt));
+          setDialogOpen(true);
+        },
+        openJournalModal: (next) => {
+          setJournalEvent(next);
+          setJournalOpen(true);
+        },
+        openStoicModal: (next) => {
+          setStoicEvent(next);
+          setStoicOpen(true);
+        },
+      });
+    },
+    [openRehabEventEdit],
+  );
 
   function handleSaved() {
     setDialogOpen(false);
@@ -424,7 +432,7 @@ function RehabTodayItemRow({
   const myNotes = parseEventDescription(event.description).myNotes.trim();
   const hasDescription = Boolean(descriptionText);
   const hasDetails = hasDescription || Boolean(myNotes);
-  const stoicResponse = isStoicDialogEvent(event)
+  const stoicResponse = isStoicEvent(event)
     ? summarizeStoicResponse(getStoicResponseData(event.description))
     : "";
 

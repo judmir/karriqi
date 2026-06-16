@@ -22,6 +22,29 @@ export const ROUTES = {
   authCallback: "/auth/callback",
 } as const;
 
+
+export type RehabEventReturnTo = "today" | "history" | "plan";
+
+/** Rehab task view/edit (full page on mobile). */
+export function rehabEventPath(id: string, returnTo?: RehabEventReturnTo): string {
+  const qs = returnTo ? `?from=${returnTo}` : "";
+  return `/rehab/events/${encodeURIComponent(id)}${qs}`;
+}
+
+export function rehabEventReturnHref(
+  from: RehabEventReturnTo | null | undefined,
+): string {
+  switch (from) {
+    case "history":
+      return ROUTES.rehabHistory;
+    case "plan":
+      return ROUTES.rehabPlan;
+    case "today":
+    default:
+      return ROUTES.rehabToday;
+  }
+}
+
 /** Single task view/edit (e.g. Jira-style page). */
 export function todoTaskPath(id: string) {
   return `/kanban/${id}`;
