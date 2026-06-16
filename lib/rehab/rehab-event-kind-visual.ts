@@ -16,6 +16,10 @@ import {
   Trophy,
 } from "lucide-react";
 
+import {
+  allEventSubtasksDone,
+  resolveEventSubtasks,
+} from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
 import type { RehabEventKind, RehabPlanEvent } from "@/types/rehab";
 
@@ -57,6 +61,50 @@ export function isRehabPlanEvent(
   event: CalendarEvent,
 ): event is RehabPlanEvent {
   return getRehabEventKind(event) !== null;
+}
+
+export type RehabEventStatus = "completed" | "missed" | null;
+
+/**
+ * Completion state for a rehab calendar event: "completed" when done (directly
+ * or via all subtasks), "missed" when it's past and still incomplete, otherwise
+ * null. Non-rehab (e.g. Google) events always return null.
+ */
+export function getRehabEventStatus(
+  event: CalendarEvent,
+  past: boolean,
+): RehabEventStatus {
+  if (!isRehabPlanEvent(event)) {
+    return null;
+  }
+  const { subtasks } = resolveEventSubtasks(event);
+  const completed =
+    subtasks.length > 0
+      ? allEventSubtasksDone(subtasks)
+      : Boolean(event.completedAt);
+  if (completed) {
+    return "completed";
+  }
+  return past ? "missed" : null;
+}
+
+/**
+ * Unified status background for calendar events across all views: light green
+ * when completed, light grey when missed (past & incomplete). Returns null for
+ * pending/future or non-rehab events, which keep their normal colored
+ * appearance. When non-null this fully replaces the event's color fill and the
+ * past-dimming class so the status reads clearly.
+ */
+export function rehabEventStatusSurfaceClass(
+  status: RehabEventStatus,
+): string | null {
+  if (status === "completed") {
+    return "bg-emerald-400/40 text-foreground dark:bg-emerald-400/35";
+  }
+  if (status === "missed") {
+    return "bg-muted/60 text-muted-foreground";
+  }
+  return null;
 }
 
 const KIND_ICON: Record<RehabEventKind, LucideIcon> = {
