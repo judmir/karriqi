@@ -2,6 +2,13 @@
 
 Server sends Web Push using [web-push](https://github.com/web-push-libs/web-push) and VAPID. The service worker (see [`worker/index.ts`](../../worker/index.ts)) shows notifications and opens URLs on click.
 
+
+## Notification actions
+
+Rehab reminders and stale-task notifications include a **Mark as completed** action on the push banner (long-press on iOS/macOS). The service worker calls `POST /api/notifications/action` with the user’s session cookie — no app open required.
+
+Actionable kinds are defined in [`lib/notifications/push-actions.ts`](../notifications/push-actions.ts).
+
 ## Environment variables
 
 | Variable | Where | Purpose |

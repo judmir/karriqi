@@ -4,6 +4,7 @@ import { sendWebPushToUserIds } from "@/lib/push/send-web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { NotificationKind } from "./kinds";
+import { pushActionContextForDispatch } from "./push-actions";
 
 export type DispatchNotificationInput = {
   kind: NotificationKind;
@@ -41,9 +42,16 @@ export async function dispatchNotification(
     console.error("[notifications] insert failed:", error.message);
   }
 
+  const actionContext = pushActionContextForDispatch({
+    kind: input.kind,
+    metadata: input.metadata,
+  });
+
   await sendWebPushToUserIds(recipientUserIds, {
     title: input.title,
     body: input.body ?? "",
     href: input.href,
+    kind: input.kind,
+    actionContext,
   });
 }

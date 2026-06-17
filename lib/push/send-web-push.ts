@@ -3,7 +3,10 @@ import { randomUUID } from "node:crypto";
 import webPush from "web-push";
 
 import { softDeletePatch, withoutSoftDeleted } from "@/lib/db/soft-delete";
+import type { NotificationKind } from "@/lib/notifications/kinds";
+import { pushActionsForKind } from "@/lib/notifications/push-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/types/database";
 
 function vapidConfigured(): boolean {
   return Boolean(
@@ -27,9 +30,17 @@ export type SendWebPushResult = {
     | "no_subscriptions";
 };
 
+export type WebPushPayload = {
+  title: string;
+  body: string;
+  href?: string;
+  kind?: NotificationKind;
+  actionContext?: Record<string, Json | undefined>;
+};
+
 export async function sendWebPushToUserIds(
   userIds: string[],
-  payload: { title: string; body: string; href?: string },
+  payload: WebPushPayload,
 ): Promise<SendWebPushResult> {
   if (!vapidConfigured()) {
     return {
@@ -92,12 +103,20 @@ export async function sendWebPushToUserIds(
     };
   }
 
+  const pushActions =
+    payload.kind && payload.actionContext
+      ? pushActionsForKind(payload.kind)
+      : [];
+
   const body = JSON.stringify({
     /** Stable unique id: used as Notification `tag` so each push is distinct (not replaced). */
     id: randomUUID(),
     title: payload.title,
     body: payload.body,
     href: payload.href ?? "/",
+    kind: payload.kind,
+    actions: pushActions,
+    actionContext: payload.actionContext,
   });
 
   let delivered = 0;
