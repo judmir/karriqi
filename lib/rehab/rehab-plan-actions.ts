@@ -1,6 +1,7 @@
 "use server";
 
 import { softDeletePatch } from "@/lib/db/soft-delete";
+import { mapSpeechRecording } from "@/lib/rehab/map-speech-recording";
 import { createClient } from "@/lib/supabase/server";
 import {
   serializeRecurrenceRule,
@@ -17,8 +18,6 @@ import {
 
 type RehabPlanEventUpdate =
   Database["public"]["Tables"]["rehab_plan_events"]["Update"];
-type RehabSpeechRecordingRow =
-  Database["public"]["Tables"]["rehab_speech_recordings"]["Row"];
 
 type Err = { ok: false; message: string };
 
@@ -36,23 +35,6 @@ function eventKindOrCustom(value: string | undefined): RehabEventKind {
   return value && (REHAB_EVENT_KINDS as readonly string[]).includes(value)
     ? (value as RehabEventKind)
     : "custom";
-}
-
-function mapSpeechRecording(
-  row: RehabSpeechRecordingRow,
-): RehabSpeechRecording {
-  return {
-    id: row.id,
-    eventId: row.rehab_plan_event_id,
-    userId: row.user_id,
-    fileName: row.file_name,
-    mimeType: row.mime_type,
-    sizeBytes: row.size_bytes,
-    durationSeconds:
-      row.duration_seconds === null ? null : Number(row.duration_seconds),
-    storagePath: row.storage_path,
-    createdAt: row.created_at,
-  };
 }
 
 export type CreateRehabPlanEventResult =

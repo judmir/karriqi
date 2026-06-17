@@ -1,11 +1,13 @@
 import { create } from "zustand";
 
 import {
-  completeRehabSpeechRecordingUpload,
+  completeSpeechRecordingUploadClient,
+  deleteSpeechRecordingClient,
+} from "@/lib/rehab/speech-recording-client";
+import {
   createRehabPlanEvent,
   deleteRehabPlanEvent,
   deleteRehabSeries,
-  deleteRehabSpeechRecording,
   splitRehabSeries,
   toggleRehabPlanEventCompleted,
   updateRehabPlanEvent,
@@ -521,7 +523,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       };
     }
 
-    const result = await completeRehabSpeechRecordingUpload(input);
+    const result = await completeSpeechRecordingUploadClient(input);
     if (!result.ok) {
       showStoreError(result.message);
       return result;
@@ -564,7 +566,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       return { ok: true };
     }
 
-    const result = await deleteRehabSpeechRecording({ id: recording.id });
+    const result = await deleteSpeechRecordingClient({ id: recording.id });
     if (!result.ok) {
       set({ events: prevEvents, loadedAt: Date.now() });
       showStoreError(result.message);
