@@ -2,7 +2,6 @@
 
 import { addDays, addMilliseconds, format, startOfDay } from "date-fns";
 import {
-  BellOff,
   CalendarIcon,
   Clock3,
   ExternalLink,
@@ -23,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RehabTimePicker } from "@/components/rehab/rehab-time-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1251,93 +1251,29 @@ function TimeField({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const quickTimes = ["09:00", "12:00", "15:00", "18:00", "21:00"];
 
   return (
-    <Popover
+    <RehabTimePicker
+      time={time}
       open={open}
       onOpenChange={(next) => {
-        if (!disabled) setOpen(next);
-      }}
-    >
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            className="h-7 w-full justify-start gap-2.5 rounded-md px-1.5 text-sm font-normal text-white/60 hover:bg-white/8 hover:text-white/80"
-            disabled={disabled}
-          />
+        if (!disabled) {
+          setOpen(next);
         }
-      >
-        <Clock3 className="size-3.5 shrink-0 text-white/40" />
-        {time}
-      </PopoverTrigger>
-      <PopoverContent
-        className={cn("w-52 overflow-hidden p-0", POPOVER_BG)}
-        align="start"
-      >
-        {/* Editable time input */}
-        <div className="p-2">
-          <div className="flex items-center gap-2 rounded-lg bg-white/8 px-3 py-2 text-sm">
-            <Clock3 className="size-3.5 shrink-0 text-white/50" />
-            <input
-              type="text"
-              value={time}
-              placeholder="HH:MM"
-              onChange={(e) => {
-                const val = e.target.value;
-                onChange(val);
-              }}
-              onBlur={(e) => {
-                const val = e.target.value;
-                if (/^\d{1,2}:\d{2}$/.test(val)) {
-                  const [h, m] = val.split(":");
-                  onChange(`${h.padStart(2, "0")}:${m}`);
-                } else {
-                  onChange(time);
-                }
-              }}
-              className="flex-1 bg-transparent outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Quick times */}
-        <div className="border-y border-white/8 py-0.5">
-          {quickTimes.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => {
-                onChange(item);
-                setOpen(false);
-              }}
-              className={cn(
-                "flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-white/8",
-                item === time && "bg-white/10",
-              )}
-            >
-              <Clock3 className="size-3.5 shrink-0 text-white/45" />
-              {item}
-            </button>
-          ))}
-        </div>
-
-        {/* Remove time */}
-        {onClear ? (
-          <button
-            type="button"
-            onClick={() => {
-              onClear();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-red-400 hover:bg-white/8"
-          >
-            <BellOff className="size-3.5 shrink-0" />
-            Remove start time
-          </button>
-        ) : null}
-      </PopoverContent>
-    </Popover>
+      }}
+      onSelect={onChange}
+      onClear={onClear}
+      trigger={
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-7 w-full justify-start gap-2.5 rounded-md px-1.5 text-sm font-normal text-white/60 hover:bg-white/8 hover:text-white/80"
+          disabled={disabled}
+        >
+          <Clock3 className="size-3.5 shrink-0 text-white/40" />
+          {time}
+        </Button>
+      }
+    />
   );
 }

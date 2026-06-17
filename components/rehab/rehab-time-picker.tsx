@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { BellOff } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ type RehabTimePickerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (time: string) => void;
+  onClear?: () => void;
   trigger: React.ReactElement;
 };
 
@@ -69,6 +71,7 @@ export function RehabTimePicker({
   open,
   onOpenChange,
   onSelect,
+  onClear,
   trigger,
 }: RehabTimePickerProps) {
   const [draft, setDraft] = useState<TimeParts>(() => partsFromTime24(time) ?? partsFromDate(new Date()));
@@ -118,19 +121,34 @@ export function RehabTimePicker({
           className="mt-4"
         />
 
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground"
-            onClick={() => handleOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button type="button" size="sm" onClick={apply}>
-            Apply
-          </Button>
+        <div className="mt-5 space-y-2">
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => handleOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="button" size="sm" onClick={apply}>
+              Apply
+            </Button>
+          </div>
+          {onClear ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClear();
+                onOpenChange(false);
+              }}
+              className="text-destructive hover:bg-muted/60 flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs transition-colors"
+            >
+              <BellOff className="size-3.5 shrink-0" aria-hidden />
+              Remove start time
+            </button>
+          ) : null}
         </div>
       </PopoverContent>
     </Popover>
