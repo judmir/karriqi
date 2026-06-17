@@ -16,7 +16,7 @@ Before rehab scheduling, content, or feature work: read `docs/rehab/final_12_wee
 
 ## Git (agents)
 
-**Mandatory:** follow `.cursor/rules/agent-git-branch-workflow.mdc` — work on `agent/YYYY-MM-DD-…` branches, commit and push logical chunks to `origin`, **never** merge to `main` unless the user explicitly asks.
+**Mandatory:** follow `.cursor/rules/agent-git-branch-workflow.mdc` — in worktrees, **fetch `origin/main` before branching**; work on `agent/YYYY-MM-DD-…` branches from latest `origin/main`, commit and push logical chunks to `origin`, **never** merge to `main` unless the user explicitly asks.
 
 ## Hermes / third-party ingest
 

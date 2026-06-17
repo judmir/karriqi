@@ -10,11 +10,16 @@ alwaysApply: true
 ## New agent session (first substantive change)
 
 0. **Worktree path** (`/.cursor/worktrees/` in workspace): complete **`worktree-dev-server.mdc`** first (`pnpm worktree:dev`, then **Worktree preview:** URL in the first reply). No feature work before that. If the task changes **schema/migrations**, local Supabase starts automatically (see **`worktree-supabase-local.mdc`**).
-1. **Fetch** and ensure a clean working tree (stash or commit WIP if needed).
-2. **Create and switch** to a new branch from `main` (or the user’s named base):
+1. **Refresh `main` from remote** — mandatory before branching:
+   - `git fetch origin main` (or `git fetch origin`).
+   - **Worktrees** are created from a snapshot of `main` and do **not** auto-update when `main` moves in the primary checkout. Always fetch so `origin/main` is current.
+   - Local `main` may be missing or checked out in another worktree — branch from **`origin/main`**, not a stale local `main`.
+2. Ensure a **clean working tree** (stash or commit WIP if needed).
+3. **Create and switch** to a new branch from **`origin/main`** (or the user’s named base):
    - Name: `agent/YYYY-MM-DD-<short-slug>` (slug: topic, e.g. `todo-card-status`, `fix-login`).
-   - Example: `agent/2026-04-19-todo-card-status`.
-3. If the user already named a branch, use that instead.
+   - Example: `git switch -c agent/2026-04-19-todo-card-status origin/main`
+   - Primary checkout (not a worktree): `git switch main && git pull origin main`, then `git switch -c agent/…`.
+4. If the user already named a branch, use that instead — still **fetch `origin/main` first**; rebase onto `origin/main` only if the branch has no unpushed commits unless the user asks.
 
 ## During the session
 
