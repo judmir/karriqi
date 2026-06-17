@@ -107,7 +107,6 @@ export function RehabUpcomingView() {
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [eventToDelete, setEventToDelete] = useState<RehabPlanEvent | null>(null);
-  const [deletePending, setDeletePending] = useState(false);
 
   const trimmedSearch = searchQuery.trim();
   const searchActive = trimmedSearch.length > 0;
@@ -255,17 +254,13 @@ export function RehabUpcomingView() {
     setEventToDelete(event);
   }
 
-  async function confirmDelete() {
+  function confirmDelete() {
     if (!eventToDelete) {
       return;
     }
-    setDeletePending(true);
-    try {
-      await deleteOccurrence(eventToDelete, "occurrence");
-      setEventToDelete(null);
-    } finally {
-      setDeletePending(false);
-    }
+    const event = eventToDelete;
+    setEventToDelete(null);
+    void deleteOccurrence(event, "occurrence");
   }
 
   return (
@@ -429,7 +424,7 @@ export function RehabUpcomingView() {
       <AlertDialog
         open={eventToDelete !== null}
         onOpenChange={(open) => {
-          if (!open && !deletePending) {
+          if (!open) {
             setEventToDelete(null);
           }
         }}
@@ -442,13 +437,12 @@ export function RehabUpcomingView() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletePending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={deletePending}
-              onClick={() => void confirmDelete()}
+              onClick={() => confirmDelete()}
             >
-              {deletePending ? "Deleting…" : "Delete"}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
