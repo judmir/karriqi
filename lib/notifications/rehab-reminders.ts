@@ -22,6 +22,120 @@ type ReminderCandidate = {
   occurrenceAt: string;
 };
 
+type RehabMasterRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  recurrence_rule: string;
+  series_id: string | null;
+};
+
+function occurrenceKey(seriesId: string, occurrenceAt: string): string {
+  return `${seriesId}:${new Date(occurrenceAt).getTime()}`;
+}
+
+/** Drop candidates whose occurrence is already completed in the database. */
+async function filterOutCompletedCandidates(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  candidates: ReminderCandidate[],
+  concreteRowIds: string[],
+  masters: RehabMasterRow[],
+): Promise<ReminderCandidate[]> {
+  if (candidates.length === 0) {
+    return candidates;
+  }
+
+  let filtered = candidates;
+
+  if (concreteRowIds.length > 0) {
+    const { data: activeConcreteRows, error } = await admin
+      .from("rehab_plan_events")
+      .select("id")
+      .in("id", concreteRowIds)
+      .is("completed_at", null)
+      .is("deleted_at", null);
+
+    if (error) {
+      console.error("[rehab-reminders] concrete completion check failed:", error.message);
+    } else {
+      const activeIds = new Set((activeConcreteRows ?? []).map((row) => row.id));
+      filtered = filtered.filter(
+        (candidate) =>
+          !concreteRowIds.includes(candidate.eventId) ||
+          activeIds.has(candidate.eventId),
+      );
+    }
+  }
+
+  const recurringCandidates = filtered.filter(
+    (candidate) => !concreteRowIds.includes(candidate.eventId),
+  );
+  if (recurringCandidates.length === 0) {
+    return filtered;
+  }
+
+  const masterIds = [...new Set(recurringCandidates.map((candidate) => candidate.eventId))];
+  const occurrenceAts = [
+    ...new Set(recurringCandidates.map((candidate) => candidate.occurrenceAt)),
+  ];
+
+  const [{ data: completedMasters, error: completedMastersError }, { data: completedOverrides, error: completedOverridesError }] =
+    await Promise.all([
+      admin
+        .from("rehab_plan_events")
+        .select("id")
+        .in("id", masterIds)
+        .not("completed_at", "is", null),
+      admin
+        .from("rehab_plan_events")
+        .select("series_id, recurrence_at")
+        .not("recurrence_at", "is", null)
+        .not("completed_at", "is", null)
+        .in("recurrence_at", occurrenceAts),
+    ]);
+
+  if (completedMastersError) {
+    console.error(
+      "[rehab-reminders] completed masters check failed:",
+      completedMastersError.message,
+    );
+  }
+  if (completedOverridesError) {
+    console.error(
+      "[rehab-reminders] completed overrides check failed:",
+      completedOverridesError.message,
+    );
+  }
+
+  const completedMasterIds = new Set((completedMasters ?? []).map((row) => row.id));
+  const completedOccurrenceKeys = new Set(
+    (completedOverrides ?? [])
+      .filter((row) => row.series_id && row.recurrence_at)
+      .map((row) => occurrenceKey(row.series_id!, row.recurrence_at!)),
+  );
+  const seriesKeyByMasterId = new Map(
+    masters.map((master) => [master.id, master.series_id ?? master.id]),
+  );
+
+  return filtered.filter((candidate) => {
+    if (concreteRowIds.includes(candidate.eventId)) {
+      return true;
+    }
+    if (completedMasterIds.has(candidate.eventId)) {
+      return false;
+    }
+    const seriesKey = seriesKeyByMasterId.get(candidate.eventId);
+    if (!seriesKey) {
+      return true;
+    }
+    return !completedOccurrenceKeys.has(
+      occurrenceKey(seriesKey, candidate.occurrenceAt),
+    );
+  });
+}
+
 /**
  * Sends a Web Push ~5 minutes before each timed rehab event occurrence and
  * records that it was sent so it never repeats. Covers:
@@ -46,6 +160,7 @@ export async function runRehabReminderNotifications(): Promise<{
 
   const candidates: ReminderCandidate[] = [];
   const concreteRowIdsToStamp: string[] = [];
+  let masters: RehabMasterRow[] = [];
 
   // 1) Concrete rows: standalone events + per-occurrence override rows.
   //    Recurring masters are excluded here (recurrence_rule is null) and handled
@@ -57,6 +172,7 @@ export async function runRehabReminderNotifications(): Promise<{
     .eq("all_day", false)
     .eq("recurrence_cancelled", false)
     .is("completed_at", null)
+    .is("deleted_at", null)
     .is("reminder_sent_at", null)
     .gte("start_at", lowerBound)
     .lte("start_at", upperBound);
@@ -77,15 +193,18 @@ export async function runRehabReminderNotifications(): Promise<{
   }
 
   // 2) Recurring masters: expand into the reminder window.
-  const { data: masters, error: mastersError } = await admin
+  const { data: masterRows, error: mastersError } = await admin
     .from("rehab_plan_events")
     .select("id, user_id, title, start_at, end_at, recurrence_rule, series_id")
     .not("recurrence_rule", "is", null)
-    .eq("all_day", false);
+    .eq("all_day", false)
+    .is("completed_at", null)
+    .is("deleted_at", null);
 
   if (mastersError) {
     console.error("[rehab-reminders] masters query failed:", mastersError.message);
-  } else if (masters && masters.length > 0) {
+  } else if (masterRows && masterRows.length > 0) {
+    masters = masterRows as RehabMasterRow[];
     // Overrides whose original occurrence falls in the window: skip those grid
     // occurrences (the override row itself is handled by step 1, or is a
     // cancellation/completion).
@@ -93,6 +212,7 @@ export async function runRehabReminderNotifications(): Promise<{
       .from("rehab_plan_events")
       .select("series_id, recurrence_at")
       .not("recurrence_at", "is", null)
+      .is("deleted_at", null)
       .gte("recurrence_at", lowerBound)
       .lte("recurrence_at", upperBound);
 
@@ -103,7 +223,7 @@ export async function runRehabReminderNotifications(): Promise<{
     const overrideKeys = new Set<string>();
     for (const row of overrideRows ?? []) {
       if (!row.series_id || !row.recurrence_at) continue;
-      overrideKeys.add(`${row.series_id}:${new Date(row.recurrence_at).getTime()}`);
+      overrideKeys.add(occurrenceKey(row.series_id, row.recurrence_at));
     }
 
     // Occurrences already pushed (dedupe), bounded to the window.
@@ -125,7 +245,7 @@ export async function runRehabReminderNotifications(): Promise<{
     const windowStart = new Date(lowerMs);
     const windowEnd = new Date(upperMs);
 
-    for (const master of masters) {
+    for (const master of masterRows) {
       if (!master.user_id) continue;
       const rule = parseRecurrenceRule(master.recurrence_rule);
       if (!rule) continue;
@@ -147,7 +267,7 @@ export async function runRehabReminderNotifications(): Promise<{
         const occMs = new Date(occ.startAt).getTime();
         // Only reminders for occurrences whose start is inside the window.
         if (occMs < lowerMs || occMs > upperMs) continue;
-        if (overrideKeys.has(`${seriesKey}:${occMs}`)) continue;
+        if (overrideKeys.has(occurrenceKey(seriesKey, occ.startAt))) continue;
         if (sentKeys.has(`${master.id}:${occMs}`)) continue;
 
         candidates.push({
@@ -160,13 +280,24 @@ export async function runRehabReminderNotifications(): Promise<{
     }
   }
 
-  if (candidates.length === 0) {
+  const activeCandidates = await filterOutCompletedCandidates(
+    admin,
+    candidates,
+    concreteRowIdsToStamp,
+    masters,
+  );
+
+  if (activeCandidates.length === 0) {
     return { notified: 0 };
   }
 
+  const activeConcreteRowIds = activeCandidates
+    .filter((candidate) => concreteRowIdsToStamp.includes(candidate.eventId))
+    .map((candidate) => candidate.eventId);
+
   let notified = 0;
 
-  for (const candidate of candidates) {
+  for (const candidate of activeCandidates) {
     await dispatchNotification({
       kind: NOTIFICATION_KINDS.rehabReminder,
       recipientUserIds: [candidate.userId],
@@ -185,18 +316,18 @@ export async function runRehabReminderNotifications(): Promise<{
   // recurring occurrences insert into the dedupe table.
   const nowIso = new Date().toISOString();
 
-  if (concreteRowIdsToStamp.length > 0) {
+  if (activeConcreteRowIds.length > 0) {
     const { error: stampError } = await admin
       .from("rehab_plan_events")
       .update({ reminder_sent_at: nowIso })
-      .in("id", concreteRowIdsToStamp);
+      .in("id", activeConcreteRowIds);
     if (stampError) {
       console.error("[rehab-reminders] stamp failed:", stampError.message);
     }
   }
 
-  const dedupeRows = candidates
-    .filter((candidate) => !concreteRowIdsToStamp.includes(candidate.eventId))
+  const dedupeRows = activeCandidates
+    .filter((candidate) => !activeConcreteRowIds.includes(candidate.eventId))
     .map((candidate) => ({
       master_id: candidate.eventId,
       occurrence_at: candidate.occurrenceAt,
