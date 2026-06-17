@@ -14,6 +14,7 @@ const SPEECH_RECORDINGS_BUCKET = "rehab-speech-recordings";
 const EMPTY_RECORDINGS: RehabSpeechRecording[] = [];
 
 type RecorderStatus = "idle" | "recording" | "uploading";
+type MicPermissionState = "prompt" | "granted" | "denied" | "unknown";
 
 export function RehabSpeechRecordingSection({
   eventId,
@@ -44,6 +45,8 @@ export function RehabSpeechRecordingSection({
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [recordAnother, setRecordAnother] = useState(false);
+  const [micPermission, setMicPermission] =
+    useState<MicPermissionState>("unknown");
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -90,6 +93,45 @@ export function RehabSpeechRecordingSection({
       stopStreamTracks();
     };
   }, [clearTimer, stopMeter, stopStreamTracks]);
+
+  useEffect(() => {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.permissions?.query
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    let permissionStatus: PermissionStatus | null = null;
+
+    void navigator.permissions
+      .query({ name: "microphone" as PermissionName })
+      .then((status) => {
+        if (cancelled) {
+          return;
+        }
+        permissionStatus = status;
+        setMicPermission(status.state as MicPermissionState);
+        status.onchange = () => {
+          if (!cancelled) {
+            setMicPermission(status.state as MicPermissionState);
+          }
+        };
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMicPermission("unknown");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (permissionStatus) {
+        permissionStatus.onchange = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,6 +275,7 @@ export function RehabSpeechRecordingSection({
       setError(null);
       chunksRef.current = [];
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicPermission("granted");
       const mimeType = preferredMimeType();
       const recorder = new MediaRecorder(
         stream,
@@ -280,11 +323,8 @@ export function RehabSpeechRecordingSection({
     } catch (err) {
       stopMeter();
       stopStreamTracks();
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Microphone access was not available.";
-      setError(message);
+      setMicPermission("denied");
+      setError(micAccessErrorMessage(err));
       setStatus("idle");
     }
   }
@@ -330,7 +370,8 @@ export function RehabSpeechRecordingSection({
           status={status}
           elapsed={elapsed}
           amplitude={amplitude}
-          canRecord={canRecord && persistence}
+          canStart={persistence}
+          micPermission={micPermission}
           onStart={() => void startRecording()}
           onStop={stopRecording}
           onCancel={
@@ -402,7 +443,8 @@ function RecorderPanel({
   status,
   elapsed,
   amplitude,
-  canRecord,
+  canStart,
+  micPermission,
   onStart,
   onStop,
   onCancel,
@@ -410,7 +452,8 @@ function RecorderPanel({
   status: RecorderStatus;
   elapsed: number;
   amplitude: number;
-  canRecord: boolean;
+  canStart: boolean;
+  micPermission: MicPermissionState;
   onStart: () => void;
   onStop: () => void;
   onCancel?: () => void;
@@ -441,7 +484,7 @@ function RecorderPanel({
         <button
           type="button"
           onClick={isRecording ? onStop : onStart}
-          disabled={isUploading || (!isRecording && !canRecord)}
+          disabled={isUploading || (!isRecording && !canStart)}
           className={cn(
             "relative flex size-16 items-center justify-center rounded-full text-white shadow-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50",
             isRecording
@@ -468,6 +511,13 @@ function RecorderPanel({
             : "Tap to record"}
       </p>
 
+      {!isRecording && !isUploading && micPermission === "denied" ? (
+        <p className="max-w-xs text-center text-xs leading-relaxed text-amber-300/90">
+          Microphone is blocked for this site. Open site settings from the lock
+          icon in the address bar, set Microphone to Allow, then tap again.
+        </p>
+      ) : null}
+
       {isRecording ? (
         <p className="text-xs text-white/45">Tap the square to stop</p>
       ) : !isUploading && onCancel ? (
@@ -481,6 +531,30 @@ function RecorderPanel({
       ) : null}
     </div>
   );
+}
+
+function micAccessErrorMessage(err: unknown): string {
+  if (err instanceof DOMException) {
+    if (
+      err.name === "NotAllowedError" ||
+      err.name === "PermissionDeniedError"
+    ) {
+      return "Microphone access is blocked. Allow microphone for this site in your browser settings, then tap record again.";
+    }
+    if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+      return "No microphone was found on this device.";
+    }
+    if (err.name === "NotReadableError") {
+      return "Your microphone is in use by another app. Close it and try again.";
+    }
+    if (err.message) {
+      return err.message;
+    }
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return "Microphone access was not available.";
 }
 
 function preferredMimeType(): string | undefined {
