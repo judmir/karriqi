@@ -65,6 +65,7 @@ export function RehabSpeechRecordingSection({
   const mounted = useIsClient();
 
   const sessionRef = useRef<SpeechRecorderSession | null>(null);
+  const pendingStartRef = useRef(false);
   const uploadRecordingRef = useRef<
     (blob: Blob, durationSeconds: number) => Promise<void>
   >(async () => {});
@@ -264,9 +265,20 @@ export function RehabSpeechRecordingSection({
 
     try {
       setError(null);
+      pendingStartRef.current = true;
+      // Update UI synchronously in the click handler — Safari/PWA often
+      // skips repaints for state set after await getUserMedia().
+      setStatus("recording");
+      setElapsed(0);
+
       await sessionRef.current?.start();
+      if (!pendingStartRef.current) {
+        return;
+      }
+      pendingStartRef.current = false;
       setMicPermission("granted");
     } catch (err) {
+      pendingStartRef.current = false;
       setMicPermission("denied");
       setError(micAccessErrorMessage(err));
       setStatus("idle");
@@ -274,6 +286,15 @@ export function RehabSpeechRecordingSection({
   }
 
   function stopRecording() {
+    if (pendingStartRef.current) {
+      pendingStartRef.current = false;
+      sessionRef.current?.cancelPendingStart();
+      setStatus("idle");
+      setElapsed(0);
+      setAmplitude(0);
+      setWaveformSamples([]);
+      return;
+    }
     sessionRef.current?.stop();
   }
 

@@ -40,6 +40,7 @@ export class SpeechRecorderSession {
   private waveformSamples: number[] = [];
   private state: SpeechRecorderSessionState = "idle";
   private userStopRequested = false;
+  private pendingStart = false;
   private visibilityHandler: (() => void) | null = null;
   private pageHideHandler: (() => void) | null = null;
 
@@ -68,6 +69,7 @@ export class SpeechRecorderSession {
     }
 
     this.userStopRequested = false;
+    this.pendingStart = true;
     this.chunks = [];
     this.waveformSamples = [];
 
@@ -78,6 +80,12 @@ export class SpeechRecorderSession {
           noiseSuppression: true,
         },
       });
+
+      if (!this.pendingStart) {
+        this.stream.getTracks().forEach((track) => track.stop());
+        this.stream = null;
+        return;
+      }
 
       // iOS Safari: set play-and-record AFTER getUserMedia so mic + background audio stay active.
       setAudioSessionType("play-and-record");
@@ -112,7 +120,9 @@ export class SpeechRecorderSession {
       this.configureMediaSession();
       this.attachLifecycleHandlers();
       await this.resumeAudioPipeline();
+      this.pendingStart = false;
     } catch (error) {
+      this.pendingStart = false;
       await this.cleanup();
       this.setState("idle");
       const message =
@@ -133,6 +143,10 @@ export class SpeechRecorderSession {
     if (this.recorder.state === "recording") {
       this.recorder.stop();
     }
+  }
+
+  cancelPendingStart(): void {
+    this.pendingStart = false;
   }
 
   async dispose(): Promise<void> {
