@@ -239,7 +239,8 @@ function EventFormDialogBody({
     event?.color ?? rehabEventKindDefaultColor(initialEventKind),
   );
   const [eventKind, setEventKind] = useState<RehabEventKind>(initialEventKind);
-  const isSpeechEvent = isRehab && isEditing && eventKind === "speech";
+  const isSpeechTask = isRehab && eventKind === "speech";
+  const isSpeechEvent = isSpeechTask && isEditing && event !== null;
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
   const [startTime, setStartTime] = useState(toTimeInputValue(initialStart));
@@ -772,20 +773,24 @@ function EventFormDialogBody({
                 />
               ) : null}
             </div>
-            <textarea
-              id="event-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
-              readOnly={viewOnly}
-              disabled={viewOnly}
-              className={cn("mt-3 min-h-0 flex-1 resize-none overflow-y-auto bg-transparent leading-relaxed text-white/55 outline-none placeholder:text-white/30 disabled:opacity-60", isPage ? "text-base" : "text-sm")}
-            />
-            <EventSubtasksEditor
-              subtasks={subtasks}
-              onChange={setSubtasks}
-              disabled={viewOnly}
-            />
+            {!isSpeechTask ? (
+              <>
+                <textarea
+                  id="event-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Description"
+                  readOnly={viewOnly}
+                  disabled={viewOnly}
+                  className={cn("mt-3 min-h-0 flex-1 resize-none overflow-y-auto bg-transparent leading-relaxed text-white/55 outline-none placeholder:text-white/30 disabled:opacity-60", isPage ? "text-base" : "text-sm")}
+                />
+                <EventSubtasksEditor
+                  subtasks={subtasks}
+                  onChange={setSubtasks}
+                  disabled={viewOnly}
+                />
+              </>
+            ) : null}
             {isSpeechEvent && event ? (
               <RehabSpeechRecordingSection
                 eventId={event.id}
@@ -794,7 +799,7 @@ function EventFormDialogBody({
                 readOnly={viewOnly}
               />
             ) : null}
-            {isRehab ? (
+            {isRehab && !isSpeechTask ? (
               <div className="mt-4 shrink-0 space-y-1.5">
                 <label
                   htmlFor="event-my-notes"

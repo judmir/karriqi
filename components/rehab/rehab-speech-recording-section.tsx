@@ -8,9 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react";
-import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
 import { VoiceMemoRecorderBar } from "@/components/rehab/voice-memo-recorder-bar";
@@ -27,7 +25,7 @@ import type { RehabSpeechRecording } from "@/types/rehab";
 const SPEECH_RECORDINGS_BUCKET = "rehab-speech-recordings";
 const EMPTY_RECORDINGS: RehabSpeechRecording[] = [];
 
-type RecorderStatus = "idle" | "recording" | "uploading";
+type RecorderStatus = "idle" | "starting" | "recording" | "uploading";
 type MicPermissionState = "prompt" | "granted" | "denied" | "unknown";
 
 export function RehabSpeechRecordingSection({
@@ -62,7 +60,6 @@ export function RehabSpeechRecordingSection({
   const [recordAnother, setRecordAnother] = useState(false);
   const [micPermission, setMicPermission] =
     useState<MicPermissionState>("unknown");
-  const mounted = useIsClient();
 
   const sessionRef = useRef<SpeechRecorderSession | null>(null);
   const pendingStartRef = useRef(false);
@@ -259,16 +256,20 @@ export function RehabSpeechRecordingSection({
       return;
     }
     if (!canRecord) {
-      setError("Audio recording is not supported in this browser.");
+      setError(
+        typeof window !== "undefined" && !window.isSecureContext
+          ? "Microphone requires HTTPS or localhost. Open this app at http://localhost:3010 or use karriqi.com."
+          : "Audio recording is not supported in this browser.",
+      );
       return;
     }
 
     try {
       setError(null);
       pendingStartRef.current = true;
-      // Update UI synchronously in the click handler — Safari/PWA often
-      // skips repaints for state set after await getUserMedia().
-      setStatus("recording");
+      // Show "starting" until the session confirms mic + MediaRecorder — avoids
+      // a fake 0:00 recording UI while Safari waits on getUserMedia / play().
+      setStatus("starting");
       setElapsed(0);
 
       await sessionRef.current?.start();
@@ -308,6 +309,7 @@ export function RehabSpeechRecordingSection({
   const hasRecordings = recordings.length > 0;
   const isRecording = status === "recording";
   const showRecorder =
+    status === "starting" ||
     status === "recording" ||
     status === "uploading" ||
     (!hasRecordings && !readOnly) ||
@@ -315,25 +317,9 @@ export function RehabSpeechRecordingSection({
 
   return (
     <>
-      {mounted && isRecording
-        ? createPortal(
-            <div className="pointer-events-none fixed inset-x-0 top-[max(env(safe-area-inset-top,0px),0.75rem)] z-[70] flex justify-center px-3">
-              <div className="pointer-events-auto w-full max-w-md animate-in fade-in slide-in-from-top-2 duration-300">
-                <VoiceMemoRecorderBar
-                  elapsed={elapsed}
-                  waveformSamples={waveformSamples}
-                  onStop={stopRecording}
-                />
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-
-      <div className="mt-4 shrink-0 space-y-3 border-t border-white/8 pt-4">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-white/50">Voice recordings</p>
-          {hasRecordings && !readOnly && status === "idle" && !recordAnother ? (
+      <div className="mt-3 shrink-0 space-y-3">
+        {hasRecordings && !readOnly && status === "idle" && !recordAnother ? (
+          <div className="flex justify-end">
             <button
               type="button"
               onClick={() => setRecordAnother(true)}
@@ -342,8 +328,8 @@ export function RehabSpeechRecordingSection({
               <Plus className="size-3.5" aria-hidden />
               New recording
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {showRecorder ? (
           <RecorderPanel
@@ -373,8 +359,8 @@ export function RehabSpeechRecordingSection({
         ) : null}
         {isRecording ? (
           <p className="text-xs text-white/45">
-            Recording continues while your phone sleeps. Stop from the banner or
-            lock-screen control.
+            Recording continues while your phone sleeps. Tap stop when you are
+            done, or use the lock-screen control.
           </p>
         ) : null}
         {error ? <p className="text-xs text-red-400">{error}</p> : null}
@@ -448,13 +434,14 @@ function RecorderPanel({
   onStop: () => void;
   onCancel?: () => void;
 }) {
+  const isStarting = status === "starting";
   const isRecording = status === "recording";
   const isUploading = status === "uploading";
   const pulseScale = isRecording ? 1 + amplitude * 0.6 : 1;
   const glowOpacity = isRecording ? 0.25 + amplitude * 0.55 : 0;
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-6">
+    <div className="flex flex-col items-center gap-3 py-2">
       {isRecording ? (
         <VoiceMemoRecorderBar
           elapsed={elapsed}
@@ -481,16 +468,22 @@ function RecorderPanel({
           <button
             type="button"
             onClick={onStart}
-            disabled={isUploading || !canStart}
+            disabled={isStarting || isUploading || !canStart}
             className={cn(
               "relative flex size-16 items-center justify-center rounded-full text-white shadow-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50",
               isRecording
                 ? "bg-red-500 hover:bg-red-600"
                 : "bg-red-500/90 hover:bg-red-500",
             )}
-            aria-label={isRecording ? "Stop recording" : "Start recording"}
+            aria-label={
+              isStarting
+                ? "Starting recording"
+                : isRecording
+                  ? "Stop recording"
+                  : "Start recording"
+            }
           >
-            {isUploading ? (
+            {isUploading || isStarting ? (
               <Loader2 className="size-6 animate-spin" aria-hidden />
             ) : isRecording ? (
               <Square className="size-6 fill-current" aria-hidden />
@@ -504,9 +497,11 @@ function RecorderPanel({
       <p className="text-sm font-medium tabular-nums text-white/80">
         {isUploading
           ? "Saving…"
-          : isRecording
-            ? formatSpeechDuration(elapsed)
-            : "Tap to record"}
+          : isStarting
+            ? "Starting…"
+            : isRecording
+              ? formatSpeechDuration(elapsed)
+              : "Tap to record"}
       </p>
 
       {!isRecording && !isUploading && micPermission === "denied" ? (
@@ -518,9 +513,16 @@ function RecorderPanel({
 
       {isRecording ? (
         <p className="text-center text-xs text-white/45">
-          Lock your phone to keep recording. Use the top banner or lock-screen
-          stop control to finish.
+          Lock your phone to keep recording. Tap stop when finished.
         </p>
+      ) : isStarting ? (
+        <button
+          type="button"
+          onClick={onStop}
+          className="text-xs text-white/45 transition-colors hover:text-white/70"
+        >
+          Cancel
+        </button>
       ) : !isUploading && onCancel ? (
         <button
           type="button"
@@ -557,12 +559,4 @@ function micAccessErrorMessage(err: unknown): string {
     return err.message;
   }
   return "Microphone access was not available.";
-}
-
-function useIsClient() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
 }

@@ -89,7 +89,9 @@ export class SpeechRecorderSession {
 
       // iOS Safari: set play-and-record AFTER getUserMedia so mic + background audio stay active.
       setAudioSessionType("play-and-record");
-      await this.startKeepAlive(this.stream);
+      // Meter pipeline is sync; never await HTMLMediaElement.play() here — after
+      // getUserMedia the user-gesture chain is broken and Safari can hang forever.
+      this.initAudioMeter(this.stream);
 
       const mimeType = preferredSpeechMimeType();
       this.recorder = new MediaRecorder(
@@ -119,7 +121,8 @@ export class SpeechRecorderSession {
       this.startElapsedTimer();
       this.configureMediaSession();
       this.attachLifecycleHandlers();
-      await this.resumeAudioPipeline();
+      void this.activateKeepAliveAudio();
+      void this.resumeAudioPipeline();
       this.pendingStart = false;
     } catch (error) {
       this.pendingStart = false;
@@ -163,7 +166,8 @@ export class SpeechRecorderSession {
     this.callbacks.onStateChange?.(next);
   }
 
-  private async startKeepAlive(stream: MediaStream) {
+  /** Waveform meter + silent oscillator — must not await play/resume (Safari hang). */
+  private initAudioMeter(stream: MediaStream) {
     const AudioCtor =
       window.AudioContext ??
       (window as unknown as { webkitAudioContext?: typeof AudioContext })
@@ -189,18 +193,25 @@ export class SpeechRecorderSession {
     oscillatorGain.connect(context.destination);
     oscillator.start();
 
-    await context.resume().catch(() => {});
+    void context.resume().catch(() => {});
 
     this.audioContext = context;
     this.meterAnalyser = analyser;
     this.keepAliveOscillator = oscillator;
+  }
+
+  /** iOS background keep-alive — fire-and-forget; must not block MediaRecorder.start. */
+  private activateKeepAliveAudio() {
+    if (this.keepAliveAudio) {
+      return;
+    }
 
     const audio = new Audio(SILENT_KEEPALIVE_AUDIO_URI);
     audio.loop = true;
     audio.setAttribute("playsinline", "true");
     audio.setAttribute("webkit-playsinline", "true");
-    await audio.play().catch(() => {});
     this.keepAliveAudio = audio;
+    void audio.play().catch(() => {});
   }
 
   private startMeter() {
