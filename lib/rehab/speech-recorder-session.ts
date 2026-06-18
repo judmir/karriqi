@@ -20,11 +20,8 @@ export type SpeechRecorderSessionCallbacks = {
   onError?: (message: string) => void;
 };
 
-type WakeLockNavigator = Navigator & {
-  wakeLock?: {
-    request: (type: "screen") => Promise<WakeLockSentinel>;
-  };
-};
+const METER_INTERVAL_MS = 50;
+const RECORDER_HEALTH_GRACE_MS = 3_000;
 
 export class SpeechRecorderSession {
   private callbacks: SpeechRecorderSessionCallbacks;
@@ -35,11 +32,11 @@ export class SpeechRecorderSession {
   private elapsedTimer: number | null = null;
   private mediaSessionTimer: number | null = null;
   private healthTimer: number | null = null;
+  private meterTimer: number | null = null;
   private audioContext: AudioContext | null = null;
+  private meterAnalyser: AnalyserNode | null = null;
   private keepAliveAudio: HTMLAudioElement | null = null;
   private keepAliveOscillator: OscillatorNode | null = null;
-  private rafId: number | null = null;
-  private wakeLock: WakeLockSentinel | null = null;
   private waveformSamples: number[] = [];
   private state: SpeechRecorderSessionState = "idle";
   private userStopRequested = false;
@@ -73,7 +70,6 @@ export class SpeechRecorderSession {
     this.userStopRequested = false;
     this.chunks = [];
     this.waveformSamples = [];
-    this.setState("recording");
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -108,13 +104,14 @@ export class SpeechRecorderSession {
       };
 
       this.startedAt = Date.now();
+      this.setState("recording");
       this.callbacks.onElapsed?.(0);
       this.recorder.start(SPEECH_RECORDER_TIMESLICE_MS);
-      this.startMeter(this.stream);
+      this.startMeter();
       this.startElapsedTimer();
       this.configureMediaSession();
-      await this.requestWakeLock();
       this.attachLifecycleHandlers();
+      await this.resumeAudioPipeline();
     } catch (error) {
       await this.cleanup();
       this.setState("idle");
@@ -162,9 +159,9 @@ export class SpeechRecorderSession {
     }
 
     const context = new AudioCtor();
-    const source = context.createMediaStreamSource(stream);
     const analyser = context.createAnalyser();
     analyser.fftSize = 256;
+    const source = context.createMediaStreamSource(stream);
     const silentGain = context.createGain();
     silentGain.gain.value = 0.0001;
     source.connect(analyser);
@@ -181,6 +178,7 @@ export class SpeechRecorderSession {
     await context.resume().catch(() => {});
 
     this.audioContext = context;
+    this.meterAnalyser = analyser;
     this.keepAliveOscillator = oscillator;
 
     const audio = new Audio(SILENT_KEEPALIVE_AUDIO_URI);
@@ -191,18 +189,14 @@ export class SpeechRecorderSession {
     this.keepAliveAudio = audio;
   }
 
-  private startMeter(stream: MediaStream) {
-    if (!this.audioContext) {
+  private startMeter() {
+    if (!this.meterAnalyser) {
       return;
     }
 
-    const source = this.audioContext.createMediaStreamSource(stream);
-    const analyser = this.audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
-
+    const analyser = this.meterAnalyser;
     const data = new Uint8Array(analyser.frequencyBinCount);
-    const tick = () => {
+    this.meterTimer = window.setInterval(() => {
       if (this.state !== "recording") {
         return;
       }
@@ -215,9 +209,7 @@ export class SpeechRecorderSession {
         SPEECH_RECORDER_WAVEFORM_CAPACITY,
       );
       this.callbacks.onWaveform?.(this.waveformSamples);
-      this.rafId = requestAnimationFrame(tick);
-    };
-    tick();
+    }, METER_INTERVAL_MS);
   }
 
   private startElapsedTimer() {
@@ -232,13 +224,19 @@ export class SpeechRecorderSession {
     }, 250);
 
     this.healthTimer = window.setInterval(() => {
-      if (this.state !== "recording") {
+      if (this.state !== "recording" || this.startedAt === null) {
         return;
       }
-      void this.audioContext?.resume().catch(() => {});
-      void this.keepAliveAudio?.play().catch(() => {});
-      if (this.recorder && this.recorder.state === "inactive") {
-        this.callbacks.onError?.("Recording paused when the device locked. Tap stop to save what was captured.");
+      void this.resumeAudioPipeline();
+      const recordingAgeMs = Date.now() - this.startedAt;
+      if (
+        recordingAgeMs >= RECORDER_HEALTH_GRACE_MS &&
+        this.recorder &&
+        this.recorder.state === "inactive"
+      ) {
+        this.callbacks.onError?.(
+          "Recording paused when the device locked. Tap stop to save what was captured.",
+        );
         this.userStopRequested = true;
         void this.handleRecorderStop();
       }
@@ -314,43 +312,28 @@ export class SpeechRecorderSession {
     navigator.mediaSession.metadata = null;
   }
 
-  private async requestWakeLock() {
-    const wakeLockApi = (navigator as WakeLockNavigator).wakeLock;
-    if (!wakeLockApi) {
-      return;
+  private async resumeAudioPipeline() {
+    if (this.audioContext?.state === "suspended") {
+      await this.audioContext.resume().catch(() => {});
     }
-    try {
-      this.wakeLock = await wakeLockApi.request("screen");
-      this.wakeLock.addEventListener("release", () => {
-        this.wakeLock = null;
-      });
-    } catch {
-      // Wake lock is best-effort; recording can continue when the user locks manually.
+    if (this.keepAliveAudio?.paused) {
+      await this.keepAliveAudio.play().catch(() => {});
     }
-  }
-
-  private async releaseWakeLock() {
-    await this.wakeLock?.release().catch(() => {});
-    this.wakeLock = null;
   }
 
   private attachLifecycleHandlers() {
     this.visibilityHandler = () => {
-      if (document.visibilityState === "visible" && this.state === "recording") {
-        void this.audioContext?.resume().catch(() => {});
-        void this.keepAliveAudio?.play().catch(() => {});
-        void this.requestWakeLock();
-        this.callbacks.onElapsed?.(this.getElapsedSeconds());
+      if (this.state !== "recording") {
         return;
       }
-      if (document.visibilityState === "hidden" && this.state === "recording") {
-        void this.audioContext?.resume().catch(() => {});
-        void this.keepAliveAudio?.play().catch(() => {});
+      void this.resumeAudioPipeline();
+      if (document.visibilityState === "visible") {
+        this.callbacks.onElapsed?.(this.getElapsedSeconds());
       }
     };
     this.pageHideHandler = () => {
       if (this.state === "recording") {
-        void this.audioContext?.resume().catch(() => {});
+        void this.resumeAudioPipeline();
       }
     };
     document.addEventListener("visibilitychange", this.visibilityHandler);
@@ -369,10 +352,11 @@ export class SpeechRecorderSession {
   }
 
   private stopMeter() {
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    if (this.meterTimer !== null) {
+      window.clearInterval(this.meterTimer);
+      this.meterTimer = null;
     }
+    this.meterAnalyser = null;
     this.callbacks.onAmplitude?.(0);
   }
 
@@ -386,7 +370,6 @@ export class SpeechRecorderSession {
     this.stopMeter();
     this.detachLifecycleHandlers();
     this.clearMediaSession();
-    await this.releaseWakeLock();
 
     if (this.keepAliveOscillator) {
       try {
