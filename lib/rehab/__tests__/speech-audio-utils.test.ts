@@ -31,7 +31,7 @@ describe("encodeAudioBufferToWavBlob", () => {
       sampleRate: 16_000,
       length: 4,
       getChannelData: () => Float32Array.from([0, 0.5, -0.5, 0.25]),
-    } as AudioBuffer;
+    } as unknown as AudioBuffer;
 
     const blob = encodeAudioBufferToWavBlob(buffer);
     expect(blob.type).toBe("audio/wav");
