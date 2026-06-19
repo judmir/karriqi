@@ -1,5 +1,6 @@
 import { softDeletePatch } from "@/lib/db/soft-delete";
 import { mapSpeechRecording } from "@/lib/rehab/map-speech-recording";
+import { replaceSpeechRecordingExtension } from "@/lib/rehab/speech-recorder-utils";
 import { createClient } from "@/lib/supabase/client";
 import type { RehabSpeechRecording } from "@/types/rehab";
 
@@ -76,6 +77,99 @@ export async function completeSpeechRecordingUploadClient(input: {
 
   if (error || !recording) {
     return { ok: false, message: error?.message ?? "Recording save failed." };
+  }
+
+  return { ok: true, recording: mapSpeechRecording(recording) };
+}
+
+export type ReplaceSpeechRecordingResult =
+  | { ok: true; recording: RehabSpeechRecording }
+  | { ok: false; message: string };
+
+export async function replaceSpeechRecordingClient(input: {
+  id: string;
+  blob: Blob;
+  mimeType: string;
+  durationSeconds: number;
+}): Promise<ReplaceSpeechRecordingResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { ok: false, message: userError?.message ?? "Not signed in." };
+  }
+
+  const { data: existing, error: findError } = await supabase
+    .from("rehab_speech_recordings")
+    .select(
+      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at",
+    )
+    .eq("id", input.id)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (findError || !existing) {
+    return {
+      ok: false,
+      message: findError?.message ?? "Recording not found.",
+    };
+  }
+
+  const nextStoragePath = replaceSpeechRecordingExtension(
+    existing.storage_path,
+    input.mimeType,
+  );
+  const nextFileName = replaceSpeechRecordingExtension(
+    existing.file_name,
+    input.mimeType,
+  );
+  const pathsToRemove =
+    nextStoragePath === existing.storage_path
+      ? [existing.storage_path]
+      : [existing.storage_path, nextStoragePath];
+
+  const { error: removeError } = await supabase.storage
+    .from(SPEECH_RECORDINGS_BUCKET)
+    .remove(pathsToRemove);
+  if (removeError) {
+    return { ok: false, message: removeError.message };
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from(SPEECH_RECORDINGS_BUCKET)
+    .upload(nextStoragePath, input.blob, {
+      contentType: input.mimeType,
+      upsert: false,
+    });
+  if (uploadError) {
+    return { ok: false, message: uploadError.message };
+  }
+
+  const { data: recording, error: updateError } = await supabase
+    .from("rehab_speech_recordings")
+    .update({
+      file_name: nextFileName,
+      storage_path: nextStoragePath,
+      mime_type: input.mimeType,
+      size_bytes: input.blob.size,
+      duration_seconds: input.durationSeconds,
+    })
+    .eq("id", input.id)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .select(
+      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at",
+    )
+    .single();
+
+  if (updateError || !recording) {
+    return {
+      ok: false,
+      message: updateError?.message ?? "Recording update failed.",
+    };
   }
 
   return { ok: true, recording: mapSpeechRecording(recording) };

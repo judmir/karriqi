@@ -3,6 +3,7 @@ import { create } from "zustand";
 import {
   completeSpeechRecordingUploadClient,
   deleteSpeechRecordingClient,
+  replaceSpeechRecordingClient,
 } from "@/lib/rehab/speech-recording-client";
 import {
   createRehabPlanEvent,
@@ -96,6 +97,17 @@ type RehabPlanStoreActions = {
   deleteSpeechRecording: (
     recording: RehabSpeechRecording,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
+  replaceSpeechRecording: (
+    recording: RehabSpeechRecording,
+    input: {
+      blob: Blob;
+      mimeType: string;
+      durationSeconds: number;
+    },
+  ) => Promise<
+    | { ok: true; recording: RehabSpeechRecording }
+    | { ok: false; message: string }
+  >;
   toggleCompleted: (
     id: string,
     completed: boolean,
@@ -246,6 +258,8 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
   async ensureLoaded() {
     const { loadedAt, loading, events } = get();
     if (events.length > 0 && loadedAt !== null && !isStoreStale(loadedAt)) {
+      // Stale-while-revalidate: keep showing cache, pull latest from Supabase.
+      void get().refresh();
       return;
     }
     if (loading && loadPromise) {
@@ -571,6 +585,68 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       set({ events: prevEvents, loadedAt: Date.now() });
       showStoreError(result.message);
     }
+    return result;
+  },
+
+  async replaceSpeechRecording(recording, input) {
+    const { events, persistence } = get();
+    const prevEvents = events;
+
+    if (!persistence) {
+      return {
+        ok: false,
+        message: "Recording needs persistence to be enabled.",
+      };
+    }
+
+    set({
+      events: events.map((event) =>
+        event.id === recording.eventId
+          ? {
+              ...event,
+              speechRecordings: event.speechRecordings.map((item) =>
+                item.id === recording.id
+                  ? {
+                      ...item,
+                      mimeType: input.mimeType,
+                      sizeBytes: input.blob.size,
+                      durationSeconds: input.durationSeconds,
+                    }
+                  : item,
+              ),
+            }
+          : event,
+      ),
+      loadedAt: Date.now(),
+    });
+
+    const result = await replaceSpeechRecordingClient({
+      id: recording.id,
+      blob: input.blob,
+      mimeType: input.mimeType,
+      durationSeconds: input.durationSeconds,
+    });
+
+    if (!result.ok) {
+      set({ events: prevEvents, loadedAt: Date.now() });
+      showStoreError(result.message);
+      return result;
+    }
+
+    set((state) => ({
+      events: state.events.map((event) =>
+        event.id === recording.eventId
+          ? {
+              ...event,
+              speechRecordings: event.speechRecordings.map((item) =>
+                item.id === recording.id ? result.recording : item,
+              ),
+            }
+          : event,
+      ),
+      loadedAt: Date.now(),
+    }));
+
     return result;
   },
 

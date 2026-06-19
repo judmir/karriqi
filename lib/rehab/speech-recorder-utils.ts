@@ -14,6 +14,9 @@ export function preferredSpeechMimeType(): string | undefined {
 }
 
 export function fileExtensionForSpeechMime(mimeType: string): string {
+  if (mimeType.includes("wav")) {
+    return "wav";
+  }
   if (mimeType.includes("mp4")) {
     return "m4a";
   }
@@ -21,6 +24,14 @@ export function fileExtensionForSpeechMime(mimeType: string): string {
     return "ogg";
   }
   return "webm";
+}
+
+export function replaceSpeechRecordingExtension(
+  path: string,
+  mimeType: string,
+): string {
+  const extension = fileExtensionForSpeechMime(mimeType);
+  return path.replace(/\.[^./]+$/, `.${extension}`);
 }
 
 export function formatSpeechDuration(totalSeconds: number): string {

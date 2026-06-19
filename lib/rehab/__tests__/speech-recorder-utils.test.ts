@@ -17,6 +17,7 @@ describe("formatSpeechDuration", () => {
 
 describe("fileExtensionForSpeechMime", () => {
   it("maps common mime types", () => {
+    expect(fileExtensionForSpeechMime("audio/wav")).toBe("wav");
     expect(fileExtensionForSpeechMime("audio/mp4")).toBe("m4a");
     expect(fileExtensionForSpeechMime("audio/ogg")).toBe("ogg");
     expect(fileExtensionForSpeechMime("audio/webm")).toBe("webm");

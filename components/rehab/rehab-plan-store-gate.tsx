@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { ListPlaceholder } from "@/components/patterns/list-placeholder";
+import { useRehabPlanSync } from "@/hooks/use-rehab-plan-sync";
 import {
   selectRehabPlanReady,
   useRehabPlanStore,
@@ -29,10 +30,13 @@ export function RehabPlanStoreGate({ children }: { children: React.ReactNode }) 
   const ensureLoaded = useRehabPlanStore((state) => state.ensureLoaded);
   const ready = useRehabPlanStore(selectRehabPlanReady);
   const loading = useRehabPlanStore((state) => state.loading);
+  const persistence = useRehabPlanStore((state) => state.persistence);
 
   useEffect(() => {
     void ensureLoaded();
   }, [ensureLoaded]);
+
+  useRehabPlanSync({ enabled: ready && persistence });
 
   if (!ready && loading) {
     return <RehabPlanStoreSkeleton />;

@@ -12,11 +12,13 @@ import {
 import { toast } from "sonner";
 
 import { VoiceMemoRecorderBar } from "@/components/rehab/voice-memo-recorder-bar";
+import { SpeechAudioPlayer } from "@/components/rehab/speech-audio-player";
 import { createClient } from "@/lib/supabase/client";
 import { SpeechRecorderSession } from "@/lib/rehab/speech-recorder-session";
 import {
   fileExtensionForSpeechMime,
   formatSpeechDuration,
+  preferredSpeechMimeType,
 } from "@/lib/rehab/speech-recorder-utils";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { cn } from "@/lib/utils";
@@ -27,6 +29,10 @@ const EMPTY_RECORDINGS: RehabSpeechRecording[] = [];
 
 type RecorderStatus = "idle" | "starting" | "recording" | "uploading";
 type MicPermissionState = "prompt" | "granted" | "denied" | "unknown";
+type PendingReview = {
+  blob: Blob;
+  durationSeconds: number;
+};
 
 export function RehabSpeechRecordingSection({
   eventId,
@@ -50,6 +56,9 @@ export function RehabSpeechRecordingSection({
   const deleteSpeechRecording = useRehabPlanStore(
     (state) => state.deleteSpeechRecording,
   );
+  const replaceSpeechRecording = useRehabPlanStore(
+    (state) => state.replaceSpeechRecording,
+  );
 
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -58,14 +67,17 @@ export function RehabSpeechRecordingSection({
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [recordAnother, setRecordAnother] = useState(false);
+  const [pendingReview, setPendingReview] = useState<PendingReview | null>(
+    null,
+  );
+  const [playbackRevision, setPlaybackRevision] = useState<
+    Record<string, number>
+  >({});
   const [micPermission, setMicPermission] =
     useState<MicPermissionState>("unknown");
 
   const sessionRef = useRef<SpeechRecorderSession | null>(null);
   const pendingStartRef = useRef(false);
-  const uploadRecordingRef = useRef<
-    (blob: Blob, durationSeconds: number) => Promise<void>
-  >(async () => {});
 
 
   const canRecord = useMemo(
@@ -171,14 +183,15 @@ export function RehabSpeechRecordingSection({
           typeof crypto !== "undefined" && crypto.randomUUID
             ? crypto.randomUUID()
             : `${Date.now()}`;
-        const extension = fileExtensionForSpeechMime(blob.type);
+        const mimeType = blob.type || preferredSpeechMimeType() || "audio/webm";
+        const extension = fileExtensionForSpeechMime(mimeType);
         const storagePath = `${user.id}/${eventId}/${recordingId}.${extension}`;
         const fileName = `speech-${format(new Date(eventStartAt), "yyyy-MM-dd-HHmm")}.${extension}`;
 
         const { error: uploadError } = await supabase.storage
           .from(SPEECH_RECORDINGS_BUCKET)
           .upload(storagePath, blob, {
-            contentType: blob.type || "audio/webm",
+            contentType: mimeType,
             upsert: false,
           });
         if (uploadError) {
@@ -189,7 +202,7 @@ export function RehabSpeechRecordingSection({
           eventId,
           storagePath,
           fileName,
-          mimeType: blob.type || "audio/webm",
+          mimeType,
           sizeBytes: blob.size,
           durationSeconds,
         });
@@ -200,6 +213,7 @@ export function RehabSpeechRecordingSection({
           throw new Error(result.message);
         }
 
+        setPendingReview(null);
         setRecordAnother(false);
         toast.success("Recording saved.");
       } catch (err) {
@@ -215,17 +229,11 @@ export function RehabSpeechRecordingSection({
   );
 
   useEffect(() => {
-    uploadRecordingRef.current = uploadRecording;
-  }, [uploadRecording]);
-
-  useEffect(() => {
     sessionRef.current = new SpeechRecorderSession({
       onStateChange: (next) => {
         if (next === "recording") {
           setStatus("recording");
-        } else if (next === "stopping") {
-          setStatus("uploading");
-        } else {
+        } else if (next === "idle") {
           setStatus("idle");
           setElapsed(0);
           setAmplitude(0);
@@ -240,7 +248,8 @@ export function RehabSpeechRecordingSection({
         toast.error(message);
       },
       onComplete: ({ blob, durationSeconds }) => {
-        void uploadRecordingRef.current(blob, durationSeconds);
+        setPendingReview({ blob, durationSeconds });
+        setStatus("idle");
       },
     });
 
@@ -306,14 +315,35 @@ export function RehabSpeechRecordingSection({
     }
   }
 
+  async function handleReplaceRecording(
+    recording: RehabSpeechRecording,
+    blob: Blob,
+    durationSeconds: number,
+    mimeType: string,
+  ) {
+    const result = await replaceSpeechRecording(recording, {
+      blob,
+      mimeType,
+      durationSeconds,
+    });
+    if (result.ok) {
+      setPlaybackRevision((current) => ({
+        ...current,
+        [recording.id]: (current[recording.id] ?? 0) + 1,
+      }));
+      toast.success("Recording trimmed.");
+    }
+  }
+
   const hasRecordings = recordings.length > 0;
   const isRecording = status === "recording";
   const showRecorder =
-    status === "starting" ||
+    !pendingReview &&
+    (status === "starting" ||
     status === "recording" ||
     status === "uploading" ||
     (!hasRecordings && !readOnly) ||
-    (recordAnother && !readOnly);
+    (recordAnother && !readOnly));
 
   return (
     <>
@@ -329,6 +359,18 @@ export function RehabSpeechRecordingSection({
               New recording
             </button>
           </div>
+        ) : null}
+
+        {pendingReview ? (
+          <SpeechAudioPlayer
+            blob={pendingReview.blob}
+            durationHint={pendingReview.durationSeconds}
+            mimeType={pendingReview.blob.type}
+            postRecord
+            saving={status === "uploading"}
+            onSave={uploadRecording}
+            onDiscard={() => setPendingReview(null)}
+          />
         ) : null}
 
         {showRecorder ? (
@@ -396,10 +438,20 @@ export function RehabSpeechRecordingSection({
                   ) : null}
                 </div>
                 {signedUrls[item.id] ? (
-                  <audio
-                    controls
-                    src={signedUrls[item.id]}
-                    className="h-9 w-full"
+                  <SpeechAudioPlayer
+                    key={`${item.id}:${playbackRevision[item.id] ?? 0}`}
+                    srcUrl={`${signedUrls[item.id]}${signedUrls[item.id].includes("?") ? "&" : "?"}v=${playbackRevision[item.id] ?? 0}`}
+                    mimeType={item.mimeType}
+                    durationHint={item.durationSeconds}
+                    readOnly={readOnly}
+                    onReplace={(blob, durationSeconds, mimeType) =>
+                      handleReplaceRecording(
+                        item,
+                        blob,
+                        durationSeconds,
+                        mimeType,
+                      )
+                    }
                   />
                 ) : (
                   <p className="text-[11px] text-white/40">Preparing playback…</p>
