@@ -15,6 +15,7 @@ export type MainLayoutUserState = {
   userDisplayName: string | null;
   userAvatarPreset: string | null;
   includeDevNav: boolean;
+  includeRehabNav: boolean;
   includeThemeCustomizer: boolean;
 };
 
@@ -24,6 +25,7 @@ const defaultState: MainLayoutUserState = {
   userDisplayName: null,
   userAvatarPreset: null,
   includeDevNav: false,
+  includeRehabNav: false,
   includeThemeCustomizer: false,
 };
 

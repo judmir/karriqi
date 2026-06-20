@@ -24,7 +24,7 @@ export function AppShell({
   userMenu: ReactNode;
   children: React.ReactNode;
 }) {
-  const { userId, includeDevNav } = useMainLayoutUser();
+  const { userId, includeDevNav, includeRehabNav } = useMainLayoutUser();
   const { setSidebarOpen, sidebarOpen } = useAppearance();
   const pathname = usePathname();
   const calendarRoute = isCalendarRoute(pathname);
@@ -39,6 +39,7 @@ export function AppShell({
     <div className="bg-sidebar flex min-h-[100dvh] flex-1 flex-col md:flex-row md:pt-2">
       <MainNavDesktop
         includeDevNav={includeDevNav}
+        includeRehabNav={includeRehabNav}
         open={sidebarOpen}
         onToggleSidebar={toggleSidebar}
       />
@@ -58,7 +59,7 @@ export function AppShell({
           </InstantNavigationProvider>
         </div>
       </div>
-      <MainNavMobile includeDevNav={includeDevNav} />
+      <MainNavMobile includeDevNav={includeDevNav} includeRehabNav={includeRehabNav} />
     </div>
   );
 }

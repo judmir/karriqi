@@ -17,6 +17,7 @@ export function mapSpeechRecording(
     durationSeconds:
       row.duration_seconds === null ? null : Number(row.duration_seconds),
     storagePath: row.storage_path,
+    note: row.note,
     createdAt: row.created_at,
   };
 }

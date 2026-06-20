@@ -132,20 +132,22 @@ function DesktopNavSection({
   items,
   open,
 }: {
-  title: string;
+  title?: string;
   items: MainNavItem[];
   open: boolean;
 }) {
   return (
     <div className="relative flex w-64 min-w-0 flex-col p-2">
-      <p
-        className={cn(
-          "text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium transition-opacity duration-200",
-          open ? "opacity-100" : "opacity-0",
-        )}
-      >
-        {title}
-      </p>
+      {title ? (
+        <p
+          className={cn(
+            "text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium transition-opacity duration-200",
+            open ? "opacity-100" : "opacity-0",
+          )}
+        >
+          {title}
+        </p>
+      ) : null}
       <ul className="flex min-w-0 flex-col gap-1">
         {items.map((item) => (
           <li key={item.href} className="relative">
@@ -247,11 +249,18 @@ const MOBILE_NAV_ROW_HEIGHT = "3.25rem";
 const MOBILE_NAV_SWIPE_THRESHOLD_PX = 28;
 const MOBILE_NAV_SWIPE_INTENT_PX = 8;
 
-export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
+export function MainNavMobile({
+  includeDevNav,
+  includeRehabNav,
+}: {
+  includeDevNav?: boolean;
+  includeRehabNav?: boolean;
+}) {
   const pathname = usePathname();
   const familyItems = navItemsFor(includeDevNav ?? false);
+  const showRehabNav = includeRehabNav ?? false;
   const [section, setSection] = useState<MobileNavSection>(() =>
-    mobileNavSectionFromPathname(pathname),
+    showRehabNav ? mobileNavSectionFromPathname(pathname) : "family",
   );
   const dragRef = useRef<{
     startX: number;
@@ -260,13 +269,18 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
   } | null>(null);
 
   useEffect(() => {
+    if (!showRehabNav) {
+      setSection("family");
+      return;
+    }
     setSection(mobileNavSectionFromPathname(pathname));
-  }, [pathname]);
+  }, [pathname, showRehabNav]);
 
   const sectionLabel = section === "rehab" ? "Rehab" : "Family";
   const otherSectionLabel = section === "rehab" ? "Family" : "Rehab";
 
   function onPointerDown(e: React.PointerEvent<HTMLElement>) {
+    if (!showRehabNav) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     dragRef.current = {
       startX: e.clientX,
@@ -324,11 +338,15 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
   return (
     <nav
       className="border-border fixed right-0 bottom-0 left-0 z-40 touch-pan-x border-t bg-[#101011] md:hidden"
-      aria-label={`Main navigation, ${sectionLabel} section. Swipe up or down to switch to ${otherSectionLabel}.`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
+      aria-label={
+        showRehabNav
+          ? `Main navigation, ${sectionLabel} section. Swipe up or down to switch to ${otherSectionLabel}.`
+          : "Main navigation"
+      }
+      onPointerDown={showRehabNav ? onPointerDown : undefined}
+      onPointerMove={showRehabNav ? onPointerMove : undefined}
+      onPointerUp={showRehabNav ? onPointerUp : undefined}
+      onPointerCancel={showRehabNav ? onPointerCancel : undefined}
     >
       <div
         className="flex flex-col"
@@ -336,42 +354,48 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
           paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
         }}
       >
-        <div className="text-muted-foreground flex items-center justify-center gap-1.5 px-2 pt-1.5 select-none">
-          <span
-            className={cn(
-              "size-1 rounded-full transition-colors",
-              section === "rehab" ? "bg-foreground/70" : "bg-foreground/25",
-            )}
-            aria-hidden
-          />
-          <p className="text-[0.6rem] font-medium tracking-wide uppercase">
-            {sectionLabel}
-          </p>
-          <span
-            className={cn(
-              "size-1 rounded-full transition-colors",
-              section === "family" ? "bg-foreground/70" : "bg-foreground/25",
-            )}
-            aria-hidden
-          />
-        </div>
+        {showRehabNav ? (
+          <div className="text-muted-foreground flex items-center justify-center gap-1.5 px-2 pt-1.5 select-none">
+            <span
+              className={cn(
+                "size-1 rounded-full transition-colors",
+                section === "rehab" ? "bg-foreground/70" : "bg-foreground/25",
+              )}
+              aria-hidden
+            />
+            <p className="text-[0.6rem] font-medium tracking-wide uppercase">
+              {sectionLabel}
+            </p>
+            <span
+              className={cn(
+                "size-1 rounded-full transition-colors",
+                section === "family" ? "bg-foreground/70" : "bg-foreground/25",
+              )}
+              aria-hidden
+            />
+          </div>
+        ) : null}
 
         <div
           className="overflow-hidden bg-[#101011]"
           style={{ height: MOBILE_NAV_ROW_HEIGHT }}
         >
-          <div
-            className="bg-[#101011] transition-transform duration-300 ease-out"
-            style={{
-              transform:
-                section === "rehab"
-                  ? "translateY(0)"
-                  : `translateY(calc(-1 * ${MOBILE_NAV_ROW_HEIGHT}))`,
-            }}
-          >
-            <MobileNavRow items={rehabNavItems} />
+          {showRehabNav ? (
+            <div
+              className="bg-[#101011] transition-transform duration-300 ease-out"
+              style={{
+                transform:
+                  section === "rehab"
+                    ? "translateY(0)"
+                    : `translateY(calc(-1 * ${MOBILE_NAV_ROW_HEIGHT}))`,
+              }}
+            >
+              <MobileNavRow items={rehabNavItems} />
+              <MobileNavRow items={familyItems} />
+            </div>
+          ) : (
             <MobileNavRow items={familyItems} />
-          </div>
+          )}
         </div>
       </div>
     </nav>
@@ -380,14 +404,17 @@ export function MainNavMobile({ includeDevNav }: { includeDevNav?: boolean }) {
 
 export function MainNavDesktop({
   includeDevNav,
+  includeRehabNav,
   open = true,
   onToggleSidebar,
 }: {
   includeDevNav?: boolean;
+  includeRehabNav?: boolean;
   open?: boolean;
   onToggleSidebar?: () => void;
 }) {
   const items = navItemsFor(includeDevNav ?? false);
+  const showRehabNav = includeRehabNav ?? false;
   return (
     <nav
       className={cn(
@@ -420,8 +447,14 @@ export function MainNavDesktop({
         )}
       </div>
 
-      <DesktopNavSection title="Rehab" items={rehabNavItems} open={open} />
-      <DesktopNavSection title="Family" items={items} open={open} />
+      {showRehabNav ? (
+        <>
+          <DesktopNavSection title="Rehab" items={rehabNavItems} open={open} />
+          <DesktopNavSection title="Family" items={items} open={open} />
+        </>
+      ) : (
+        <DesktopNavSection items={items} open={open} />
+      )}
     </nav>
   );
 }

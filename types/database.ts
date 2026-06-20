@@ -582,6 +582,7 @@ export type Database = {
           size_bytes: number | null;
           duration_seconds: number | null;
           storage_path: string;
+          note: string | null;
           created_at: string;
         };
         Insert: {
@@ -593,6 +594,7 @@ export type Database = {
           size_bytes?: number | null;
           duration_seconds?: number | null;
           storage_path: string;
+          note?: string | null;
           created_at?: string;
         };
         Update: {
@@ -604,6 +606,7 @@ export type Database = {
           size_bytes?: number | null;
           duration_seconds?: number | null;
           storage_path?: string;
+          note?: string | null;
           created_at?: string;
         };
         Relationships: [];

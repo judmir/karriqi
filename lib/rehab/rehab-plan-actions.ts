@@ -2,6 +2,7 @@
 
 import { softDeletePatch } from "@/lib/db/soft-delete";
 import { mapSpeechRecording } from "@/lib/rehab/map-speech-recording";
+import { normalizeSpeechRecordingNote } from "@/lib/rehab/speech-recording-note";
 import { createClient } from "@/lib/supabase/server";
 import {
   serializeRecurrenceRule,
@@ -239,6 +240,7 @@ export async function completeRehabSpeechRecordingUpload(input: {
   mimeType?: string | null;
   sizeBytes?: number | null;
   durationSeconds?: number | null;
+  note?: string | null;
 }): Promise<CompleteRehabSpeechRecordingUploadResult> {
   const fileName = input.fileName.trim();
   const storagePath = input.storagePath.trim();
@@ -285,9 +287,10 @@ export async function completeRehabSpeechRecordingUpload(input: {
       size_bytes: input.sizeBytes ?? null,
       duration_seconds: input.durationSeconds ?? null,
       storage_path: storagePath,
+      note: normalizeSpeechRecordingNote(input.note),
     })
     .select(
-      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at",
+      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, note, created_at",
     )
     .single();
 

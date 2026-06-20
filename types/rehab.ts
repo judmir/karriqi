@@ -60,6 +60,7 @@ export type RehabSpeechRecording = {
   sizeBytes: number | null;
   durationSeconds: number | null;
   storagePath: string;
+  note: string | null;
   createdAt: string;
 };
 

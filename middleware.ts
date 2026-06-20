@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { ROUTES, isProtectedPath } from "@/config/routes";
+import { canUseRehab, isRehabPath } from "@/lib/rehab/rehab-access";
 import { updateSession } from "@/lib/supabase/middleware";
 
 function safeNextPath(next: string | null): string {
@@ -31,6 +32,13 @@ export async function middleware(request: NextRequest) {
   if (user && pathname === ROUTES.signIn) {
     const url = request.nextUrl.clone();
     url.pathname = safeNextPath(request.nextUrl.searchParams.get("next"));
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && isRehabPath(pathname) && !canUseRehab(user)) {
+    const url = request.nextUrl.clone();
+    url.pathname = ROUTES.dashboard;
     url.search = "";
     return NextResponse.redirect(url);
   }

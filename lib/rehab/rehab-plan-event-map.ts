@@ -38,6 +38,7 @@ export type RehabSpeechRecordingRow = {
   size_bytes: number | null;
   duration_seconds: number | null;
   storage_path: string;
+  note: string | null;
   created_at: string;
 };
 
@@ -55,7 +56,7 @@ function isEventKind(value: string): value is RehabEventKind {
 }
 
 export const REHAB_SPEECH_RECORDING_SELECT =
-  "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at";
+  "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, note, created_at";
 
 export function mapRehabSpeechRecording(
   row: RehabSpeechRecordingRow,
@@ -70,6 +71,7 @@ export function mapRehabSpeechRecording(
     durationSeconds:
       row.duration_seconds === null ? null : Number(row.duration_seconds),
     storagePath: row.storage_path,
+    note: row.note,
     createdAt: row.created_at,
   };
 }

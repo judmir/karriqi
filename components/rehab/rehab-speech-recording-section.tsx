@@ -13,8 +13,10 @@ import { toast } from "sonner";
 
 import { VoiceMemoRecorderBar } from "@/components/rehab/voice-memo-recorder-bar";
 import { SpeechAudioPlayer } from "@/components/rehab/speech-audio-player";
+import { SpeechRecordingNoteField } from "@/components/rehab/speech-recording-note-field";
 import { createClient } from "@/lib/supabase/client";
 import { SpeechRecorderSession } from "@/lib/rehab/speech-recorder-session";
+import { normalizeSpeechRecordingNote } from "@/lib/rehab/speech-recording-note";
 import {
   fileExtensionForSpeechMime,
   formatSpeechDuration,
@@ -59,6 +61,9 @@ export function RehabSpeechRecordingSection({
   const replaceSpeechRecording = useRehabPlanStore(
     (state) => state.replaceSpeechRecording,
   );
+  const updateSpeechRecordingNote = useRehabPlanStore(
+    (state) => state.updateSpeechRecordingNote,
+  );
 
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -70,6 +75,7 @@ export function RehabSpeechRecordingSection({
   const [pendingReview, setPendingReview] = useState<PendingReview | null>(
     null,
   );
+  const [pendingNote, setPendingNote] = useState("");
   const [playbackRevision, setPlaybackRevision] = useState<
     Record<string, number>
   >({});
@@ -205,6 +211,7 @@ export function RehabSpeechRecordingSection({
           mimeType,
           sizeBytes: blob.size,
           durationSeconds,
+          note: pendingNote,
         });
         if (!result.ok) {
           await supabase.storage
@@ -214,6 +221,7 @@ export function RehabSpeechRecordingSection({
         }
 
         setPendingReview(null);
+        setPendingNote("");
         setRecordAnother(false);
         toast.success("Recording saved.");
       } catch (err) {
@@ -225,7 +233,7 @@ export function RehabSpeechRecordingSection({
         setStatus("idle");
       }
     },
-    [completeSpeechRecordingUpload, eventId, eventStartAt],
+    [completeSpeechRecordingUpload, eventId, eventStartAt, pendingNote],
   );
 
   useEffect(() => {
@@ -362,15 +370,25 @@ export function RehabSpeechRecordingSection({
         ) : null}
 
         {pendingReview ? (
-          <SpeechAudioPlayer
-            blob={pendingReview.blob}
-            durationHint={pendingReview.durationSeconds}
-            mimeType={pendingReview.blob.type}
-            postRecord
-            saving={status === "uploading"}
-            onSave={uploadRecording}
-            onDiscard={() => setPendingReview(null)}
-          />
+          <div className="space-y-3">
+            <SpeechRecordingNoteField
+              value={pendingNote}
+              onChange={setPendingNote}
+              disabled={status === "uploading"}
+            />
+            <SpeechAudioPlayer
+              blob={pendingReview.blob}
+              durationHint={pendingReview.durationSeconds}
+              mimeType={pendingReview.blob.type}
+              postRecord
+              saving={status === "uploading"}
+              onSave={uploadRecording}
+              onDiscard={() => {
+                setPendingReview(null);
+                setPendingNote("");
+              }}
+            />
+          </div>
         ) : null}
 
         {showRecorder ? (
@@ -437,6 +455,26 @@ export function RehabSpeechRecordingSection({
                     </button>
                   ) : null}
                 </div>
+                {!readOnly ? (
+                  <SavedRecordingNote
+                    recording={item}
+                    onSave={async (note) => {
+                      const result = await updateSpeechRecordingNote(
+                        item,
+                        note,
+                      );
+                      if (result.ok) {
+                        toast.success("Note saved.");
+                      }
+                    }}
+                  />
+                ) : item.note ? (
+                  <SavedRecordingNote
+                    recording={item}
+                    readOnly
+                    onSave={async () => {}}
+                  />
+                ) : null}
                 {signedUrls[item.id] ? (
                   <SpeechAudioPlayer
                     key={`${item.id}:${playbackRevision[item.id] ?? 0}`}
@@ -462,6 +500,39 @@ export function RehabSpeechRecordingSection({
         ) : null}
       </div>
     </>
+  );
+}
+
+function SavedRecordingNote({
+  recording,
+  readOnly,
+  onSave,
+}: {
+  recording: RehabSpeechRecording;
+  readOnly?: boolean;
+  onSave: (note: string | null) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState(recording.note ?? "");
+
+  useEffect(() => {
+    setDraft(recording.note ?? "");
+  }, [recording.id, recording.note]);
+
+  return (
+    <SpeechRecordingNoteField
+      value={draft}
+      onChange={setDraft}
+      readOnly={readOnly}
+      className="mb-2"
+      onBlurSave={async () => {
+        const nextNote = normalizeSpeechRecordingNote(draft);
+        const currentNote = normalizeSpeechRecordingNote(recording.note);
+        if (nextNote === currentNote) {
+          return;
+        }
+        await onSave(nextNote);
+      }}
+    />
   );
 }
 

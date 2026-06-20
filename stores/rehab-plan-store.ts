@@ -4,6 +4,7 @@ import {
   completeSpeechRecordingUploadClient,
   deleteSpeechRecordingClient,
   replaceSpeechRecordingClient,
+  updateSpeechRecordingNoteClient,
 } from "@/lib/rehab/speech-recording-client";
 import {
   createRehabPlanEvent,
@@ -90,7 +91,15 @@ type RehabPlanStoreActions = {
     mimeType?: string | null;
     sizeBytes?: number | null;
     durationSeconds?: number | null;
+    note?: string | null;
   }) => Promise<
+    | { ok: true; recording: RehabSpeechRecording }
+    | { ok: false; message: string }
+  >;
+  updateSpeechRecordingNote: (
+    recording: RehabSpeechRecording,
+    note: string | null,
+  ) => Promise<
     | { ok: true; recording: RehabSpeechRecording }
     | { ok: false; message: string }
   >;
@@ -551,6 +560,61 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
               speechRecordings: [result.recording, ...item.speechRecordings],
             }
           : item,
+      ),
+      loadedAt: Date.now(),
+    }));
+
+    return result;
+  },
+
+  async updateSpeechRecordingNote(recording, note) {
+    const { events, persistence } = get();
+    const prevEvents = events;
+    const normalizedNote = note?.trim() ? note.trim() : null;
+
+    set({
+      events: events.map((event) =>
+        event.id === recording.eventId
+          ? {
+              ...event,
+              speechRecordings: event.speechRecordings.map((item) =>
+                item.id === recording.id
+                  ? { ...item, note: normalizedNote }
+                  : item,
+              ),
+            }
+          : event,
+      ),
+      loadedAt: Date.now(),
+    });
+
+    if (!persistence) {
+      return {
+        ok: true,
+        recording: { ...recording, note: normalizedNote },
+      };
+    }
+
+    const result = await updateSpeechRecordingNoteClient({
+      id: recording.id,
+      note: normalizedNote,
+    });
+    if (!result.ok) {
+      set({ events: prevEvents, loadedAt: Date.now() });
+      showStoreError(result.message);
+      return result;
+    }
+
+    set((state) => ({
+      events: state.events.map((event) =>
+        event.id === recording.eventId
+          ? {
+              ...event,
+              speechRecordings: event.speechRecordings.map((item) =>
+                item.id === recording.id ? result.recording : item,
+              ),
+            }
+          : event,
       ),
       loadedAt: Date.now(),
     }));

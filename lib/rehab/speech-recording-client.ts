@@ -1,3 +1,4 @@
+import { normalizeSpeechRecordingNote } from "@/lib/rehab/speech-recording-note";
 import { softDeletePatch } from "@/lib/db/soft-delete";
 import { mapSpeechRecording } from "@/lib/rehab/map-speech-recording";
 import { replaceSpeechRecordingExtension } from "@/lib/rehab/speech-recorder-utils";
@@ -14,6 +15,9 @@ export type DeleteSpeechRecordingResult =
   | { ok: true }
   | { ok: false; message: string };
 
+const SPEECH_RECORDING_ROW_SELECT =
+  "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, note, created_at";
+
 export async function completeSpeechRecordingUploadClient(input: {
   eventId: string;
   storagePath: string;
@@ -21,6 +25,7 @@ export async function completeSpeechRecordingUploadClient(input: {
   mimeType?: string | null;
   sizeBytes?: number | null;
   durationSeconds?: number | null;
+  note?: string | null;
 }): Promise<CompleteSpeechRecordingUploadResult> {
   const fileName = input.fileName.trim();
   const storagePath = input.storagePath.trim();
@@ -69,10 +74,9 @@ export async function completeSpeechRecordingUploadClient(input: {
       size_bytes: input.sizeBytes ?? null,
       duration_seconds: input.durationSeconds ?? null,
       storage_path: storagePath,
+      note: normalizeSpeechRecordingNote(input.note),
     })
-    .select(
-      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at",
-    )
+    .select(SPEECH_RECORDING_ROW_SELECT)
     .single();
 
   if (error || !recording) {
@@ -103,9 +107,7 @@ export async function replaceSpeechRecordingClient(input: {
 
   const { data: existing, error: findError } = await supabase
     .from("rehab_speech_recordings")
-    .select(
-      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at",
-    )
+    .select(SPEECH_RECORDING_ROW_SELECT)
     .eq("id", input.id)
     .eq("user_id", user.id)
     .is("deleted_at", null)
@@ -160,9 +162,7 @@ export async function replaceSpeechRecordingClient(input: {
     .eq("id", input.id)
     .eq("user_id", user.id)
     .is("deleted_at", null)
-    .select(
-      "id, rehab_plan_event_id, user_id, file_name, mime_type, size_bytes, duration_seconds, storage_path, created_at",
-    )
+    .select(SPEECH_RECORDING_ROW_SELECT)
     .single();
 
   if (updateError || !recording) {
@@ -170,6 +170,39 @@ export async function replaceSpeechRecordingClient(input: {
       ok: false,
       message: updateError?.message ?? "Recording update failed.",
     };
+  }
+
+  return { ok: true, recording: mapSpeechRecording(recording) };
+}
+
+export type UpdateSpeechRecordingNoteResult =
+  | { ok: true; recording: RehabSpeechRecording }
+  | { ok: false; message: string };
+
+export async function updateSpeechRecordingNoteClient(input: {
+  id: string;
+  note: string | null;
+}): Promise<UpdateSpeechRecordingNoteResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { ok: false, message: userError?.message ?? "Not signed in." };
+  }
+
+  const { data: recording, error } = await supabase
+    .from("rehab_speech_recordings")
+    .update({ note: normalizeSpeechRecordingNote(input.note) })
+    .eq("id", input.id)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .select(SPEECH_RECORDING_ROW_SELECT)
+    .single();
+
+  if (error || !recording) {
+    return { ok: false, message: error?.message ?? "Could not save note." };
   }
 
   return { ok: true, recording: mapSpeechRecording(recording) };

@@ -1,6 +1,7 @@
 import { AppHeaderUserBridge } from "@/components/layout/app-header-user-bridge";
 import { avatarPresetFromUserMeta } from "@/lib/avatar/presets";
 import { canUseDevMenu } from "@/lib/dev/dev-access";
+import { canUseRehab } from "@/lib/rehab/rehab-access";
 import { getSessionUser } from "@/lib/supabase/server";
 import { appearanceFromUserMeta } from "@/lib/theme/appearance";
 import { canUseThemeCustomizerEmail } from "@/lib/theme/theme-customizer-access";
@@ -19,6 +20,7 @@ export async function AppHeaderUserLoader() {
         userDisplayName: displayNameFromUserMeta(meta),
         userAvatarPreset: avatarPresetFromUserMeta(meta),
         includeDevNav: canUseDevMenu(user),
+        includeRehabNav: canUseRehab(user),
         includeThemeCustomizer: canUseThemeCustomizerEmail(user?.email),
       }}
     />
