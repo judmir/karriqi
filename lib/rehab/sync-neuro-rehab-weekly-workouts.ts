@@ -125,13 +125,15 @@ export function buildWeeklyWorkoutSyncPlan(
       if (
         row.start_at !== target.start_at ||
         row.end_at !== target.end_at ||
-        row.title !== target.title
+        row.title !== target.title ||
+        row.description !== target.description
       ) {
         patches.push({
           id: row.id,
           start_at: target.start_at,
           end_at: target.end_at,
           title: target.title,
+          description: target.description ?? null,
         });
       }
       continue;

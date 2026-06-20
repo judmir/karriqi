@@ -86,4 +86,29 @@ describe("sync-neuro-rehab-weekly-workouts", () => {
     );
     expect(plan.inserts.length + plan.patches.length).toBeGreaterThan(0);
   });
+
+  it("patches gym descriptions when the seed template changes", () => {
+    const expected = expectedWeeklyWorkouts(userId).find(
+      (row) => row.event_kind === "gym_a" && row.plan_week === 1,
+    );
+    expect(expected?.description).toContain("Left-leg strength");
+
+    const existing: ScheduleRow[] = [
+      {
+        id: "a",
+        start_at: expected!.start_at,
+        end_at: expected!.end_at,
+        title: "Gym A — lower body + left leg",
+        description: "old checklist",
+        event_kind: "gym_a",
+        program_id: "neuro-rehab-2026-v1",
+        plan_week: 1,
+      },
+    ];
+
+    const plan = buildWeeklyWorkoutSyncPlan(userId, existing);
+    const patch = plan.patches.find((row) => row.id === "a");
+    expect(patch?.title).toContain("left-leg strength");
+    expect(patch?.description).toContain("Left-leg strength");
+  });
 });

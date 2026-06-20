@@ -23,6 +23,7 @@ export type ScheduleRow = {
   start_at: string;
   end_at: string;
   title?: string;
+  description?: string | null;
   event_kind: string;
   program_id: string | null;
   plan_week?: number | null;
@@ -34,6 +35,7 @@ export type SchedulePatch = {
   start_at: string;
   end_at: string;
   title?: string;
+  description?: string | null;
 };
 
 function isGymKind(kind: string): boolean {

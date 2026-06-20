@@ -219,10 +219,10 @@ If tired: drop Saturday easy walk or shorten sessions. **Consistency beats inten
 | Sunday | Run + weekly review | light mobility, plan next week |
 | Monday | Run | hand 10 min, meditation, journal |
 | Tuesday | Run | hand 20 min, meditation, journal |
-| Wednesday | Gym A — lower body + left leg | hand 10 min, meditation, journal |
+| Wednesday | Gym A — left-leg strength + loaded control | hand 10 min, meditation, journal |
 | Thursday | Run | speech 10 min, meditation, journal |
-| Friday | Gym C — dynamic stability (18:00) | hand 10 min, meditation, journal |
-| Saturday | Gym B — upper + core | easy walk 20 min, meditation, journal |`,
+| Friday | Gym C — dynamic stability + gait control (18:00) | hand 10 min, meditation, journal |
+| Saturday | Gym B — upper body + core + left hand | easy walk 20 min, meditation, journal |`,
   },
   {
     slug: "gym-workouts",
@@ -231,16 +231,16 @@ If tired: drop Saturday easy walk or shorten sessions. **Consistency beats inten
     sortOrder: 8,
     body: `# What To Do In The Gym
 
-Keep sessions 45–60 min. Stop before you are destroyed.
+Keep sessions 45–60 min. Moderate intensity — finish trained, not destroyed. Discuss with physio/doctor; keep stop/deload rules.
 
-## Gym A — Lower body + left leg control
-Warm-up → sit-to-stand/goblet squat → split squat → step-ups → slow step-downs → heel raises → balance → cool-down.
+## Gym A — Left-leg strength + loaded control
+Your only strength-focused leg day. Warm-up → goblet squat or leg press 3×6–10 → split squat 3×6–8/side → step-ups 3×6–8/side → slow step-downs 2–3×5–8/side → heel raises 2–3×10–15 → balance 2–3 rounds → cool-down + log. RPE 6–7 early weeks; 7–8 later only if stable.
 
-## Gym B — Upper body + core + coordination
-Warm-up → row → chest press → lat pulldown → shoulder press → farmer carry → Pallof press → hand finisher.
+## Gym B — Upper body + core + left-hand coordination
+Warm-up + left-hand drills → row 3×8–12 → chest press 3×8–12 → lat pulldown 3×8–12 → shoulder press 2×8–10 light → carries optional/lighter (Friday has carries) → Pallof 2–3×8–12/side → hand finisher 8–10 min.
 
-## Gym C — Lower body + dynamic stability
-Warm-up → RDL → leg press/squat → lateral step-down/lunge → eccentric knee control → direction-change drills → optional mini hops (Week 5+ only if safe).
+## Gym C — Dynamic stability + gait control + light power prep
+Not a second leg strength day — movement quality only. Dynamic warm-up → gait start/stop 5 min → low step-downs 2×5/side (practice) → lateral weight shift 2–3 rounds → balance + reach 2–3 rounds → loaded carry 3 rounds → direction-change drills 5–10 min → power prep Week 5+ only if no pain → cool-down + log. If sore from Wednesday: reduce volume 30–50%, skip plyometrics.
 
 ## Gym D — Optional
 Easy full-body, football coordination, or mobility + balance. Not a punishment day.`,

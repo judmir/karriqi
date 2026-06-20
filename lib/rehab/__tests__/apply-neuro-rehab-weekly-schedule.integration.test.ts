@@ -67,7 +67,7 @@ async function applySchedulePatches(
   for (const patch of tempBump) {
     const { error } = await admin
       .from("rehab_plan_events")
-      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}) })
+      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}), ...(patch.description !== undefined ? { description: patch.description } : {}) })
       .eq("id", patch.id);
     expect(error).toBeNull();
   }
@@ -75,7 +75,7 @@ async function applySchedulePatches(
   for (const patch of patches) {
     const { error } = await admin
       .from("rehab_plan_events")
-      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}) })
+      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}), ...(patch.description !== undefined ? { description: patch.description } : {}) })
       .eq("id", patch.id);
     expect(error).toBeNull();
   }
@@ -105,7 +105,7 @@ async function applyStoicUpdates(
   for (const patch of tempBump) {
     const { error } = await admin
       .from("rehab_plan_events")
-      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}) })
+      .update({ start_at: patch.start_at, end_at: patch.end_at, ...(patch.title ? { title: patch.title } : {}), ...(patch.description !== undefined ? { description: patch.description } : {}) })
       .eq("id", patch.id);
     expect(error).toBeNull();
   }
@@ -129,7 +129,7 @@ describe.runIf(RUN)("apply neuro rehab weekly schedule to Supabase", () => {
 
     const scheduleRows = (await fetchProgramRows(
       admin,
-      "id, title, start_at, end_at, event_kind, program_id, plan_week, completed_at, user_id",
+      "id, title, description, start_at, end_at, event_kind, program_id, plan_week, completed_at, user_id",
       ["gym_a", "gym_b", "gym_c", "gym_d", "run_walk"],
     )) as (ScheduleRow & { user_id: string })[];
 

@@ -9,7 +9,7 @@ import {
   startOfDay,
   startOfWeek,
 } from "date-fns";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon, Check, Clock } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -294,7 +294,6 @@ export function RehabInlineAddTask({
               onOpenChange={setTimeOpen}
               onSelect={(next) => {
                 setTime(next);
-                setTimeOpen(false);
               }}
               trigger={
                 <button
@@ -326,6 +325,17 @@ export function RehabInlineAddTask({
               disabled={pending}
               appearance="inline"
             />
+
+            <button
+              type="button"
+              onClick={() => void submit()}
+              disabled={pending || title.trim().length === 0}
+              className="text-emerald-600 hover:bg-muted/60 hover:text-emerald-500 ml-auto inline-flex cursor-pointer items-center rounded-md p-1.5 transition-colors disabled:pointer-events-none disabled:opacity-40 dark:text-emerald-400 dark:hover:text-emerald-300"
+              aria-label="Create task"
+              title="Create task"
+            >
+              <Check className="size-4" aria-hidden />
+            </button>
           </div>
         </div>
       </div>

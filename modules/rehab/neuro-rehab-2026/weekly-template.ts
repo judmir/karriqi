@@ -1,6 +1,6 @@
 import type { RehabEventKind } from "@/types/rehab";
 
-/** Gym C (dynamic stability) — Friday evening, all weeks. */
+/** Gym C (dynamic stability + gait control) — Friday evening, all weeks. */
 export const GYM_C_WEEKDAY = 5;
 export const GYM_C_START_HOUR = 18;
 export const GYM_C_START_MINUTE = 0;
@@ -56,7 +56,9 @@ export function weekdayTemplate(
     case 3:
       return {
         mainKind: "gym_a",
-        mainTitle: isRetest ? "Gym A (deload)" : "Gym A — lower body + left leg",
+        mainTitle: isRetest
+          ? "Gym A (deload)"
+          : "Gym A — left-leg strength + loaded control",
         mainDescription: "See Wiki: Gym Workouts — Gym A.",
         handMinutes: 10,
         includeFootball: false,
@@ -78,7 +80,9 @@ export function weekdayTemplate(
     case 5:
       return {
         mainKind: "gym_c",
-        mainTitle: isRetest ? "Gym C (deload)" : "Gym C — dynamic stability",
+        mainTitle: isRetest
+          ? "Gym C (deload)"
+          : "Gym C — dynamic stability + gait control",
         mainDescription: "See Wiki: Gym Workouts — Gym C.",
         handMinutes: 10,
         includeFootball: false,
@@ -89,7 +93,9 @@ export function weekdayTemplate(
     case 6:
       return {
         mainKind: "gym_b",
-        mainTitle: isRetest ? "Gym B (deload)" : "Gym B — upper body + core",
+        mainTitle: isRetest
+          ? "Gym B (deload)"
+          : "Gym B — upper body + core + left hand",
         mainDescription: "See Wiki: Gym Workouts — Gym B.",
         handMinutes: 10,
         includeFootball: false,

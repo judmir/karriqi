@@ -79,6 +79,19 @@ describe("generateNeuroRehabProgramEvents", () => {
     expect(parsed.subtasks[0]?.referenceUrl).toContain("tbm=isch");
   });
 
+  it("keeps Gym C as gait/control day without heavy leg strength work", () => {
+    const gymC = events.find((e) => e.event_kind === "gym_c");
+    expect(gymC?.title).toContain("gait control");
+    expect(gymC?.description).toContain("gait control");
+    expect(gymC?.description).not.toContain("leg press");
+    expect(gymC?.description).not.toContain("Romanian deadlift");
+
+    const parsed = parseEventDescription(gymC?.description);
+    expect(parsed.subtasks.some((s) => s.label.includes("Gait rhythm"))).toBe(
+      true,
+    );
+  });
+
   it("flags retest weeks 4, 8, 12", () => {
     expect(isRetestWeek(4)).toBe(true);
     expect(isRetestWeek(8)).toBe(true);

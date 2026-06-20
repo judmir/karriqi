@@ -23,6 +23,10 @@ function exerciseSubtask(
   };
 }
 
+function noteSubtask(id: string, label: string): EventSubtask {
+  return { id, label, done: false };
+}
+
 function gymDescription(
   title: string,
   note: string,
@@ -32,129 +36,155 @@ function gymDescription(
 }
 
 export const GYM_A_DESCRIPTION = gymDescription(
-  "Gym A — Lower body + left leg control",
-  "Keep session 45–60 min. Stop before you are destroyed.",
+  "Gym A — Left-leg strength + loaded control",
+  "Your only strength-focused leg day of the week. RPE 6–7 in early weeks; RPE 7–8 later only if stable. No grinding, no max weight, no pushing through ugly left-leg control. Not medical prescription — discuss with physio/doctor. Keep stop/deload rules.",
   [
     exerciseSubtask(
       "gym-a-warm-up",
-      "Warm-up: 5–10 min bike/walk + mobility",
-      "stationary bike warm up mobility",
+      "Warm-up: 8–10 min — bike/walk 5 min, hip/ankle mobility, 2 rounds bodyweight squats + heel raises + step-ups",
+      "stationary bike warm up hip ankle mobility",
     ),
     exerciseSubtask(
       "gym-a-squat",
-      "Sit-to-stand or goblet squat: 3 sets",
+      "Goblet squat or leg press: 3 × 6–10 — equal foot pressure, slow lowering, smooth drive up",
       "goblet squat",
     ),
     exerciseSubtask(
       "gym-a-split-squat",
-      "Supported split squat: 3 sets each side",
+      "Supported split squat: 3 × 6–8 each side — left knee tracks straight, quality over depth",
       "supported split squat",
     ),
     exerciseSubtask(
       "gym-a-step-ups",
-      "Step-ups: 3 sets each side",
+      "Step-ups: 3 × 6–8 each side — full left foot on step, push through left leg, pause at top",
       "step up exercise",
     ),
     exerciseSubtask(
       "gym-a-step-downs",
-      "Slow step-downs: 2–3 sets each side",
+      "Slow step-downs: 2–3 × 5–8 each side — 3-sec lowering, knee aligned, light support OK",
       "slow step down exercise",
     ),
     exerciseSubtask(
       "gym-a-heel-raises",
-      "Heel raises: 2–3 sets",
+      "Heel raises: 2–3 × 10–15 — both legs first, then supported single-leg; compare left vs right",
       "standing heel raise",
     ),
     exerciseSubtask(
       "gym-a-balance",
-      "Balance: single-leg stance with support, 2–3 rounds",
+      "Balance / left-leg control: 2–3 rounds — single-leg stance, toe taps, weight shifts, or slow marching",
       "single leg stance balance support",
     ),
     exerciseSubtask(
       "gym-a-cool-down",
-      "Cool-down: easy walk + breathing",
+      "Cool-down: easy walk 3–5 min",
       "cool down walk breathing exercise",
+    ),
+    noteSubtask(
+      "gym-a-log",
+      "Log 0–10: left-leg control, stairs confidence, fatigue",
     ),
   ],
 );
 
 export const GYM_B_DESCRIPTION = gymDescription(
-  "Gym B — Upper body + core + coordination",
-  "Keep session 45–60 min. Stay controlled and leave 1–2 reps in reserve.",
+  "Gym B — Upper body + core + left-hand coordination",
+  "Whole-body coordination day — not leg-heavy. RPE 5–7 in weeks 1–3. Friday already includes carries; skip or lighten Saturday carries if tired or sore from Wednesday.",
   [
-    exerciseSubtask("gym-b-warm-up", "Warm-up: 5–10 min", "upper body warm up"),
-    exerciseSubtask("gym-b-row", "Row: 3 sets", "seated cable row"),
+    exerciseSubtask(
+      "gym-b-warm-up",
+      "Warm-up: 8 min — row/bike/walk, shoulder circles, wall slides, band pull-aparts, 1 min left-hand open/close/taps",
+      "upper body warm up shoulder mobility",
+    ),
+    exerciseSubtask(
+      "gym-b-row",
+      "Seated row or cable row: 3 × 8–12 — equal pull left/right, calm left grip, slow return",
+      "seated cable row",
+    ),
     exerciseSubtask(
       "gym-b-chest-press",
-      "Chest press or push-up variation: 3 sets",
+      "Chest press or push-up variation: 3 × 8–12 — both arms together, no right-side dominance",
       "machine chest press push up",
     ),
     exerciseSubtask(
       "gym-b-lat-pulldown",
-      "Lat pulldown: 3 sets",
+      "Lat pulldown: 3 × 8–12 — equal grip pressure, left arm does not lag",
       "lat pulldown",
     ),
     exerciseSubtask(
       "gym-b-shoulder-press",
-      "Shoulder press light/moderate: 2–3 sets",
+      "Shoulder press: 2 × 8–10 light/moderate — alt landmine, incline DB, or machine if messy",
       "dumbbell shoulder press",
     ),
     exerciseSubtask(
       "gym-b-carry",
-      "Farmer carry or suitcase carry: 3 rounds",
+      "Farmer/suitcase carry (optional or lighter): 2–3 × 20–40 m — skip if tired; tall posture, left grip, no leaning",
       "farmer carry suitcase carry",
     ),
     exerciseSubtask(
       "gym-b-pallof",
-      "Core anti-rotation / Pallof press: 2–3 sets",
+      "Pallof press / anti-rotation core: 2–3 × 8–12 each side — resist rotation, stable pelvis",
       "pallof press",
     ),
     exerciseSubtask(
       "gym-b-hand",
-      "Left-hand dexterity finisher: 5–10 min",
+      "Left-hand coordination finisher: 8–10 min — choose 2–3 (coin transfer, buttons, shoelace, typing, finger pattern)",
       "hand dexterity exercise",
     ),
   ],
 );
 
 export const GYM_C_DESCRIPTION = gymDescription(
-  "Gym C — Lower body + dynamic stability",
-  "Keep this accurate before making it faster. Optional hops only after Week 5 and only if safe/stable.",
+  "Gym C — Dynamic stability + gait control + light power prep",
+  "Movement-quality day — not a second leg strength session. Friday should make you move better, not make legs sore. If leg pain after Wednesday: no plyometrics, no deep lunges, reduce volume 30–50%. Power only Week 5+ if no pain and control stays clean.",
   [
     exerciseSubtask(
       "gym-c-warm-up",
-      "Warm-up: 5–10 min",
-      "lower body warm up mobility",
+      "Dynamic warm-up: 8–10 min — walk/bike, ankle rocks, hip mobility, slow marching, lateral steps",
+      "dynamic warm up ankle hip mobility",
     ),
     exerciseSubtask(
-      "gym-c-rdl",
-      "Romanian deadlift pattern: 3 sets",
-      "romanian deadlift",
+      "gym-c-gait-rhythm",
+      "Gait rhythm / start-stop control: 5 min — walk → stop → restart, slow turns, left-foot placement; no speed goal",
+      "gait start stop walking drill",
     ),
     exerciseSubtask(
-      "gym-c-leg-press",
-      "Leg press or squat pattern: 3 sets",
-      "leg press exercise",
+      "gym-c-step-down-technique",
+      "Low step-down technique: 2 × 5 each side — slow, clean practice only; not fatiguing",
+      "slow step down exercise",
     ),
     exerciseSubtask(
-      "gym-c-lateral",
-      "Lateral step-down or lateral lunge: 2–3 sets",
-      "lateral step down lateral lunge",
+      "gym-c-lateral-shift",
+      "Lateral weight shift / step control: 2–3 rounds — side steps, weight transfer, mini lateral lunge only if pain-free",
+      "lateral weight shift side step",
     ),
     exerciseSubtask(
-      "gym-c-knee-control",
-      "Eccentric knee-control drill: 2–3 sets",
-      "eccentric knee control exercise",
+      "gym-c-balance-reach",
+      "Balance + reach drills: 2–3 rounds — single-leg stance with support, toe taps forward/side/back, cone taps",
+      "single leg balance reach cone tap",
+    ),
+    exerciseSubtask(
+      "gym-c-carry",
+      "Loaded carry: 3 rounds — farmer or suitcase, moderate weight, tall posture, left grip + trunk control",
+      "farmer carry suitcase carry",
     ),
     exerciseSubtask(
       "gym-c-direction-change",
-      "Direction-change walking drills: 5–10 min",
+      "Direction-change drills: 5–10 min — figure-8 walk, cone walk, slow accel/decel, football foot placement; no sprinting",
       "direction change walking drill",
     ),
     exerciseSubtask(
-      "gym-c-mini-hops",
-      "Optional mini hops after Week 5 only if safe/stable",
+      "gym-c-power-prep",
+      "Power prep (Week 5+ only if no pain): mini pogo hops 2 × 10 sec OR low step quick drive 2 × 5/side — skip if sloppy",
       "mini hop plyometric drill",
+    ),
+    exerciseSubtask(
+      "gym-c-cool-down",
+      "Cool-down: easy walk 5 min",
+      "cool down walk breathing exercise",
+    ),
+    noteSubtask(
+      "gym-c-log",
+      "Log 0–10: gait confidence, left-leg heaviness; tremor yes/no; next-day flare yes/no",
     ),
   ],
 );

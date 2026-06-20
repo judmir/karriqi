@@ -323,54 +323,60 @@ This is a rehab/tracking plan to discuss with your doctor/physio/OT/logopedics t
 | Sunday | Run + weekly review | light mobility, week review, plan next week |
 | Monday | Run | hand 10 min, meditation, journal |
 | Tuesday | Run | hand 20 min, meditation, journal |
-| Wednesday | Gym A — lower body + left leg control | hand 10 min, meditation, journal |
+| Wednesday | Gym A — left-leg strength + loaded control | hand 10 min, meditation, journal |
 | Thursday | Run | speech 10 min, meditation, journal |
-| Friday | Gym C — dynamic stability (18:00) | hand 10 min, meditation, journal |
-| Saturday | Gym B — upper body + core | easy walk 20 min, meditation, journal |`,
+| Friday | Gym C — dynamic stability + gait control (18:00) | hand 10 min, meditation, journal |
+| Saturday | Gym B — upper body + core + left hand | easy walk 20 min, meditation, journal |`,
   ),
 
   section("sec.gym", "sec.root", "What To Do In The Gym", 60,
-    "Keep sessions 45–60 min. Stop before you are destroyed."),
+    "Wed = main leg strength. Fri = movement quality (not a second leg day). Sat = upper/core/hand. Discuss with physio/doctor; keep stop/deload rules."),
   guide(
     "guide.gym.a",
     "sec.gym",
-    "Gym A — Lower body + left leg control",
+    "Gym A — Left-leg strength + loaded control",
     0,
-    `- Warm-up: 5–10 min bike/walk + mobility
-- Sit-to-stand or goblet squat: 3 sets
-- Supported split squat: 3 sets each side
-- Step-ups: 3 sets each side
-- Slow step-downs: 2–3 sets each side
-- Heel raises: 2–3 sets
-- Balance: single-leg stance with support, 2–3 rounds
-- Cool-down: easy walk + breathing`,
+    `Your only strength-focused leg day of the week.
+- Warm-up: 8–10 min bike/walk + hip/ankle mobility + 2 easy rounds
+- Goblet squat or leg press: 3 × 6–10
+- Supported split squat: 3 × 6–8 each side
+- Step-ups: 3 × 6–8 each side
+- Slow step-downs: 2–3 × 5–8 each side (3-sec lowering)
+- Heel raises: 2–3 × 10–15
+- Balance / left-leg control: 2–3 rounds
+- Cool-down + log left-leg control, stairs confidence, fatigue 0–10
+RPE 6–7 early weeks; 7–8 later only if stable. No grinding or max weight.`,
   ),
   guide(
     "guide.gym.b",
     "sec.gym",
-    "Gym B — Upper body + core + coordination",
+    "Gym B — Upper body + core + left-hand coordination",
     1,
-    `- Warm-up: 5–10 min
-- Row: 3 sets
-- Chest press or push-up variation: 3 sets
-- Lat pulldown: 3 sets
-- Shoulder press light/moderate: 2–3 sets
-- Farmer carry or suitcase carry: 3 rounds
-- Core anti-rotation / Pallof press: 2–3 sets
-- Left-hand dexterity finisher: 5–10 min`,
+    `- Warm-up: 8 min row/bike/walk + shoulder mobility + 1 min left-hand drills
+- Seated row or cable row: 3 × 8–12
+- Chest press or push-up variation: 3 × 8–12
+- Lat pulldown: 3 × 8–12
+- Shoulder press light/moderate: 2 × 8–10
+- Farmer/suitcase carry optional or lighter: 2–3 × 20–40 m (Friday has carries; skip if tired)
+- Pallof press / anti-rotation: 2–3 × 8–12 each side
+- Left-hand coordination finisher: 8–10 min (choose 2–3)`,
   ),
   guide(
     "guide.gym.c",
     "sec.gym",
-    "Gym C — Lower body + dynamic stability",
+    "Gym C — Dynamic stability + gait control + light power prep",
     2,
-    `- Warm-up: 5–10 min
-- Romanian deadlift pattern: 3 sets
-- Leg press or squat pattern: 3 sets
-- Lateral step-down or lateral lunge: 2–3 sets
-- Eccentric knee-control drill: 2–3 sets
-- Direction-change walking drills: 5–10 min
-- Optional mini hops only after Week 5 and only if safe/stable`,
+    `Movement-quality day — not a second leg strength session. Friday should make you move better, not make legs sore.
+- Dynamic warm-up: 8–10 min walk/bike + ankle/hip mobility + slow marching
+- Gait rhythm / start-stop control: 5 min
+- Low step-down technique: 2 × 5 each side (practice, not strength)
+- Lateral weight shift / step control: 2–3 rounds
+- Balance + reach drills: 2–3 rounds
+- Loaded carry: 3 rounds (moderate weight)
+- Direction-change drills: 5–10 min
+- Power prep only Week 5+ if no pain (mini hops or low step drive)
+- Cool-down + log gait confidence, left-leg heaviness, tremor, next-day flare
+If sore from Wednesday: reduce volume 30–50%, skip plyometrics and deep lunges.`,
   ),
   guide(
     "guide.gym.d",

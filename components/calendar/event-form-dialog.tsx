@@ -3,6 +3,7 @@
 import { addDays, addMilliseconds, format, startOfDay } from "date-fns";
 import {
   CalendarIcon,
+  Check,
   Clock3,
   ExternalLink,
   RotateCcw,
@@ -54,12 +55,11 @@ import {
 import {
   parseEventDescription,
   serializeEventDescription,
-  subtasksEqual,
   type EventSubtask,
 } from "@/lib/calendar/event-subtasks";
+import { RehabTimePicker } from "@/components/rehab/rehab-time-picker";
 import {
   describeRecurrence,
-  rulesEqual,
   type RecurrenceRule,
 } from "@/lib/rehab/recurrence";
 import {
@@ -260,23 +260,10 @@ function EventFormDialogBody({
   const [editScopePrompt, setEditScopePrompt] = useState(false);
   const [deleteScopePrompt, setDeleteScopePrompt] = useState(false);
   const effectiveAllDay = allDay || !showTime;
-  const recurrenceChanged =
-    isRehab && !rulesEqual(recurrence, initialRecurrence);
   const hasSubtasks = subtasks.length > 0;
   const isCompleted = hasSubtasks
     ? allEventSubtasksDone(subtasks)
     : (completedOverride ?? Boolean(rehabEvent?.completedAt));
-  const hasChanges =
-    title !== (event?.title ?? "") ||
-    description !== initialParsed.description ||
-    myNotes !== initialParsed.myNotes ||
-    !subtasksEqual(subtasks, initialParsed.subtasks) ||
-    effectiveAllDay !== (event?.allDay ?? defaultAllDay) ||
-    color !== (event?.color ?? rehabEventKindDefaultColor(initialEventKind)) ||
-    eventKind !== initialEventKind ||
-    toDateInputValue(startDate) !== toDateInputValue(initialStart) ||
-    startTime !== toTimeInputValue(initialStart) ||
-    recurrenceChanged;
 
   function handleEventKindChange(
     kind: RehabEventKind,
@@ -675,19 +662,11 @@ function EventFormDialogBody({
     }
   }
 
-  async function handleClose() {
+  function handleClose() {
     if (pending) {
       return;
     }
-    if (
-      viewOnly ||
-      (isEditing && !hasChanges) ||
-      (!isEditing && title.trim().length === 0)
-    ) {
-      onOpenChange(false);
-      return;
-    }
-    await handleSubmit();
+    onOpenChange(false);
   }
 
   closeRequestRef.current = handleClose;
@@ -716,25 +695,39 @@ function EventFormDialogBody({
         <div className="mb-4 flex shrink-0 items-center justify-between">
           <button
             type="button"
-            onClick={() => void handleClose()}
+            onClick={handleClose}
             className="text-white/45 transition-colors hover:text-white"
             aria-label="Close"
           >
             <X className="size-4" aria-hidden />
           </button>
 
-          {isEditing && !viewOnly ? (
-            <button
-              type="button"
-              onClick={requestDelete}
-              disabled={pending}
-              className="rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Delete event"
-              title="Delete"
-            >
-              <Trash2 className="size-4" aria-hidden />
-            </button>
-          ) : null}
+          <div className="flex items-center gap-1">
+            {!viewOnly ? (
+              <button
+                type="button"
+                onClick={() => void handleSubmit()}
+                disabled={pending || title.trim().length === 0}
+                className="rounded-md p-1.5 text-emerald-400 transition-colors hover:bg-white/10 hover:text-emerald-300 disabled:pointer-events-none disabled:opacity-40"
+                aria-label={isEditing ? "Save task" : "Create task"}
+                title={isEditing ? "Save" : "Create"}
+              >
+                <Check className="size-4" aria-hidden />
+              </button>
+            ) : null}
+            {isEditing && !viewOnly ? (
+              <button
+                type="button"
+                onClick={requestDelete}
+                disabled={pending}
+                className="rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Delete event"
+                title="Delete"
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1 gap-3">
@@ -842,7 +835,7 @@ function EventFormDialogBody({
                 time={startTime}
                 onChange={updateStartTime}
                 onClear={() => setShowTime(false)}
-                disabled={viewOnly}
+                disabled={viewOnly || pending}
               />
             ) : null}
           </div>
