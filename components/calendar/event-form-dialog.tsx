@@ -57,7 +57,6 @@ import {
   serializeEventDescription,
   type EventSubtask,
 } from "@/lib/calendar/event-subtasks";
-import { RehabTimePicker } from "@/components/rehab/rehab-time-picker";
 import {
   describeRecurrence,
   type RecurrenceRule,
