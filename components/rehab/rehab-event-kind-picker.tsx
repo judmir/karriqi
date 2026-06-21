@@ -81,9 +81,9 @@ export function RehabEventKindPicker({
 
   if (appearance === "sidebar") {
     return (
-      <div className="space-y-2 px-1.5 pt-2">
+      <div className="min-w-0 w-full space-y-2 px-1.5 pt-2">
         <p className="text-xs text-white/45">Type</p>
-        {grid}
+        <div className="min-w-0 w-full overflow-hidden">{grid}</div>
       </div>
     );
   }

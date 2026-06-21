@@ -449,16 +449,16 @@ export function SpeechAudioPlayer({
   const busy = saving || processing;
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 max-w-full space-y-4">
       {objectUrl ? (
         <audio ref={audioRef} src={objectUrl} preload="auto" className="hidden" />
       ) : null}
 
-      <div className="space-y-1.5">
+      <div className="w-full min-w-0 space-y-1.5">
         <div
           ref={waveformRef}
           className={cn(
-            "relative h-16 overflow-hidden rounded-xl bg-[#2b2b2b] touch-none",
+            "relative h-16 w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-[#2b2b2b] touch-none",
             !readOnly && "cursor-pointer",
           )}
           onPointerDown={handleWaveformPointerDown}
@@ -506,18 +506,18 @@ export function SpeechAudioPlayer({
           />
         </div>
 
-        <div className="flex justify-between px-0.5 text-[11px] tabular-nums text-white/40">
+        <div className="flex w-full min-w-0 justify-between px-0.5 text-[11px] tabular-nums text-white/40">
           <span>{formatSpeechDuration(Math.floor(trimMode ? trimStart : 0))}</span>
           <span>{formatSpeechDuration(Math.floor(durationSeconds))}</span>
         </div>
       </div>
 
-      <p className="text-center text-3xl font-light tabular-nums tracking-tight text-white">
+      <p className="text-center text-2xl font-light tabular-nums tracking-tight text-white sm:text-3xl">
         {formatSpeechTimePrecise(displayTime)}
       </p>
 
-      <div className="flex justify-center">
-        <div className="flex items-center gap-5 rounded-full bg-[#2b2b2b] px-5 py-2.5">
+      <div className="flex w-full min-w-0 justify-center">
+        <div className="flex max-w-full items-center gap-3 rounded-full bg-[#2b2b2b] px-3 py-2 sm:gap-5 sm:px-5 sm:py-2.5">
           <SkipButton
             direction="back"
             disabled={busy}
@@ -545,13 +545,13 @@ export function SpeechAudioPlayer({
       </div>
 
       {!readOnly ? (
-        <div className="flex items-center justify-between gap-3 pt-1">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 pt-1 sm:gap-3">
           <button
             type="button"
             onClick={handleEnterTrimMode}
             disabled={busy || trimMode}
             className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+              "shrink-0 rounded-full px-3 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 sm:text-sm",
               trimMode
                 ? "bg-white/10 text-white"
                 : "bg-white/8 text-white/80 hover:bg-white/12 hover:text-white",
@@ -560,14 +560,14 @@ export function SpeechAudioPlayer({
             Trim
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             {trimMode ? (
               <>
                 <button
                   type="button"
                   onClick={handleCancelTrim}
                   disabled={busy}
-                  className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/8 disabled:opacity-50"
+                  className="rounded-full border border-white/20 px-3 py-2 text-xs font-medium text-white/85 transition-colors hover:bg-white/8 disabled:opacity-50 sm:px-4 sm:text-sm"
                 >
                   Cancel
                 </button>
@@ -575,7 +575,7 @@ export function SpeechAudioPlayer({
                   type="button"
                   onClick={() => void handleApplyTrim()}
                   disabled={busy || !hasTrimChanges}
-                  className="rounded-full bg-[#ffd60a] px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-full bg-[#ffd60a] px-3 py-2 text-xs font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 sm:text-sm"
                 >
                   {busy ? "Trimming…" : "Apply"}
                 </button>
@@ -587,7 +587,7 @@ export function SpeechAudioPlayer({
                     type="button"
                     onClick={onDiscard}
                     disabled={busy}
-                    className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/8 disabled:opacity-50"
+                    className="rounded-full border border-white/20 px-3 py-2 text-xs font-medium text-white/85 transition-colors hover:bg-white/8 disabled:opacity-50 sm:px-4 sm:text-sm"
                   >
                     Discard
                   </button>
@@ -596,7 +596,7 @@ export function SpeechAudioPlayer({
                   type="button"
                   onClick={() => void handleSaveFull()}
                   disabled={busy}
-                  className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="rounded-full bg-white px-3 py-2 text-xs font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50 sm:px-4 sm:text-sm"
                 >
                   {busy ? "Saving…" : "Save"}
                 </button>
@@ -610,27 +610,32 @@ export function SpeechAudioPlayer({
 }
 
 function WaveformBars({ peaks }: { peaks: number[] }) {
-  if (peaks.length === 0) {
-    return (
-      <div className="flex h-full items-end gap-px px-2 py-3">
-        {Array.from({ length: 80 }).map((_, index) => (
-          <span
-            key={`empty-bar-${index}`}
-            className="w-[2px] flex-1 rounded-full bg-white/25"
-            style={{ height: `${20 + (index % 5) * 8}%` }}
-          />
-        ))}
-      </div>
-    );
-  }
+  const barCount = peaks.length > 0 ? peaks.length : 80;
 
   return (
-    <div className="flex h-full items-end gap-px px-2 py-3">
-      {peaks.map((peak, index) => (
+    <div
+      className="grid h-full w-full min-w-0 items-end gap-px px-2 py-3"
+      style={{
+        gridTemplateColumns: `repeat(${barCount}, minmax(0, 1fr))`,
+      }}
+    >
+      {(peaks.length > 0
+        ? peaks
+        : Array.from({ length: barCount }, (_, index) => 0.2 + (index % 5) * 0.08)
+      ).map((peak, index) => (
         <span
           key={`peak-${index}`}
-          className="w-[2px] flex-1 rounded-full bg-white/85"
-          style={{ height: `${Math.max(8, peak * 100)}%` }}
+          className={cn(
+            "min-w-0 rounded-full",
+            peaks.length > 0 ? "bg-white/85" : "bg-white/25",
+          )}
+          style={{
+            height: `${
+              peaks.length > 0
+                ? Math.max(8, peak * 100)
+                : 20 + (index % 5) * 8
+            }%`,
+          }}
         />
       ))}
     </div>

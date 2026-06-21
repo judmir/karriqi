@@ -672,7 +672,7 @@ function EventFormDialogBody({
 
   const isPage = layout === "page";
   const shellClassName = cn(
-    "grid w-full overflow-x-hidden border-white/10 bg-[#1f1f1f] p-0 text-white",
+    "grid w-full min-w-0 max-w-full overflow-x-hidden border-white/10 bg-[#1f1f1f] p-0 text-white",
     isPage
       ? "min-h-0 flex-1 overflow-y-auto md:grid-cols-[minmax(0,1fr)_15rem] md:items-stretch"
       : "max-h-[min(90vh,42rem)] min-h-[32rem] overflow-hidden shadow-2xl sm:max-w-[48rem] md:grid-cols-[minmax(0,1fr)_15rem] md:items-stretch",
@@ -690,7 +690,7 @@ function EventFormDialogBody({
 
   const formBody = (
     <>
-      <section className="order-2 flex min-h-0 flex-col px-5 py-5 md:order-1 md:px-6">
+      <section className="order-2 flex min-h-0 min-w-0 w-full max-w-full flex-col overflow-x-hidden px-4 py-5 sm:px-5 md:order-1 md:px-6">
         <div className="mb-4 flex shrink-0 items-center justify-between">
           <button
             type="button"
@@ -741,7 +741,7 @@ function EventFormDialogBody({
               isCompleted ? "Mark task incomplete" : "Mark task complete"
             }
           />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
             <div className="flex shrink-0 items-center gap-2">
               <input
                 id="event-title"
@@ -821,7 +821,7 @@ function EventFormDialogBody({
         ) : null}
       </section>
 
-      <aside className="order-1 flex shrink-0 flex-col gap-1 border-b border-white/8 bg-[#161616] px-3 py-4 md:order-2 md:border-b-0 md:border-l md:border-l-white/8">
+      <aside className="order-1 flex min-w-0 w-full max-w-full shrink-0 flex-col gap-1 overflow-x-hidden border-b border-white/8 bg-[#161616] px-3 py-4 md:order-2 md:border-b-0 md:border-l md:border-l-white/8">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1 space-y-1">
             <DateField

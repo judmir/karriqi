@@ -355,7 +355,7 @@ export function RehabSpeechRecordingSection({
 
   return (
     <>
-      <div className="mt-3 shrink-0 space-y-3">
+      <div className="mt-3 w-full min-w-0 max-w-full shrink-0 space-y-3 overflow-x-hidden">
         {hasRecordings && !readOnly && status === "idle" && !recordAnother ? (
           <div className="flex justify-end">
             <button
@@ -370,7 +370,7 @@ export function RehabSpeechRecordingSection({
         ) : null}
 
         {pendingReview ? (
-          <div className="space-y-3">
+          <div className="w-full min-w-0 space-y-3">
             <SpeechRecordingNoteField
               value={pendingNote}
               onChange={setPendingNote}
@@ -430,7 +430,7 @@ export function RehabSpeechRecordingSection({
             {recordings.map((item) => (
               <li
                 key={item.id}
-                className="rounded-lg border border-white/10 bg-white/5 p-2.5"
+                className="min-w-0 overflow-hidden rounded-lg border border-white/10 bg-white/5 p-2.5"
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="min-w-0">

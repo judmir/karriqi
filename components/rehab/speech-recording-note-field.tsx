@@ -22,7 +22,7 @@ export function SpeechRecordingNoteField({
   }
 
   return (
-    <div className={cn("space-y-1", className)}>
+    <div className={cn("min-w-0 w-full space-y-1", className)}>
       <label className="text-xs font-medium text-white/50">
         Note <span className="font-normal text-white/35">(optional)</span>
       </label>
