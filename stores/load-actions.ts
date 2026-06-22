@@ -26,6 +26,7 @@ import type { CalendarEvent } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
 import type { RehabPlanListItem } from "@/types/rehab";
 import type { RehabClinicalItem } from "@/types/rehab";
+import type { StoicRehabCompletion } from "@/types/stoic-rehab";
 import type { RuleOf3Day } from "@/types/rule-of-3";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 import type {
@@ -320,6 +321,31 @@ export async function loadRehabClinicalStoreAction(): Promise<RehabClinicalStore
   );
   const items = await fetchRehabClinicalForUser(user.id);
   return { ok: true, items, persistence: true };
+}
+
+export type StoicRehabStorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      completions: StoicRehabCompletion[];
+      persistence: boolean;
+    };
+
+export async function loadStoicRehabStoreAction(): Promise<StoicRehabStorePayload> {
+  if (!isSupabaseConfigured()) {
+    return { ok: true, completions: [], persistence: false };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const { fetchStoicRehabCompletionsForUser } = await import(
+    "@/lib/rehab/fetch-stoic-rehab"
+  );
+  const completions = await fetchStoicRehabCompletionsForUser(user.id);
+  return { ok: true, completions, persistence: true };
 }
 
 export type ShoppingStorePayload =

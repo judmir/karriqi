@@ -2,6 +2,7 @@ import { useCalendarStore } from "@/stores/calendar-store";
 import { useNotesStore } from "@/stores/notes-store";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { useRuleOf3Store } from "@/stores/rule-of-3-store";
+import { useStoicRehabStore } from "@/stores/stoic-rehab-store";
 import { useShoppingStore } from "@/stores/shopping-store";
 import { useTodoStore } from "@/stores/todo-store";
 
@@ -13,6 +14,7 @@ export function resetAllStores(): void {
   useNotesStore.getState().reset();
   useRehabPlanStore.getState().reset();
   useRuleOf3Store.getState().reset();
+  useStoicRehabStore.getState().reset();
 }
 
 export {
@@ -29,5 +31,9 @@ export {
 } from "@/stores/shopping-store";
 export { useTodoStore, selectKanbanReady } from "@/stores/todo-store";
 export { useRuleOf3Store, selectRuleOf3Ready } from "@/stores/rule-of-3-store";
+export {
+  useStoicRehabStore,
+  selectStoicRehabReady,
+} from "@/stores/stoic-rehab-store";
 export { STORE_STALE_MS } from "@/stores/store-utils";
 export { useNotesStore } from "@/stores/notes-store";

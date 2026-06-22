@@ -1,6 +1,7 @@
 export const ROUTES = {
   home: "/",
   rehabClinical: "/rehab/clinical",
+  rehabStoicPath: "/rehab/stoic-path",
   rehabPlanList: "/rehab/plan-list",
   rehabToday: "/rehab/today",
   rehabPlan: "/rehab/plan",

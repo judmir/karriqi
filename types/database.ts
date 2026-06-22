@@ -752,6 +752,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      rehab_stoic_completions: {
+        Row: {
+          id: string;
+          user_id: string;
+          exercise_id: string;
+          completed_at: string;
+          journal_text: string | null;
+          process_score: number | null;
+          adapted: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          exercise_id: string;
+          completed_at?: string;
+          journal_text?: string | null;
+          process_score?: number | null;
+          adapted?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          exercise_id?: string;
+          completed_at?: string;
+          journal_text?: string | null;
+          process_score?: number | null;
+          adapted?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       rehab_journal_entries: {
         Row: {
           id: string;

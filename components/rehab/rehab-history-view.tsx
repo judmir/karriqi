@@ -8,6 +8,7 @@ import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
 import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import { RehabMarkdown } from "@/components/rehab/rehab-markdown";
+import { RehabStoicPathDialog } from "@/components/rehab/rehab-stoic-path-dialog";
 import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -27,9 +28,15 @@ import {
   isStoicEvent,
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
+import {
+  injectStoicPathEventsForRange,
+  isStoicPathPlanEvent,
+  parseStoicPathExerciseId,
+} from "@/lib/rehab/stoic-rehab-utils";
 import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
+import { useStoicRehabStore } from "@/stores/stoic-rehab-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
 
@@ -38,6 +45,11 @@ export function RehabHistoryView() {
   const persistence = useRehabPlanStore((state) => state.persistence);
   const toggleOccurrenceCompleted = useRehabPlanStore(
     (state) => state.toggleOccurrenceCompleted,
+  );
+  const stoicCompletions = useStoicRehabStore((state) => state.completions);
+  const saveStoicCompletion = useStoicRehabStore((state) => state.saveCompletion);
+  const clearStoicCompletion = useStoicRehabStore(
+    (state) => state.clearCompletion,
   );
 
   const [visibleDays, setVisibleDays] = useState(HISTORY_INITIAL_DAYS);
@@ -49,6 +61,10 @@ export function RehabHistoryView() {
   const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
   const [stoicOpen, setStoicOpen] = useState(false);
   const [stoicEvent, setStoicEvent] = useState<RehabPlanEvent | null>(null);
+  const [stoicPathOpen, setStoicPathOpen] = useState(false);
+  const [stoicPathEvent, setStoicPathEvent] = useState<RehabPlanEvent | null>(
+    null,
+  );
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
 
@@ -67,10 +83,15 @@ export function RehabHistoryView() {
       ? programStart
       : startOfDay(oldestDay);
 
-    return expandRehabEvents(allEvents, windowStart, windowEnd, {
-      overdueLookbackDays: visibleDays + 30,
-    });
-  }, [allEvents, visibleDays]);
+    return injectStoicPathEventsForRange(
+      expandRehabEvents(allEvents, windowStart, windowEnd, {
+        overdueLookbackDays: visibleDays + 30,
+      }),
+      windowStart,
+      windowEnd,
+      stoicCompletions,
+    );
+  }, [allEvents, visibleDays, stoicCompletions]);
 
   const sections = useMemo(
     () => buildHistoryDaySections(expandedEvents, new Date(), visibleDays),
@@ -98,6 +119,10 @@ export function RehabHistoryView() {
           setStoicEvent(next);
           setStoicOpen(true);
         },
+        openStoicPathModal: (next) => {
+          setStoicPathEvent(next);
+          setStoicPathOpen(true);
+        },
       });
     },
     [openRehabEventEdit],
@@ -107,6 +132,15 @@ export function RehabHistoryView() {
     event: RehabPlanEvent,
     completed: boolean,
   ) {
+    if (isStoicPathPlanEvent(event)) {
+      const exerciseId = parseStoicPathExerciseId(event.id);
+      if (completed) {
+        await saveStoicCompletion({ exerciseId });
+        return;
+      }
+      await clearStoicCompletion(exerciseId);
+      return;
+    }
     await toggleOccurrenceCompleted(event, completed);
   }
 
@@ -205,6 +239,19 @@ export function RehabHistoryView() {
         open={stoicOpen && stoicEvent !== null}
         onOpenChange={setStoicOpen}
         event={stoicEvent}
+      />
+
+      <RehabStoicPathDialog
+        open={stoicPathOpen}
+        onOpenChange={setStoicPathOpen}
+        date={
+          stoicPathEvent ? new Date(stoicPathEvent.startAt) : new Date()
+        }
+        exerciseId={
+          stoicPathEvent
+            ? parseStoicPathExerciseId(stoicPathEvent.id)
+            : undefined
+        }
       />
     </div>
   );

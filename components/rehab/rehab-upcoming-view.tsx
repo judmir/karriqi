@@ -22,6 +22,7 @@ import { RehabInlineAddTask } from "@/components/rehab/rehab-inline-add-task";
 import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
 import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
+import { RehabStoicPathDialog } from "@/components/rehab/rehab-stoic-path-dialog";
 import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
 import {
   RehabUpcomingViewSwitcher,
@@ -61,9 +62,15 @@ import {
 import { rehabEventTimeLabel } from "@/lib/rehab/rehab-today-utils";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import { isStoicDialogEvent } from "@/lib/rehab/stoic-response";
+import {
+  injectStoicPathEventsForRange,
+  isStoicPathPlanEvent,
+  parseStoicPathExerciseId,
+} from "@/lib/rehab/stoic-rehab-utils";
 import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
+import { useStoicRehabStore } from "@/stores/stoic-rehab-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
 
@@ -82,6 +89,11 @@ export function RehabUpcomingView() {
   );
   const updateEvent = useRehabPlanStore((state) => state.updateEvent);
   const deleteOccurrence = useRehabPlanStore((state) => state.deleteOccurrence);
+  const stoicCompletions = useStoicRehabStore((state) => state.completions);
+  const saveStoicCompletion = useStoicRehabStore((state) => state.saveCompletion);
+  const clearStoicCompletion = useStoicRehabStore(
+    (state) => state.clearCompletion,
+  );
 
   const [view, setView] = useState<RehabUpcomingViewMode>(() =>
     initialViewMode(searchParams),
@@ -98,6 +110,10 @@ export function RehabUpcomingView() {
   const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
   const [stoicOpen, setStoicOpen] = useState(false);
   const [stoicEvent, setStoicEvent] = useState<RehabPlanEvent | null>(null);
+  const [stoicPathOpen, setStoicPathOpen] = useState(false);
+  const [stoicPathEvent, setStoicPathEvent] = useState<RehabPlanEvent | null>(
+    null,
+  );
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [expandedPastDays, setExpandedPastDays] = useState<Set<string>>(
@@ -118,8 +134,14 @@ export function RehabUpcomingView() {
     const windowEnd = endOfDay(
       addDays(startOfDay(now), maxUpcomingDaysFrom(now, allEvents)),
     );
-    return expandRehabEvents(allEvents, windowStart, windowEnd);
-  }, [allEvents]);
+    const expanded = expandRehabEvents(allEvents, windowStart, windowEnd);
+    return injectStoicPathEventsForRange(
+      expanded,
+      windowStart,
+      windowEnd,
+      stoicCompletions,
+    );
+  }, [allEvents, stoicCompletions]);
 
   const sections = useMemo(
     () => buildUpcomingListSections(expandedEvents, new Date(), visibleDays),
@@ -202,6 +224,10 @@ export function RehabUpcomingView() {
           setStoicEvent(next);
           setStoicOpen(true);
         },
+        openStoicPathModal: (next) => {
+          setStoicPathEvent(next);
+          setStoicPathOpen(true);
+        },
       });
     },
     [openRehabEventEdit],
@@ -224,6 +250,15 @@ export function RehabUpcomingView() {
     event: RehabPlanEvent,
     completed: boolean,
   ) {
+    if (isStoicPathPlanEvent(event)) {
+      const exerciseId = parseStoicPathExerciseId(event.id);
+      if (completed) {
+        await saveStoicCompletion({ exerciseId });
+        return;
+      }
+      await clearStoicCompletion(exerciseId);
+      return;
+    }
     await toggleOccurrenceCompleted(event, completed);
   }
 
@@ -251,6 +286,9 @@ export function RehabUpcomingView() {
   }
 
   function requestDelete(event: RehabPlanEvent) {
+    if (isStoicPathPlanEvent(event)) {
+      return;
+    }
     setEventToDelete(event);
   }
 
@@ -419,6 +457,19 @@ export function RehabUpcomingView() {
         open={stoicOpen && stoicEvent !== null}
         onOpenChange={setStoicOpen}
         event={stoicEvent}
+      />
+
+      <RehabStoicPathDialog
+        open={stoicPathOpen}
+        onOpenChange={setStoicPathOpen}
+        date={
+          stoicPathEvent ? new Date(stoicPathEvent.startAt) : new Date()
+        }
+        exerciseId={
+          stoicPathEvent
+            ? parseStoicPathExerciseId(stoicPathEvent.id)
+            : undefined
+        }
       />
 
       <AlertDialog

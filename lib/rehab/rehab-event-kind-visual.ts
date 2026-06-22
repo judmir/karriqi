@@ -32,6 +32,9 @@ export const CALENDAR_COLOR_HEX: Record<CalendarEventColor, string> = {
   red: "#d50000",
 };
 
+/** Icon accent for the Stoicism layer (distinct from meditation purple). */
+export const STOICISM_COLOR_HEX = "#A68B5B";
+
 export function hexToRgba(hex: string, alpha: number): string {
   const normalized = hex.replace("#", "");
   const value =
@@ -154,6 +157,16 @@ export type RehabEventKindVisual = {
   hex: string;
 };
 
+function rehabEventKindIconHex(
+  kind: RehabEventKind,
+  eventColor: CalendarEventColor,
+): string {
+  if (kind === "stoic") {
+    return STOICISM_COLOR_HEX;
+  }
+  return CALENDAR_COLOR_HEX[eventColor] ?? CALENDAR_COLOR_HEX.blue;
+}
+
 export function rehabEventKindVisual(
   event: CalendarEvent,
 ): RehabEventKindVisual | null {
@@ -161,7 +174,7 @@ export function rehabEventKindVisual(
   if (!kind) {
     return null;
   }
-  const hex = CALENDAR_COLOR_HEX[event.color] ?? CALENDAR_COLOR_HEX.blue;
+  const hex = rehabEventKindIconHex(kind, event.color);
   return {
     kind,
     icon: KIND_ICON[kind],
@@ -237,6 +250,6 @@ export function rehabEventKindPickerVisual(
     icon: KIND_ICON[kind],
     label: KIND_LABEL[kind],
     defaultColor,
-    hex: CALENDAR_COLOR_HEX[defaultColor],
+    hex: rehabEventKindIconHex(kind, defaultColor),
   };
 }

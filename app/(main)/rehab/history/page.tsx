@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { RehabHistoryView } from "@/components/rehab/rehab-history-view";
 import { RehabPlanStoreGate } from "@/components/rehab/rehab-plan-store-gate";
+import { RehabStoicPathStoreGate } from "@/components/rehab/rehab-stoic-path-store-gate";
 import { ROUTES } from "@/config/routes";
 import { ensureNeuroRehabProgramReady } from "@/lib/rehab/ensure-neuro-rehab-program";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -22,7 +23,9 @@ export default async function RehabHistoryPage() {
   return (
     <Suspense fallback={null}>
       <RehabPlanStoreGate>
-        <RehabHistoryView />
+        <RehabStoicPathStoreGate>
+          <RehabHistoryView />
+        </RehabStoicPathStoreGate>
       </RehabPlanStoreGate>
     </Suspense>
   );

@@ -16,10 +16,7 @@ import {
   isRetestWeek,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
 import {
-  STOIC_BLOCKS,
-  STOIC_INTENTION_TITLE,
   STOIC_WEEKLY_REVIEW_TITLE,
-  buildStoicDailyDescription,
   buildStoicWeeklyDescription,
 } from "@/modules/rehab/neuro-rehab-2026/stoic-content";
 import { buildDay0EventDescription } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
@@ -152,33 +149,11 @@ function recurringMaster(
 }
 
 /**
- * Stoicism layer: a daily morning intention (one recurring master per 2-week
- * block so the theme evolves) plus a weekly Sunday Stoic review. Delivered as
- * recurring series rather than ~90 standalone rows.
+ * Stoicism layer: weekly Sunday review in the calendar. Daily 84-day Stoic Path
+ * tasks are injected on Rehab Today from stoic-rehab content + completions store.
  */
 function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
   const events: RehabPlanEventInsert[] = [];
-
-  for (const block of STOIC_BLOCKS) {
-    const startOffset = (block.startWeek - 1) * 7;
-    const blockStart = addDays(PROGRAM_START, startOffset);
-    const blockEnd = addDays(blockStart, 13); // inclusive 14-day block
-    events.push(
-      recurringMaster(
-        userId,
-        blockStart,
-        block.startWeek,
-        6,
-        0,
-        5,
-        STOIC_INTENTION_TITLE,
-        buildStoicDailyDescription(block),
-        "stoic",
-        "purple",
-        { freq: "daily", interval: 1, until: toDateOnly(blockEnd) },
-      ),
-    );
-  }
 
   // Weekly Sunday Stoic review, starting the first Sunday of the program.
   const firstSundayOffset = (7 - PROGRAM_START.getDay()) % 7;

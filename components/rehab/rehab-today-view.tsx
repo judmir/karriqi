@@ -14,6 +14,7 @@ import { RehabEventKindIcon } from "@/components/rehab/rehab-event-kind-icon";
 import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import { RehabMarkdown } from "@/components/rehab/rehab-markdown";
+import { RehabStoicPathDialog } from "@/components/rehab/rehab-stoic-path-dialog";
 import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,11 +37,19 @@ import {
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import {
   getStoicResponseData,
+  isStoicDialogEvent,
   isStoicEvent,
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
+import {
+  isStoicPathPlanEvent,
+  mergeStoicPathIntoTodayEvents,
+  parseStoicPathExerciseId,
+  summarizeStoicPathCompletion,
+} from "@/lib/rehab/stoic-rehab-utils";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
+import { useStoicRehabStore } from "@/stores/stoic-rehab-store";
 import { cn } from "@/lib/utils";
 import type { RehabPlanEvent } from "@/types/rehab";
 
@@ -61,6 +70,11 @@ export function RehabTodayView() {
   const toggleOccurrenceCompleted = useRehabPlanStore(
     (state) => state.toggleOccurrenceCompleted,
   );
+  const stoicCompletions = useStoicRehabStore((state) => state.completions);
+  const saveStoicCompletion = useStoicRehabStore((state) => state.saveCompletion);
+  const clearStoicCompletion = useStoicRehabStore(
+    (state) => state.clearCompletion,
+  );
 
   const events = useMemo(() => {
     const expanded = expandRehabEvents(
@@ -68,8 +82,9 @@ export function RehabTodayView() {
       startOfDay(today),
       endOfDay(today),
     );
-    return filterRehabEventsForDay(expanded, today);
-  }, [allEvents, today]);
+    const filtered = filterRehabEventsForDay(expanded, today);
+    return mergeStoicPathIntoTodayEvents(filtered, today, stoicCompletions);
+  }, [allEvents, today, stoicCompletions]);
   const [collapsed, setCollapsed] = useState<
     Record<RehabTodaySection, boolean>
   >({
@@ -87,6 +102,10 @@ export function RehabTodayView() {
   const [journalEvent, setJournalEvent] = useState<RehabPlanEvent | null>(null);
   const [stoicOpen, setStoicOpen] = useState(false);
   const [stoicEvent, setStoicEvent] = useState<RehabPlanEvent | null>(null);
+  const [stoicPathOpen, setStoicPathOpen] = useState(false);
+  const [stoicPathExerciseId, setStoicPathExerciseId] = useState<string | null>(
+    null,
+  );
   const [draftStart, setDraftStart] = useState(() => new Date());
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
@@ -185,6 +204,10 @@ export function RehabTodayView() {
           setStoicEvent(next);
           setStoicOpen(true);
         },
+        openStoicPathModal: (next) => {
+          setStoicPathExerciseId(parseStoicPathExerciseId(next.id));
+          setStoicPathOpen(true);
+        },
       });
     },
     [openRehabEventEdit],
@@ -207,6 +230,15 @@ export function RehabTodayView() {
     event: RehabPlanEvent,
     completed: boolean,
   ) {
+    if (isStoicPathPlanEvent(event)) {
+      const exerciseId = parseStoicPathExerciseId(event.id);
+      if (completed) {
+        await saveStoicCompletion({ exerciseId });
+        return;
+      }
+      await clearStoicCompletion(exerciseId);
+      return;
+    }
     await toggleOccurrenceCompleted(event, completed);
   }
 
@@ -311,6 +343,13 @@ export function RehabTodayView() {
         open={stoicOpen && stoicEvent !== null}
         onOpenChange={setStoicOpen}
         event={stoicEvent}
+      />
+
+      <RehabStoicPathDialog
+        open={stoicPathOpen}
+        onOpenChange={setStoicPathOpen}
+        date={today}
+        exerciseId={stoicPathExerciseId ?? undefined}
       />
     </div>
   );
@@ -443,9 +482,19 @@ function RehabTodayItemRow({
   const myNotes = parseEventDescription(event.description).myNotes.trim();
   const hasDescription = Boolean(descriptionText);
   const hasDetails = hasDescription || Boolean(myNotes);
-  const stoicResponse = isStoicEvent(event)
-    ? summarizeStoicResponse(getStoicResponseData(event.description))
-    : "";
+  const stoicPathExerciseId = isStoicPathPlanEvent(event)
+    ? parseStoicPathExerciseId(event.id)
+    : null;
+  const stoicPathCompletion = useStoicRehabStore((state) =>
+    stoicPathExerciseId
+      ? state.getCompletionForExercise(stoicPathExerciseId)
+      : null,
+  );
+  const stoicResponse =
+    isStoicEvent(event) && isStoicDialogEvent(event)
+      ? summarizeStoicResponse(getStoicResponseData(event.description))
+      : "";
+  const stoicPathSummary = summarizeStoicPathCompletion(stoicPathCompletion);
 
   return (
     <div
@@ -487,6 +536,18 @@ function RehabTodayItemRow({
               className="text-muted-foreground hover:text-foreground mt-1 text-xs"
             >
               {expanded ? "Hide details" : "Show details"}
+            </button>
+          ) : null}
+          {stoicPathSummary ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="mt-1 flex w-full items-start gap-1.5 text-left"
+            >
+              <span className="text-muted-foreground/80 mt-px text-xs">↳</span>
+              <span className="text-muted-foreground line-clamp-2 text-xs leading-snug">
+                {stoicPathSummary}
+              </span>
             </button>
           ) : null}
           {stoicResponse ? (

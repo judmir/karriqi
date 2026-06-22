@@ -144,8 +144,8 @@ describe("generateNeuroRehabProgramEvents", () => {
 
   it("delivers Stoicism as recurring masters, not one row per day", () => {
     const stoic = events.filter((e) => e.event_kind === "stoic");
-    // 6 daily block masters (one per 2-week theme) + 1 weekly Sunday review.
-    expect(stoic.length).toBe(7);
+    // Daily Stoic Path is injected on Today; program seed keeps weekly review only.
+    expect(stoic.length).toBe(1);
 
     // Every stoic row is a recurring master: own id === series_id, has a rule,
     // and is not a per-occurrence override.
@@ -160,12 +160,7 @@ describe("generateNeuroRehabProgramEvents", () => {
     const dailyMasters = stoic.filter(
       (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "daily",
     );
-    expect(dailyMasters.length).toBe(6);
-    for (const event of dailyMasters) {
-      const start = new Date(event.start_at);
-      expect(start.getHours()).toBe(6);
-      expect(start.getMinutes()).toBe(0);
-    }
+    expect(dailyMasters.length).toBe(0);
 
     const weeklyMasters = stoic.filter(
       (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "weekly",

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
 import { RehabPlanStoreGate } from "@/components/rehab/rehab-plan-store-gate";
+import { RehabStoicPathStoreGate } from "@/components/rehab/rehab-stoic-path-store-gate";
 import { RehabUpcomingView } from "@/components/rehab/rehab-upcoming-view";
 import { ROUTES } from "@/config/routes";
 import { ensureNeuroRehabProgramReady } from "@/lib/rehab/ensure-neuro-rehab-program";
@@ -22,7 +23,9 @@ export default async function RehabUpcomingPage() {
   return (
     <Suspense fallback={null}>
       <RehabPlanStoreGate>
-        <RehabUpcomingView />
+        <RehabStoicPathStoreGate>
+          <RehabUpcomingView />
+        </RehabStoicPathStoreGate>
       </RehabPlanStoreGate>
     </Suspense>
   );
