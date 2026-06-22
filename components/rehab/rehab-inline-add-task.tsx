@@ -30,6 +30,7 @@ import { rehabEventKindDefaultColor, rehabEventKindPickerVisual } from "@/lib/re
 import { cn } from "@/lib/utils";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import type { CalendarEventColor } from "@/types/calendar";
+import { MOBILITY_DESCRIPTION } from "@/modules/rehab/neuro-rehab-2026/mobility-routine";
 import type { RehabEventKind } from "@/types/rehab";
 
 function dateButtonLabel(date: Date): string {
@@ -207,6 +208,11 @@ export function RehabInlineAddTask({
     const nextLabel = rehabEventKindPickerVisual(kind).label;
     if (!title.trim() || title.trim() === previousLabel) {
       setTitle(kind === "custom" ? "" : nextLabel);
+    }
+    if (kind === "mobility") {
+      setDescription(MOBILITY_DESCRIPTION);
+    } else if (eventKind === "mobility" && description === MOBILITY_DESCRIPTION) {
+      setDescription("");
     }
   }
 

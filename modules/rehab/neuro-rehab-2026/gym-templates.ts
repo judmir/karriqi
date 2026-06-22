@@ -2,6 +2,7 @@ import {
   serializeEventDescription,
   type EventSubtask,
 } from "@/lib/calendar/event-subtasks";
+import { appendMobilitySubtasks } from "@/modules/rehab/neuro-rehab-2026/mobility-routine";
 
 function gifReferenceUrl(query: string): string {
   return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(
@@ -32,7 +33,12 @@ function gymDescription(
   note: string,
   subtasks: EventSubtask[],
 ): string {
-  return serializeEventDescription(`## ${title}\n\n${note}`, subtasks) ?? "";
+  return (
+    serializeEventDescription(
+      `## ${title}\n\n${note}`,
+      appendMobilitySubtasks(subtasks),
+    ) ?? ""
+  );
 }
 
 export const GYM_A_DESCRIPTION = gymDescription(

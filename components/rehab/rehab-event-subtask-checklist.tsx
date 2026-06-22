@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import { useMemo } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -98,6 +99,18 @@ export function RehabEventSubtaskChecklist({
                 >
                   {subtask.label}
                 </span>
+                {subtask.referenceUrl ? (
+                  <a
+                    href={subtask.referenceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                    aria-label={`Open reference for ${subtask.label}`}
+                  >
+                    {subtask.referenceLabel ?? "Link"}
+                    <ExternalLink className="size-3" aria-hidden />
+                  </a>
+                ) : null}
               </li>
             ))}
           </ul>

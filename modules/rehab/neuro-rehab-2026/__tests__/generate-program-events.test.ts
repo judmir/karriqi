@@ -68,6 +68,18 @@ describe("generateNeuroRehabProgramEvents", () => {
     );
   });
 
+  it("schedules standalone mobility on non-gym days with YouTube links", () => {
+    const mobility = events.filter((e) => e.event_kind === "mobility");
+    expect(mobility.length).toBeGreaterThan(50);
+    expect(mobility.every((e) => new Date(e.start_at).getDay() !== 3)).toBe(true);
+    expect(mobility.every((e) => new Date(e.start_at).getDay() !== 5)).toBe(true);
+    expect(mobility.every((e) => new Date(e.start_at).getDay() !== 6)).toBe(true);
+
+    const parsed = parseEventDescription(mobility[0]?.description);
+    expect(parsed.subtasks).toHaveLength(5);
+    expect(parsed.subtasks[0]?.referenceLabel).toBe("Link");
+  });
+
   it("stores gym exercises as checklist subtasks with reference links", () => {
     const gymA = events.find((e) => e.event_kind === "gym_a");
     expect(gymA?.description).toBeTruthy();

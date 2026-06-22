@@ -113,7 +113,7 @@ values (
   'fbf3f6b3-2aff-4a72-9c1d-22cda9cdf398',
   'Savina'
 )
-on conflict (owner_user_id, member_user_id) do nothing;
+on conflict (owner_user_id, member_user_id) where deleted_at is null do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Kanban / todo board
@@ -299,7 +299,7 @@ values
     'Bukë',
     4
   )
-on conflict do nothing;
+on conflict (id) do nothing;
 
 insert into public.shopping_list_items (
   id,

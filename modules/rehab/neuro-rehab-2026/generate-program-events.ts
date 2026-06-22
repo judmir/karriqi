@@ -31,6 +31,7 @@ import {
   WEEKLY_REVIEW_DESCRIPTION,
   footballDescriptionForWeek,
 } from "@/modules/rehab/neuro-rehab-2026/gym-templates";
+import { MOBILITY_DESCRIPTION } from "@/modules/rehab/neuro-rehab-2026/mobility-routine";
 import { runWalkPlanForWeek } from "@/modules/rehab/neuro-rehab-2026/run-walk-progression";
 import { RUN_EVENT_TITLE, weekdayTemplate } from "@/modules/rehab/neuro-rehab-2026/weekly-template";
 import type { CalendarEventColor } from "@/types/calendar";
@@ -331,6 +332,37 @@ function mainSessionForDay(
   return events;
 }
 
+
+function isGymDay(dayOfWeek: number): boolean {
+  return dayOfWeek === 3 || dayOfWeek === 5 || dayOfWeek === 6;
+}
+
+function mobilitySessionForDay(
+  userId: string,
+  day: Date,
+  week: number,
+  dayOfWeek: number,
+): RehabPlanEventInsert[] {
+  if (isGymDay(dayOfWeek)) {
+    return [];
+  }
+
+  return [
+    timed(
+      userId,
+      day,
+      week,
+      10,
+      0,
+      15,
+      "Daily mobility",
+      MOBILITY_DESCRIPTION,
+      "mobility",
+      "green",
+    ),
+  ];
+}
+
 function dailyNonNegotiables(
   userId: string,
   day: Date,
@@ -451,6 +483,7 @@ export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventI
 
     events.push(...dailyNonNegotiables(userId, day, week, isFirstDay));
     events.push(...mainSessionForDay(userId, day, week, dayOfWeek, isRetest));
+    events.push(...mobilitySessionForDay(userId, day, week, dayOfWeek));
 
     // Workout-day creatine reminder (Wed, Fri, Sat gym)
     if ([3, 5, 6].includes(dayOfWeek)) {

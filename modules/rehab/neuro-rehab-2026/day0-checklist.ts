@@ -3,6 +3,7 @@ import {
   serializeEventDescription,
   type EventSubtask,
 } from "@/lib/calendar/event-subtasks";
+import { MOBILITY_SUBTASKS } from "@/modules/rehab/neuro-rehab-2026/mobility-routine";
 import type { RehabEventKind, RehabPlanEvent } from "@/types/rehab";
 
 export const DAY0_DESCRIPTION = `## Day 0 checklist
@@ -111,6 +112,14 @@ export function resolveEventSubtasks(
     return {
       description: parsed.description.trim() || DAY0_DESCRIPTION,
       subtasks: defaultDay0Subtasks(),
+      myNotes: parsed.myNotes,
+    };
+  }
+
+  if (event.eventKind === "mobility" && parsed.subtasks.length === 0) {
+    return {
+      description: parsed.description,
+      subtasks: MOBILITY_SUBTASKS.map((item) => ({ ...item, done: false })),
       myNotes: parsed.myNotes,
     };
   }

@@ -17,6 +17,7 @@ export const REHAB_EVENT_KINDS = [
   "retest",
   "day0",
   "recovery",
+  "mobility",
   "stoic",
   "custom",
   "push_up",
