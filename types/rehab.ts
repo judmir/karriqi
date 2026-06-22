@@ -19,6 +19,9 @@ export const REHAB_EVENT_KINDS = [
   "recovery",
   "stoic",
   "custom",
+  "push_up",
+  "squat",
+  "crunch",
 ] as const;
 
 export type RehabEventKind = (typeof REHAB_EVENT_KINDS)[number];

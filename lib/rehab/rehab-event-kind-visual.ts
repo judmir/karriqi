@@ -1,9 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  ArrowDownToLine,
+  BicepsFlexed,
   ClipboardList,
   Compass,
   Dumbbell,
+  FoldVertical,
   Footprints,
   Hand,
   Leaf,
@@ -128,6 +131,9 @@ const KIND_ICON: Record<RehabEventKind, LucideIcon> = {
   recovery: Leaf,
   stoic: Compass,
   custom: Activity,
+  push_up: BicepsFlexed,
+  squat: ArrowDownToLine,
+  crunch: FoldVertical,
 };
 
 const KIND_LABEL: Record<RehabEventKind, string> = {
@@ -148,6 +154,9 @@ const KIND_LABEL: Record<RehabEventKind, string> = {
   recovery: "Recovery",
   stoic: "Stoicism",
   custom: "Task",
+  push_up: "Push up",
+  squat: "Squat",
+  crunch: "Crunch",
 };
 
 export type RehabEventKindVisual = {
@@ -196,6 +205,9 @@ export const REHAB_EVENT_KIND_PICKER_OPTIONS: RehabEventKind[] = [
   "stoic",
   "recovery",
   "custom",
+  "push_up",
+  "squat",
+  "crunch",
 ];
 
 const KIND_DEFAULT_COLOR: Record<RehabEventKind, CalendarEventColor> = {
@@ -216,6 +228,9 @@ const KIND_DEFAULT_COLOR: Record<RehabEventKind, CalendarEventColor> = {
   recovery: "green",
   stoic: "purple",
   custom: "blue",
+  push_up: "orange",
+  squat: "blue",
+  crunch: "red",
 };
 
 export function rehabEventKindPickerOptions(
