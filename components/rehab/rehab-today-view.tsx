@@ -41,10 +41,11 @@ import {
   isStoicEvent,
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
+import { setStoicPathExerciseCompleted } from "@/lib/rehab/stoic-path-completion";
 import {
+  getStoicPathExerciseId,
   isStoicPathPlanEvent,
   mergeStoicPathIntoTodayEvents,
-  parseStoicPathExerciseId,
   summarizeStoicPathCompletion,
 } from "@/lib/rehab/stoic-rehab-utils";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
@@ -74,6 +75,9 @@ export function RehabTodayView() {
   const saveStoicCompletion = useStoicRehabStore((state) => state.saveCompletion);
   const clearStoicCompletion = useStoicRehabStore(
     (state) => state.clearCompletion,
+  );
+  const toggleOccurrenceCompletedForStoic = useRehabPlanStore(
+    (state) => state.toggleOccurrenceCompleted,
   );
 
   const events = useMemo(() => {
@@ -205,7 +209,7 @@ export function RehabTodayView() {
           setStoicOpen(true);
         },
         openStoicPathModal: (next) => {
-          setStoicPathExerciseId(parseStoicPathExerciseId(next.id));
+          setStoicPathExerciseId(getStoicPathExerciseId(next));
           setStoicPathOpen(true);
         },
       });
@@ -231,12 +235,12 @@ export function RehabTodayView() {
     completed: boolean,
   ) {
     if (isStoicPathPlanEvent(event)) {
-      const exerciseId = parseStoicPathExerciseId(event.id);
-      if (completed) {
-        await saveStoicCompletion({ exerciseId });
-        return;
-      }
-      await clearStoicCompletion(exerciseId);
+      await setStoicPathExerciseCompleted(event, completed, {
+        saveCompletion: saveStoicCompletion,
+        clearCompletion: clearStoicCompletion,
+      }, {
+        toggleOccurrenceCompleted: toggleOccurrenceCompletedForStoic,
+      });
       return;
     }
     await toggleOccurrenceCompleted(event, completed);
@@ -483,7 +487,7 @@ function RehabTodayItemRow({
   const hasDescription = Boolean(descriptionText);
   const hasDetails = hasDescription || Boolean(myNotes);
   const stoicPathExerciseId = isStoicPathPlanEvent(event)
-    ? parseStoicPathExerciseId(event.id)
+    ? getStoicPathExerciseId(event)
     : null;
   const stoicPathCompletion = useStoicRehabStore((state) =>
     stoicPathExerciseId

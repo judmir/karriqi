@@ -30,6 +30,7 @@ import {
   WEEKLY_REVIEW_DESCRIPTION,
   footballDescriptionForWeek,
 } from "@/modules/rehab/neuro-rehab-2026/gym-templates";
+import { generateStoicPathProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-stoic-path-events";
 import { MOBILITY_DESCRIPTION } from "@/modules/rehab/neuro-rehab-2026/mobility-routine";
 import { buildSpeechDescriptionForDate } from "@/modules/rehab/neuro-rehab-2026/speech-content";
 import { runWalkPlanForWeek } from "@/modules/rehab/neuro-rehab-2026/run-walk-progression";
@@ -150,8 +151,8 @@ function recurringMaster(
 }
 
 /**
- * Stoicism layer: weekly Sunday review in the calendar. Daily 84-day Stoic Path
- * tasks are injected on Rehab Today from stoic-rehab content + completions store.
+ * Stoicism layer: weekly Sunday review (recurring master) plus concrete daily
+ * Stoic Path rows materialized in rehab_plan_events for reminders + completion.
  */
 function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
   const events: RehabPlanEventInsert[] = [];
@@ -469,8 +470,9 @@ function dailyNonNegotiables(
 export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventInsert[] {
   const events: RehabPlanEventInsert[] = [];
 
-  // Stoicism layer: a handful of recurring masters (not one row per day).
+  // Stoicism layer: weekly review master + one row per Stoic Path exercise.
   events.push(...stoicSeriesEvents(userId));
+  events.push(...generateStoicPathProgramEvents(userId));
 
   const totalDays = PROGRAM_WEEKS * 7 + PROGRAM_EXTRA_DAYS;
 

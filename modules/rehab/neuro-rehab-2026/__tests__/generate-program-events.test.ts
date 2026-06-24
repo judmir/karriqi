@@ -156,34 +156,30 @@ describe("generateNeuroRehabProgramEvents", () => {
     }
   });
 
-  it("delivers Stoicism as recurring masters, not one row per day", () => {
+  it("materializes Stoic Path exercises and keeps weekly review as a recurring master", () => {
     const stoic = events.filter((e) => e.event_kind === "stoic");
-    // Daily Stoic Path is injected on Today; program seed keeps weekly review only.
-    expect(stoic.length).toBe(1);
+    const pathRows = stoic.filter((e) => !e.recurrence_rule);
+    const weeklyMasters = stoic.filter(
+      (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "weekly",
+    );
 
-    // Every stoic row is a recurring master: own id === series_id, has a rule,
-    // and is not a per-occurrence override.
-    for (const event of stoic) {
+    expect(pathRows.length).toBe(252);
+    expect(weeklyMasters.length).toBe(1);
+
+    for (const event of weeklyMasters) {
       expect(event.id).toBeTruthy();
       expect(event.series_id).toBe(event.id);
-      expect(event.recurrence_rule).toBeTruthy();
       expect(event.recurrence_at ?? null).toBeNull();
       expect(event.color).toBe("purple");
     }
 
-    const dailyMasters = stoic.filter(
-      (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "daily",
-    );
-    expect(dailyMasters.length).toBe(0);
-
-    const weeklyMasters = stoic.filter(
-      (e) => e.recurrence_rule && JSON.parse(e.recurrence_rule).freq === "weekly",
-    );
-    expect(weeklyMasters.length).toBe(1);
     const weeklyRule = JSON.parse(weeklyMasters[0]!.recurrence_rule!);
     expect(weeklyRule.weekdays).toEqual([0]);
-    // Weekly review starts on a Sunday.
     expect(new Date(weeklyMasters[0]!.start_at).getDay()).toBe(0);
+
+    expect(pathRows.every((row) => row.description?.includes("karriqi-stoic-exercise-id"))).toBe(
+      true,
+    );
   });
 
   it("spans through week 12 ending in September 2026", () => {
@@ -196,7 +192,7 @@ describe("generateNeuroRehabProgramEvents", () => {
 
 describe("filterRehabEventsForDay", () => {
   it("returns only events for the given day", () => {
-    const rows = generateNeuroRehabProgramEvents("u").slice(0, 20);
+    const rows = generateNeuroRehabProgramEvents("u");
     const mapped = rows.map((row, i) =>
       mapRehabPlanEvent({
         id: `id-${i}`,

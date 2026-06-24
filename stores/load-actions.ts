@@ -417,3 +417,17 @@ export async function loadRuleOf3StoreAction(): Promise<RuleOf3StorePayload> {
   const days = await fetchRuleOf3DaysForUser(user.id);
   return { ok: true, days, persistence: true };
 }
+
+export type DashboardPageData = {
+  rehab: RehabPlanStorePayload;
+  ruleOf3: RuleOf3StorePayload;
+};
+
+/** Server-prefetch for dashboard — avoids post-hydrate store round trips on PWA open. */
+export async function loadDashboardPageData(): Promise<DashboardPageData> {
+  const [rehab, ruleOf3] = await Promise.all([
+    loadRehabPlanStoreAction(),
+    loadRuleOf3StoreAction(),
+  ]);
+  return { rehab, ruleOf3 };
+}

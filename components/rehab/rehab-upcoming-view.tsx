@@ -62,10 +62,11 @@ import {
 import { rehabEventTimeLabel } from "@/lib/rehab/rehab-today-utils";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import { isStoicDialogEvent } from "@/lib/rehab/stoic-response";
+import { setStoicPathExerciseCompleted } from "@/lib/rehab/stoic-path-completion";
 import {
+  getStoicPathExerciseId,
   injectStoicPathEventsForRange,
   isStoicPathPlanEvent,
-  parseStoicPathExerciseId,
 } from "@/lib/rehab/stoic-rehab-utils";
 import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
@@ -93,6 +94,9 @@ export function RehabUpcomingView() {
   const saveStoicCompletion = useStoicRehabStore((state) => state.saveCompletion);
   const clearStoicCompletion = useStoicRehabStore(
     (state) => state.clearCompletion,
+  );
+  const toggleOccurrenceCompletedForStoic = useRehabPlanStore(
+    (state) => state.toggleOccurrenceCompleted,
   );
 
   const [view, setView] = useState<RehabUpcomingViewMode>(() =>
@@ -251,12 +255,12 @@ export function RehabUpcomingView() {
     completed: boolean,
   ) {
     if (isStoicPathPlanEvent(event)) {
-      const exerciseId = parseStoicPathExerciseId(event.id);
-      if (completed) {
-        await saveStoicCompletion({ exerciseId });
-        return;
-      }
-      await clearStoicCompletion(exerciseId);
+      await setStoicPathExerciseCompleted(event, completed, {
+        saveCompletion: saveStoicCompletion,
+        clearCompletion: clearStoicCompletion,
+      }, {
+        toggleOccurrenceCompleted: toggleOccurrenceCompletedForStoic,
+      });
       return;
     }
     await toggleOccurrenceCompleted(event, completed);
@@ -467,7 +471,7 @@ export function RehabUpcomingView() {
         }
         exerciseId={
           stoicPathEvent
-            ? parseStoicPathExerciseId(stoicPathEvent.id)
+            ? getStoicPathExerciseId(stoicPathEvent)
             : undefined
         }
       />

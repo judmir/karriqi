@@ -16,8 +16,11 @@ export function RuleOf3StoreGate({
   const error = useRuleOf3Store((state) => state.error);
 
   useEffect(() => {
+    if (ready) {
+      return;
+    }
     void ensureLoaded();
-  }, [ensureLoaded]);
+  }, [ensureLoaded, ready]);
 
   if (error) {
     return (

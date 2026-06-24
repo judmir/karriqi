@@ -266,9 +266,11 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
 
   async ensureLoaded() {
     const { loadedAt, loading, events } = get();
-    if (events.length > 0 && loadedAt !== null && !isStoreStale(loadedAt)) {
-      // Stale-while-revalidate: keep showing cache, pull latest from Supabase.
-      void get().refresh();
+    if (loadedAt !== null && !isStoreStale(loadedAt)) {
+      if (events.length > 0) {
+        // Stale-while-revalidate: keep showing cache, pull latest from Supabase.
+        void get().refresh();
+      }
       return;
     }
     if (loading && loadPromise) {
@@ -276,7 +278,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       return;
     }
 
-    const hasCache = loadedAt !== null && events.length > 0;
+    const hasCache = loadedAt !== null;
     if (!hasCache) {
       set({ loading: true, error: null });
     }

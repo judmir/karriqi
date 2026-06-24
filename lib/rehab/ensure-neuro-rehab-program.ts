@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { materializeNeuroRehabProgramForUser } from "@/lib/rehab/materialize-neuro-rehab-program";
 import { syncNeuroRehabGymContentForUser } from "@/lib/rehab/sync-neuro-rehab-gym-content";
 import { syncNeuroRehabSpeechContentForUser } from "@/lib/rehab/sync-neuro-rehab-speech-content";
+import { syncNeuroRehabStoicPathEventsForUser } from "@/lib/rehab/sync-neuro-rehab-stoic-path-events";
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
 
 /** Idempotent: seed wiki (global) + 12-week calendar events (per user, first time only). */
@@ -31,6 +32,7 @@ export async function ensureNeuroRehabProgramReady(userId: string): Promise<void
   if ((count ?? 0) > 0) {
     await syncNeuroRehabGymContentForUser(userId);
     await syncNeuroRehabSpeechContentForUser(userId);
+    await syncNeuroRehabStoicPathEventsForUser(userId);
     return;
   }
 
@@ -38,4 +40,6 @@ export async function ensureNeuroRehabProgramReady(userId: string): Promise<void
   if (!result.ok) {
     throw new Error(result.message);
   }
+
+  await syncNeuroRehabStoicPathEventsForUser(userId);
 }

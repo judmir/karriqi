@@ -28,10 +28,11 @@ import {
   isStoicEvent,
   summarizeStoicResponse,
 } from "@/lib/rehab/stoic-response";
+import { setStoicPathExerciseCompleted } from "@/lib/rehab/stoic-path-completion";
 import {
+  getStoicPathExerciseId,
   injectStoicPathEventsForRange,
   isStoicPathPlanEvent,
-  parseStoicPathExerciseId,
 } from "@/lib/rehab/stoic-rehab-utils";
 import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
@@ -50,6 +51,9 @@ export function RehabHistoryView() {
   const saveStoicCompletion = useStoicRehabStore((state) => state.saveCompletion);
   const clearStoicCompletion = useStoicRehabStore(
     (state) => state.clearCompletion,
+  );
+  const toggleOccurrenceCompletedForStoic = useRehabPlanStore(
+    (state) => state.toggleOccurrenceCompleted,
   );
 
   const [visibleDays, setVisibleDays] = useState(HISTORY_INITIAL_DAYS);
@@ -133,12 +137,12 @@ export function RehabHistoryView() {
     completed: boolean,
   ) {
     if (isStoicPathPlanEvent(event)) {
-      const exerciseId = parseStoicPathExerciseId(event.id);
-      if (completed) {
-        await saveStoicCompletion({ exerciseId });
-        return;
-      }
-      await clearStoicCompletion(exerciseId);
+      await setStoicPathExerciseCompleted(event, completed, {
+        saveCompletion: saveStoicCompletion,
+        clearCompletion: clearStoicCompletion,
+      }, {
+        toggleOccurrenceCompleted: toggleOccurrenceCompletedForStoic,
+      });
       return;
     }
     await toggleOccurrenceCompleted(event, completed);
@@ -249,7 +253,7 @@ export function RehabHistoryView() {
         }
         exerciseId={
           stoicPathEvent
-            ? parseStoicPathExerciseId(stoicPathEvent.id)
+            ? getStoicPathExerciseId(stoicPathEvent)
             : undefined
         }
       />
