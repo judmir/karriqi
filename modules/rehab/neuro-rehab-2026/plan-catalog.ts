@@ -436,15 +436,15 @@ Track quality, not just speed.`,
   guide(
     "guide.speech.tasks",
     "sec.speech",
-    "2–3×/week, 10–15 min",
+    "Daily ~5 min at 09:55",
     0,
-    `- 1 min reading aloud
-- 1 min spontaneous speech
-- note effort 0–10
-- note saliva/swallow difficulty 0–10
-- practice slower pacing and breath pauses
+    `Open today's **Speech practice** task: one reading text, sidebar recordings, tap ratings.
 
-If saliva/swallowing feels clinically relevant, prioritize in-person logopedics/phoniatrics evaluation.`,
+- **Spontaneous speech** — tap Mark done (~30 sec)
+- **Self-rate** — clarity, effort, speed, fatigue, saliva (0–10 taps)
+- **Hard sounds** — tap difficult Albanian sounds
+
+If saliva/swallowing feels clinically relevant, prioritize in-person logopedics evaluation.`,
   ),
 
   section("sec.football", "sec.root", "Football / Coordination Tasks", 100),

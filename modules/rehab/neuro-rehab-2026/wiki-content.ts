@@ -293,15 +293,13 @@ Track **quality**, not just speed.`,
     sortOrder: 11,
     body: `# Speech / Saliva Tasks
 
-2–3×/week, 10–15 min.
+Daily at **09:55** (~5 min). One Albanian reading text per day, voice recording in the sidebar, and **tap-to-rate** self-scores (no typing).
 
-- 1 min reading aloud
-- 1 min spontaneous speech
-- Note effort 0–10
-- Note saliva/swallow difficulty 0–10
-- Practice slower pacing and breath pauses
+- **Spontaneous speech** — mark done when finished
+- **Ratings** — clarity, effort, speed, fatigue, saliva (0–10 taps)
+- **Hard sounds** — tap any that were difficult (rr, dh, gj, ç, …)
 
-If saliva/swallowing feels clinically relevant, prioritize in-person logopedics evaluation.`,
+Not medical advice — share recordings with your logoped if helpful.`,
   },
   {
     slug: "football",

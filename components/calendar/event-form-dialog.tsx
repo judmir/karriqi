@@ -69,6 +69,7 @@ import { RehabRepeatField } from "@/components/rehab/rehab-repeat-field";
 import { RehabEventKindPicker } from "@/components/rehab/rehab-event-kind-picker";
 import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabSpeechRecordingSection } from "@/components/rehab/rehab-speech-recording-section";
+import { SpeechTaskPanel } from "@/components/rehab/speech-task-panel";
 import { allEventSubtasksDone } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
   useRehabPlanStore,
@@ -782,13 +783,13 @@ function EventFormDialogBody({
                   disabled={viewOnly}
                 />
               </>
-            ) : null}
-            {isSpeechEvent && event ? (
-              <RehabSpeechRecordingSection
-                eventId={event.id}
-                eventStartAt={event.startAt}
-                persistence={persistence}
-                readOnly={viewOnly}
+            ) : isSpeechTask ? (
+              <SpeechTaskPanel
+                eventId={event?.id ?? ""}
+                description={event?.description}
+                startAt={event?.startAt ?? startDate.toISOString()}
+                persistence={persistence && Boolean(event)}
+                readOnly={viewOnly || !event}
               />
             ) : null}
             {isRehab && !isSpeechTask ? (
@@ -821,7 +822,7 @@ function EventFormDialogBody({
         ) : null}
       </section>
 
-      <aside className="order-1 flex min-w-0 w-full max-w-full shrink-0 flex-col gap-1 overflow-x-hidden border-b border-white/8 bg-[#161616] px-3 py-4 md:order-2 md:border-b-0 md:border-l md:border-l-white/8">
+      <aside className="order-1 flex min-h-0 min-w-0 w-full max-w-full shrink-0 flex-col gap-1 overflow-x-hidden overflow-y-auto border-b border-white/8 bg-[#161616] px-3 py-4 md:order-2 md:max-h-full md:border-b-0 md:border-l md:border-l-white/8">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1 space-y-1">
             <DateField
@@ -868,6 +869,15 @@ function EventFormDialogBody({
             onChange={handleEventKindChange}
             disabled={viewOnly}
             appearance="sidebar"
+          />
+        ) : null}
+        {isSpeechEvent && event ? (
+          <RehabSpeechRecordingSection
+            eventId={event.id}
+            eventStartAt={event.startAt}
+            persistence={persistence}
+            readOnly={viewOnly}
+            layout="sidebar"
           />
         ) : null}
       </aside>

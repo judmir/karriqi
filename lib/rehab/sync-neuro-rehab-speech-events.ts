@@ -3,6 +3,7 @@ import {
   clampProgramPlanWeek,
   NEURO_REHAB_PROGRAM_ID,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
+import { mergeSpeechDescriptionForSync } from "@/modules/rehab/neuro-rehab-2026/speech-content";
 import type { RehabPlanEventInsert } from "@/types/rehab";
 
 import type { SchedulePatch, ScheduleRow } from "@/lib/rehab/remap-neuro-rehab-weekly-schedule";
@@ -57,14 +58,29 @@ export function buildSpeechEventSyncPlan(
 
     if (primary) {
       usedIds.add(primary.id);
-      if (
+      const needsSchedulePatch =
         primary.start_at !== target.start_at ||
-        primary.end_at !== target.end_at
-      ) {
+        primary.end_at !== target.end_at;
+      const targetDescription = mergeSpeechDescriptionForSync(
+        target.description,
+        primary.description,
+      );
+      const needsDescriptionPatch =
+        targetDescription != null &&
+        primary.description !== targetDescription;
+
+      if (needsSchedulePatch || needsDescriptionPatch) {
         patches.push({
           id: primary.id,
-          start_at: target.start_at,
-          end_at: target.end_at,
+          ...(needsSchedulePatch
+            ? {
+                start_at: target.start_at,
+                end_at: target.end_at,
+              }
+            : {}),
+          ...(needsDescriptionPatch
+            ? { description: targetDescription }
+            : {}),
         });
       }
 

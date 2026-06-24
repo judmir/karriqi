@@ -27,11 +27,11 @@ import {
   GYM_D_DESCRIPTION,
   HAND_OT_DESCRIPTION,
   RETEST_DESCRIPTION,
-  SPEECH_DESCRIPTION,
   WEEKLY_REVIEW_DESCRIPTION,
   footballDescriptionForWeek,
 } from "@/modules/rehab/neuro-rehab-2026/gym-templates";
 import { MOBILITY_DESCRIPTION } from "@/modules/rehab/neuro-rehab-2026/mobility-routine";
+import { buildSpeechDescriptionForDate } from "@/modules/rehab/neuro-rehab-2026/speech-content";
 import { runWalkPlanForWeek } from "@/modules/rehab/neuro-rehab-2026/run-walk-progression";
 import { RUN_EVENT_TITLE, weekdayTemplate } from "@/modules/rehab/neuro-rehab-2026/weekly-template";
 import type { CalendarEventColor } from "@/types/calendar";
@@ -390,7 +390,7 @@ function dailyNonNegotiables(
       SPEECH_PRACTICE_MINUTE,
       SPEECH_PRACTICE_DURATION_MIN,
       "Speech practice",
-      SPEECH_DESCRIPTION,
+      buildSpeechDescriptionForDate(day),
       "speech",
       "red",
     ),

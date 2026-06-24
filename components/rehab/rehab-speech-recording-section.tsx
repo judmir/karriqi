@@ -41,11 +41,13 @@ export function RehabSpeechRecordingSection({
   eventStartAt,
   persistence,
   readOnly = false,
+  layout = "default",
 }: {
   eventId: string;
   eventStartAt: string;
   persistence: boolean;
   readOnly?: boolean;
+  layout?: "default" | "sidebar";
 }) {
   const recordings = useRehabPlanStore(
     (state) =>
@@ -79,6 +81,9 @@ export function RehabSpeechRecordingSection({
   const [playbackRevision, setPlaybackRevision] = useState<
     Record<string, number>
   >({});
+  const [expandedRecordingId, setExpandedRecordingId] = useState<string | null>(
+    null,
+  );
   const [micPermission, setMicPermission] =
     useState<MicPermissionState>("unknown");
 
@@ -353,18 +358,136 @@ export function RehabSpeechRecordingSection({
     (!hasRecordings && !readOnly) ||
     (recordAnother && !readOnly));
 
+  const isSidebar = layout === "sidebar";
+
   return (
     <>
-      <div className="mt-3 w-full min-w-0 max-w-full shrink-0 space-y-3 overflow-x-hidden">
+      <div
+        className={cn(
+          "w-full min-w-0 max-w-full shrink-0 space-y-3 overflow-x-hidden",
+          isSidebar
+            ? "border-t border-white/8 px-1.5 pt-3"
+            : "mt-4 border-t border-white/10 pt-4",
+        )}
+      >
+        {isSidebar ? (
+          <p className="text-xs text-white/45">Recordings</p>
+        ) : null}
+
+        {hasRecordings ? (
+          <ul className={cn("space-y-3", isSidebar && "space-y-2.5")}>
+            {recordings.map((item) => {
+              const isExpanded = expandedRecordingId === item.id;
+              return (
+              <li
+                key={item.id}
+                className="min-w-0 overflow-hidden"
+              >
+                <div className="mb-1.5 flex items-center justify-between gap-1">
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-medium text-white/80">
+                      {isSidebar
+                        ? format(new Date(item.createdAt), "EEE HH:mm")
+                        : format(
+                            new Date(item.createdAt),
+                            "EEE d MMM yyyy, HH:mm",
+                          )}
+                    </p>
+                    {!isSidebar ? (
+                      <p className="text-[11px] text-white/45">
+                        {item.durationSeconds
+                          ? formatSpeechDuration(
+                              Math.round(item.durationSeconds),
+                            )
+                          : "Saved recording"}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedRecordingId((current) =>
+                            current === item.id ? null : item.id,
+                          )
+                        }
+                        className="rounded-md px-2 py-1 text-xs font-medium text-white/55 transition-colors hover:bg-white/8 hover:text-white"
+                      >
+                        {isExpanded ? "Done" : "Edit"}
+                      </button>
+                    ) : null}
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(item)}
+                        className="rounded-md p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-red-400"
+                        aria-label="Delete recording"
+                        title="Delete recording"
+                      >
+                        <Trash2 className="size-3.5" aria-hidden />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                {isExpanded && !readOnly ? (
+                  <SavedRecordingNote
+                    recording={item}
+                    onSave={async (note) => {
+                      const result = await updateSpeechRecordingNote(
+                        item,
+                        note,
+                      );
+                      if (result.ok) {
+                        toast.success("Note saved.");
+                      }
+                    }}
+                  />
+                ) : item.note && isExpanded ? (
+                  <SavedRecordingNote
+                    recording={item}
+                    readOnly
+                    onSave={async () => {}}
+                  />
+                ) : null}
+                {signedUrls[item.id] ? (
+                  <SpeechAudioPlayer
+                    key={`${item.id}:${playbackRevision[item.id] ?? 0}:${isExpanded ? "full" : "compact"}`}
+                    srcUrl={`${signedUrls[item.id]}${signedUrls[item.id].includes("?") ? "&" : "?"}v=${playbackRevision[item.id] ?? 0}`}
+                    mimeType={item.mimeType}
+                    durationHint={item.durationSeconds}
+                    readOnly={readOnly}
+                    compact={!isExpanded}
+                    onReplace={
+                      isExpanded
+                        ? (blob, durationSeconds, mimeType) =>
+                            handleReplaceRecording(
+                              item,
+                              blob,
+                              durationSeconds,
+                              mimeType,
+                            )
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <p className="text-[11px] text-white/40">Preparing playback…</p>
+                )}
+              </li>
+            );
+            })}
+          </ul>
+        ) : null}
+
         {hasRecordings && !readOnly && status === "idle" && !recordAnother ? (
-          <div className="flex justify-end">
+          <div className={cn("flex", isSidebar ? "justify-start" : "justify-end")}>
             <button
               type="button"
               onClick={() => setRecordAnother(true)}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-white/55 transition-colors hover:bg-white/8 hover:text-white"
             >
               <Plus className="size-3.5" aria-hidden />
-              New recording
+              New
             </button>
           </div>
         ) : null}
@@ -399,6 +522,7 @@ export function RehabSpeechRecordingSection({
             waveformSamples={waveformSamples}
             canStart={persistence}
             micPermission={micPermission}
+            compact={isSidebar}
             onStart={() => void startRecording()}
             onStop={stopRecording}
             onCancel={
@@ -424,80 +548,6 @@ export function RehabSpeechRecordingSection({
           </p>
         ) : null}
         {error ? <p className="text-xs text-red-400">{error}</p> : null}
-
-        {hasRecordings ? (
-          <ul className="space-y-2">
-            {recordings.map((item) => (
-              <li
-                key={item.id}
-                className="min-w-0 overflow-hidden rounded-lg border border-white/10 bg-white/5 p-2.5"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-white/80">
-                      {format(new Date(item.createdAt), "EEE d MMM yyyy, HH:mm")}
-                    </p>
-                    <p className="text-[11px] text-white/40">
-                      {item.durationSeconds
-                        ? formatSpeechDuration(Math.round(item.durationSeconds))
-                        : "Saved recording"}
-                    </p>
-                  </div>
-                  {!readOnly ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(item)}
-                      className="shrink-0 rounded-md p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-red-400"
-                      aria-label="Delete recording"
-                      title="Delete recording"
-                    >
-                      <Trash2 className="size-3.5" aria-hidden />
-                    </button>
-                  ) : null}
-                </div>
-                {!readOnly ? (
-                  <SavedRecordingNote
-                    recording={item}
-                    onSave={async (note) => {
-                      const result = await updateSpeechRecordingNote(
-                        item,
-                        note,
-                      );
-                      if (result.ok) {
-                        toast.success("Note saved.");
-                      }
-                    }}
-                  />
-                ) : item.note ? (
-                  <SavedRecordingNote
-                    recording={item}
-                    readOnly
-                    onSave={async () => {}}
-                  />
-                ) : null}
-                {signedUrls[item.id] ? (
-                  <SpeechAudioPlayer
-                    key={`${item.id}:${playbackRevision[item.id] ?? 0}`}
-                    srcUrl={`${signedUrls[item.id]}${signedUrls[item.id].includes("?") ? "&" : "?"}v=${playbackRevision[item.id] ?? 0}`}
-                    mimeType={item.mimeType}
-                    durationHint={item.durationSeconds}
-                    readOnly={readOnly}
-                    onReplace={(blob, durationSeconds, mimeType) =>
-                      handleReplaceRecording(
-                        item,
-                        blob,
-                        durationSeconds,
-                        mimeType,
-                      )
-                    }
-                  />
-                ) : (
-                  <p className="text-[11px] text-white/40">Preparing playback…</p>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : null}
       </div>
     </>
   );
@@ -543,6 +593,7 @@ function RecorderPanel({
   waveformSamples,
   canStart,
   micPermission,
+  compact = false,
   onStart,
   onStop,
   onCancel,
@@ -553,6 +604,7 @@ function RecorderPanel({
   waveformSamples: number[];
   canStart: boolean;
   micPermission: MicPermissionState;
+  compact?: boolean;
   onStart: () => void;
   onStop: () => void;
   onCancel?: () => void;
@@ -564,7 +616,7 @@ function RecorderPanel({
   const glowOpacity = isRecording ? 0.25 + amplitude * 0.55 : 0;
 
   return (
-    <div className="flex flex-col items-center gap-3 py-2">
+    <div className={cn("flex flex-col items-center gap-3", compact ? "py-1" : "py-2")}>
       {isRecording ? (
         <VoiceMemoRecorderBar
           elapsed={elapsed}
@@ -573,7 +625,12 @@ function RecorderPanel({
           className="max-w-full"
         />
       ) : (
-        <div className="relative flex size-24 items-center justify-center">
+        <div
+          className={cn(
+            "relative flex items-center justify-center",
+            compact ? "size-16" : "size-24",
+          )}
+        >
           <span
             className="absolute inset-0 rounded-full bg-red-500 blur-xl transition-opacity"
             style={{ opacity: glowOpacity }}
@@ -582,8 +639,8 @@ function RecorderPanel({
           <span
             className="absolute rounded-full bg-red-500/30 transition-transform duration-100 ease-out"
             style={{
-              width: "6rem",
-              height: "6rem",
+              width: compact ? "4rem" : "6rem",
+              height: compact ? "4rem" : "6rem",
               transform: `scale(${pulseScale})`,
             }}
             aria-hidden
@@ -593,7 +650,8 @@ function RecorderPanel({
             onClick={onStart}
             disabled={isStarting || isUploading || !canStart}
             className={cn(
-              "relative flex size-16 items-center justify-center rounded-full text-white shadow-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+              "relative flex items-center justify-center rounded-full text-white shadow-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+              compact ? "size-11" : "size-16",
               isRecording
                 ? "bg-red-500 hover:bg-red-600"
                 : "bg-red-500/90 hover:bg-red-500",
@@ -607,17 +665,22 @@ function RecorderPanel({
             }
           >
             {isUploading || isStarting ? (
-              <Loader2 className="size-6 animate-spin" aria-hidden />
+              <Loader2 className={cn("animate-spin", compact ? "size-5" : "size-6")} aria-hidden />
             ) : isRecording ? (
-              <Square className="size-6 fill-current" aria-hidden />
+              <Square className={cn("fill-current", compact ? "size-5" : "size-6")} aria-hidden />
             ) : (
-              <Mic className="size-7" aria-hidden />
+              <Mic className={compact ? "size-5" : "size-7"} aria-hidden />
             )}
           </button>
         </div>
       )}
 
-      <p className="text-sm font-medium tabular-nums text-white/80">
+      <p
+        className={cn(
+          "font-medium tabular-nums text-white/80",
+          compact ? "text-xs" : "text-sm",
+        )}
+      >
         {isUploading
           ? "Saving…"
           : isStarting

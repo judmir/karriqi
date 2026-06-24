@@ -9,6 +9,7 @@ import {
   SPEECH_PRACTICE_HOUR,
   SPEECH_PRACTICE_MINUTE,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
+import { SPEECH_EVENT_DESCRIPTION_STUB } from "@/modules/rehab/neuro-rehab-2026/speech-content";
 
 describe("sync-neuro-rehab-speech-events", () => {
   const userId = "user-1";
@@ -53,6 +54,25 @@ describe("sync-neuro-rehab-speech-events", () => {
     ]);
     expect(plan.inserts.length).toBe(88);
     expect(plan.deleteIds).toEqual([]);
+  });
+
+  it("patches legacy speech descriptions to the short stub", () => {
+    const expected = expectedSpeechEvents(userId)[0];
+    const existing: ScheduleRow[] = [
+      {
+        id: "legacy-desc",
+        start_at: expected.start_at,
+        end_at: expected.end_at,
+        description: "10–15 min:\n- 1 min reading aloud",
+        event_kind: "speech",
+        program_id: "neuro-rehab-2026-v1",
+        plan_week: 1,
+      },
+    ];
+
+    const plan = buildSpeechEventSyncPlan(userId, existing);
+    expect(plan.patches).toHaveLength(1);
+    expect(plan.patches[0]?.description).toBe(SPEECH_EVENT_DESCRIPTION_STUB);
   });
 
   it("drops duplicate speech rows on the same day when uncompleted", () => {

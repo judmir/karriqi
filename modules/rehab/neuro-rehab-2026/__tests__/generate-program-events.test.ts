@@ -7,6 +7,7 @@ import {
   isRetestWeek,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
+import { SPEECH_EVENT_DESCRIPTION_STUB } from "@/modules/rehab/neuro-rehab-2026/speech-content";
 import { filterRehabEventsForDay } from "@/lib/rehab/rehab-today-utils";
 import { mapRehabPlanEvent } from "@/lib/rehab/rehab-plan-event-map";
 import { parseEventDescription } from "@/lib/calendar/event-subtasks";
@@ -151,6 +152,7 @@ describe("generateNeuroRehabProgramEvents", () => {
       expect(start.getHours()).toBe(9);
       expect(start.getMinutes()).toBe(55);
       expect(event.title).toBe("Speech practice");
+      expect(event.description).toBe(SPEECH_EVENT_DESCRIPTION_STUB);
     }
   });
 

@@ -38,6 +38,7 @@ type SpeechAudioPlayerProps = {
   readOnly?: boolean;
   saving?: boolean;
   postRecord?: boolean;
+  compact?: boolean;
   onSave?: (blob: Blob, durationSeconds: number) => Promise<void>;
   onReplace?: (
     blob: Blob,
@@ -55,6 +56,7 @@ export function SpeechAudioPlayer({
   readOnly = false,
   saving = false,
   postRecord = false,
+  compact = false,
   onSave,
   onReplace,
   onDiscard,
@@ -448,6 +450,68 @@ export function SpeechAudioPlayer({
 
   const busy = saving || processing;
 
+  if (compact) {
+    return (
+      <div className="w-full min-w-0 max-w-full space-y-2">
+        {objectUrl ? (
+          <audio ref={audioRef} src={objectUrl} preload="auto" className="hidden" />
+        ) : null}
+
+        <div
+          ref={waveformRef}
+          className="relative h-14 w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-xl bg-[#2b2b2b] touch-none"
+          onPointerDown={(event) => {
+            if (readOnly || !durationSeconds) return;
+            dragRef.current = { mode: "seek", pointerId: event.pointerId };
+            event.currentTarget.setPointerCapture(event.pointerId);
+            updateTrimFromPointer(event.clientX, "seek");
+          }}
+          onPointerMove={handleWaveformPointerMove}
+          onPointerUp={handleWaveformPointerUp}
+          onPointerCancel={handleWaveformPointerUp}
+          role="slider"
+          aria-label="Audio waveform"
+          aria-valuemin={0}
+          aria-valuemax={durationSeconds}
+          aria-valuenow={currentTime}
+        >
+          <WaveformBars peaks={peaks} compact />
+          <div
+            className="absolute inset-y-0 w-0.5 bg-[#0a84ff]"
+            style={{ left: `${playheadRatio * 100}%` }}
+            aria-hidden
+          />
+        </div>
+
+        <div className="flex w-full min-w-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void togglePlayback()}
+              disabled={busy}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2b2b2b] text-white transition-colors hover:bg-[#3a3a3a] disabled:opacity-50"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <Pause className="size-4 fill-current" aria-hidden />
+              ) : (
+                <Play className="size-4 fill-current" aria-hidden />
+              )}
+            </button>
+            <p className="text-lg font-light tabular-nums tracking-tight text-white">
+              {formatSpeechTimePrecise(currentTime)}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums text-white/40">
+            <span>{formatSpeechDuration(Math.floor(currentTime))}</span>
+            <span aria-hidden>/</span>
+            <span>{formatSpeechDuration(Math.floor(durationSeconds))}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-w-0 max-w-full space-y-4">
       {objectUrl ? (
@@ -609,12 +673,21 @@ export function SpeechAudioPlayer({
   );
 }
 
-function WaveformBars({ peaks }: { peaks: number[] }) {
-  const barCount = peaks.length > 0 ? peaks.length : 80;
+function WaveformBars({
+  peaks,
+  compact = false,
+}: {
+  peaks: number[];
+  compact?: boolean;
+}) {
+  const barCount = peaks.length > 0 ? peaks.length : compact ? 64 : 80;
 
   return (
     <div
-      className="grid h-full w-full min-w-0 items-end gap-px px-2 py-3"
+      className={cn(
+        "grid h-full w-full min-w-0 items-end gap-px px-2",
+        compact ? "py-2" : "py-3",
+      )}
       style={{
         gridTemplateColumns: `repeat(${barCount}, minmax(0, 1fr))`,
       }}

@@ -229,12 +229,8 @@ export const HAND_OT_DESCRIPTION = `Choose 2–3 per session (10–20 min):
 
 Track quality, not just speed. See Wiki: Hand / OT.`;
 
-export const SPEECH_DESCRIPTION = `10–15 min:
-- 1 min reading aloud
-- 1 min spontaneous speech
-- Note effort 0–10
-- Note saliva/swallow difficulty 0–10
-- Practice slower pacing and breath pauses`;
+/** @deprecated Daily speech tasks use per-day Albanian reading texts — see speech-content.ts */
+export const SPEECH_DESCRIPTION = `Daily speech practice with Albanian reading texts, spontaneous speech, and self-ratings. Open today's Speech practice task for the full text to read and record.`;
 
 export const FOOTBALL_WEEKS_1_4 = `Weeks 1–4 football / coordination:
 - ball taps
