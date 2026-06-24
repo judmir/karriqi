@@ -1,3 +1,5 @@
+import { after } from "next/server";
+
 import { ensureRehabWikiPagesSeeded } from "@/lib/rehab/fetch-rehab-wiki";
 import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,8 +21,32 @@ async function runRehabContentSync(
   }
 }
 
-/** Idempotent: seed wiki (global) + 12-week calendar events (per user, first time only). */
-export async function ensureNeuroRehabProgramReady(userId: string): Promise<void> {
+/** Gym/speech/stoic template sync — slow; never block page render on this. */
+export async function syncNeuroRehabProgramContent(userId: string): Promise<void> {
+  await runRehabContentSync(userId, "gym content sync", syncNeuroRehabGymContentForUser);
+  await runRehabContentSync(
+    userId,
+    "speech content sync",
+    syncNeuroRehabSpeechContentForUser,
+  );
+  await runRehabContentSync(
+    userId,
+    "stoic path sync",
+    syncNeuroRehabStoicPathEventsForUser,
+  );
+}
+
+function scheduleNeuroRehabProgramContentSync(userId: string): void {
+  after(() => syncNeuroRehabProgramContent(userId));
+}
+
+/**
+ * Fast path: wiki seed + first-time materialization only.
+ * Used by dashboard/store loads so navigation is not blocked by content sync.
+ */
+export async function ensureNeuroRehabProgramMaterialized(
+  userId: string,
+): Promise<void> {
   await ensureRehabWikiPagesSeeded();
 
   const admin = createAdminClient();
@@ -40,19 +66,7 @@ export async function ensureNeuroRehabProgramReady(userId: string): Promise<void
     throw new Error(error.message);
   }
 
-  // Never re-materialize on navigation — duplicates were caused by top-up here.
   if ((count ?? 0) > 0) {
-    await runRehabContentSync(userId, "gym content sync", syncNeuroRehabGymContentForUser);
-    await runRehabContentSync(
-      userId,
-      "speech content sync",
-      syncNeuroRehabSpeechContentForUser,
-    );
-    await runRehabContentSync(
-      userId,
-      "stoic path sync",
-      syncNeuroRehabStoicPathEventsForUser,
-    );
     return;
   }
 
@@ -61,9 +75,11 @@ export async function ensureNeuroRehabProgramReady(userId: string): Promise<void
     throw new Error(result.message);
   }
 
-  await runRehabContentSync(
-    userId,
-    "stoic path sync",
-    syncNeuroRehabStoicPathEventsForUser,
-  );
+  scheduleNeuroRehabProgramContentSync(userId);
+}
+
+/** Rehab routes: materialize if needed, then sync content after the response is sent. */
+export async function ensureNeuroRehabProgramReady(userId: string): Promise<void> {
+  await ensureNeuroRehabProgramMaterialized(userId);
+  scheduleNeuroRehabProgramContentSync(userId);
 }

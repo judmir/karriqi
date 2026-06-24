@@ -3,7 +3,7 @@
 import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
 import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
-import { ensureNeuroRehabProgramReady } from "@/lib/rehab/ensure-neuro-rehab-program";
+import { ensureNeuroRehabProgramMaterialized } from "@/lib/rehab/ensure-neuro-rehab-program";
 import { fetchRehabPlanEventsForUser } from "@/lib/rehab/fetch-rehab-plan-events";
 import { isGoogleCalendarConfigured } from "@/lib/env/google-calendar";
 import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
@@ -243,7 +243,7 @@ export async function loadRehabPlanStoreAction(): Promise<RehabPlanStorePayload>
     return { ok: false, reason: "signed_out" };
   }
 
-  await ensureNeuroRehabProgramReady(user.id);
+  await ensureNeuroRehabProgramMaterialized(user.id);
   const events = await fetchRehabPlanEventsForUser();
   return { ok: true, events, persistence: true };
 }
