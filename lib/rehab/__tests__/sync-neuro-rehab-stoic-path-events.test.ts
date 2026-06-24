@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { parseStoicExerciseIdFromDescription } from "@/lib/rehab/stoic-path-event-metadata";
-import { buildStoicPathEventSyncPlan } from "@/lib/rehab/sync-neuro-rehab-stoic-path-events";
+import {
+  STOIC_PATH_INSERT_BATCH_SIZE,
+  buildStoicPathEventSyncPlan,
+  stoicPathInsertsForBatch,
+} from "@/lib/rehab/sync-neuro-rehab-stoic-path-events";
 import { STOIC_REHAB_EXERCISES } from "@/modules/rehab/neuro-rehab-2026/stoic-rehab-exercises";
 
 describe("buildStoicPathEventSyncPlan", () => {
@@ -40,6 +44,14 @@ describe("buildStoicPathEventSyncPlan", () => {
     expect(plan.completionPatches).toEqual([
       { id: "row-1", completed_at: completedAt },
     ]);
+  });
+
+  it("limits apply batches to avoid worker timeouts", () => {
+    const plan = buildStoicPathEventSyncPlan(userId, [], new Map());
+    expect(plan.inserts.length).toBeGreaterThan(STOIC_PATH_INSERT_BATCH_SIZE);
+    expect(stoicPathInsertsForBatch(plan.inserts)).toHaveLength(
+      STOIC_PATH_INSERT_BATCH_SIZE,
+    );
   });
 
   it("embeds exercise ids in generated inserts", () => {

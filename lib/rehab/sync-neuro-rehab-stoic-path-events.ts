@@ -10,6 +10,9 @@ import type { RehabPlanEventInsert } from "@/types/rehab";
 
 import type { SchedulePatch, ScheduleRow } from "@/lib/rehab/remap-neuro-rehab-weekly-schedule";
 
+/** Keep each request under Cloudflare Worker CPU limits (252 total exercises). */
+export const STOIC_PATH_INSERT_BATCH_SIZE = 40;
+
 export type StoicPathEventRow = ScheduleRow & {
   description: string | null;
   recurrence_rule?: string | null;
@@ -102,6 +105,13 @@ export function buildStoicPathEventSyncPlan(
   return { patches, inserts, completionPatches };
 }
 
+export function stoicPathInsertsForBatch(
+  inserts: RehabPlanEventInsert[],
+  batchSize = STOIC_PATH_INSERT_BATCH_SIZE,
+): RehabPlanEventInsert[] {
+  return inserts.slice(0, batchSize);
+}
+
 export async function syncNeuroRehabStoicPathEventsForUser(
   userId: string,
 ): Promise<{ inserted: number; patched: number; completionsSynced: number }> {
@@ -164,8 +174,10 @@ export async function syncNeuroRehabStoicPathEventsForUser(
     patched += 1;
   }
 
-  if (plan.inserts.length > 0) {
-    const { error } = await admin.from("rehab_plan_events").insert(plan.inserts);
+  const inserts = stoicPathInsertsForBatch(plan.inserts);
+
+  if (inserts.length > 0) {
+    const { error } = await admin.from("rehab_plan_events").insert(inserts);
     if (error) {
       throw new Error(error.message);
     }
@@ -186,7 +198,7 @@ export async function syncNeuroRehabStoicPathEventsForUser(
   }
 
   return {
-    inserted: plan.inserts.length,
+    inserted: inserts.length,
     patched,
     completionsSynced,
   };

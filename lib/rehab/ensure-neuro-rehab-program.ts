@@ -7,6 +7,18 @@ import { syncNeuroRehabSpeechContentForUser } from "@/lib/rehab/sync-neuro-rehab
 import { syncNeuroRehabStoicPathEventsForUser } from "@/lib/rehab/sync-neuro-rehab-stoic-path-events";
 import { NEURO_REHAB_PROGRAM_ID } from "@/modules/rehab/neuro-rehab-2026/constants";
 
+async function runRehabContentSync(
+  userId: string,
+  label: string,
+  sync: (userId: string) => Promise<unknown>,
+): Promise<void> {
+  try {
+    await sync(userId);
+  } catch (error) {
+    console.error(`[rehab] ${label} failed for ${userId}:`, error);
+  }
+}
+
 /** Idempotent: seed wiki (global) + 12-week calendar events (per user, first time only). */
 export async function ensureNeuroRehabProgramReady(userId: string): Promise<void> {
   await ensureRehabWikiPagesSeeded();
@@ -30,9 +42,17 @@ export async function ensureNeuroRehabProgramReady(userId: string): Promise<void
 
   // Never re-materialize on navigation — duplicates were caused by top-up here.
   if ((count ?? 0) > 0) {
-    await syncNeuroRehabGymContentForUser(userId);
-    await syncNeuroRehabSpeechContentForUser(userId);
-    await syncNeuroRehabStoicPathEventsForUser(userId);
+    await runRehabContentSync(userId, "gym content sync", syncNeuroRehabGymContentForUser);
+    await runRehabContentSync(
+      userId,
+      "speech content sync",
+      syncNeuroRehabSpeechContentForUser,
+    );
+    await runRehabContentSync(
+      userId,
+      "stoic path sync",
+      syncNeuroRehabStoicPathEventsForUser,
+    );
     return;
   }
 
@@ -41,5 +61,9 @@ export async function ensureNeuroRehabProgramReady(userId: string): Promise<void
     throw new Error(result.message);
   }
 
-  await syncNeuroRehabStoicPathEventsForUser(userId);
+  await runRehabContentSync(
+    userId,
+    "stoic path sync",
+    syncNeuroRehabStoicPathEventsForUser,
+  );
 }
