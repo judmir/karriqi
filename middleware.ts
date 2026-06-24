@@ -11,9 +11,28 @@ function safeNextPath(next: string | null): string {
   return ROUTES.dashboard;
 }
 
+function redirectWithSessionCookies(
+  url: URL,
+  sessionResponse: NextResponse,
+): NextResponse {
+  const redirectResponse = NextResponse.redirect(url);
+  for (const cookie of sessionResponse.cookies.getAll()) {
+    redirectResponse.cookies.set(cookie);
+  }
+  return redirectResponse;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const protectedPath = isProtectedPath(pathname);
+
+  if (pathname === ROUTES.home) {
+    const { response, user } = await updateSession(request);
+    const url = request.nextUrl.clone();
+    url.pathname = user ? ROUTES.dashboard : ROUTES.signIn;
+    url.search = "";
+    return redirectWithSessionCookies(url, response);
+  }
 
   if (!protectedPath && pathname !== ROUTES.signIn) {
     return NextResponse.next();
@@ -26,21 +45,21 @@ export async function middleware(request: NextRequest) {
     url.pathname = ROUTES.signIn;
     const nextTarget = `${pathname}${request.nextUrl.search}`;
     url.searchParams.set("next", nextTarget);
-    return NextResponse.redirect(url);
+    return redirectWithSessionCookies(url, response);
   }
 
   if (user && pathname === ROUTES.signIn) {
     const url = request.nextUrl.clone();
     url.pathname = safeNextPath(request.nextUrl.searchParams.get("next"));
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectWithSessionCookies(url, response);
   }
 
   if (user && isRehabPath(pathname) && !canUseRehab(user)) {
     const url = request.nextUrl.clone();
     url.pathname = ROUTES.dashboard;
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectWithSessionCookies(url, response);
   }
 
   return response;

@@ -16,7 +16,7 @@
 
 | File                                                            | Purpose                                              |
 | --------------------------------------------------------------- | ---------------------------------------------------- |
-| [`public/manifest.webmanifest`](../public/manifest.webmanifest) | `name`, `display`, `start_url`, `theme_color`, icons |
+| [`public/manifest.webmanifest`](../public/manifest.webmanifest) | `name`, `display`, `start_url` (`/dashboard`), `theme_color`, icons |
 | [`public/icons/icon-192.png`](../public/icons/), `icon-512.png` | Placeholders — replace with branded assets           |
 
 ## Metadata

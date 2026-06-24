@@ -34,7 +34,8 @@ type PageRuntimeCaching = {
  * `cacheName`, so with `extendDefaultRuntimeCaching: true` it replaces the
  * matching default rule.
  */
-const PAGE_NETWORK_TIMEOUT_SECONDS = 3;
+/** Fall back to cached shell quickly on slow mobile / PWA cold opens. */
+const PAGE_NETWORK_TIMEOUT_SECONDS = 1.5;
 
 const pageExpiration = { maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 };
 

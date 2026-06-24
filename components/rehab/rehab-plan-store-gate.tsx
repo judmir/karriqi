@@ -33,8 +33,11 @@ export function RehabPlanStoreGate({ children }: { children: React.ReactNode }) 
   const persistence = useRehabPlanStore((state) => state.persistence);
 
   useEffect(() => {
+    if (ready) {
+      return;
+    }
     void ensureLoaded();
-  }, [ensureLoaded]);
+  }, [ensureLoaded, ready]);
 
   useRehabPlanSync({ enabled: ready && persistence });
 
