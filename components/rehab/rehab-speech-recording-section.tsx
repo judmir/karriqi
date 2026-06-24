@@ -31,10 +31,6 @@ const EMPTY_RECORDINGS: RehabSpeechRecording[] = [];
 
 type RecorderStatus = "idle" | "starting" | "recording" | "uploading";
 type MicPermissionState = "prompt" | "granted" | "denied" | "unknown";
-type PendingReview = {
-  blob: Blob;
-  durationSeconds: number;
-};
 
 export function RehabSpeechRecordingSection({
   eventId,
@@ -72,10 +68,6 @@ export function RehabSpeechRecordingSection({
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [recordAnother, setRecordAnother] = useState(false);
-  const [pendingReview, setPendingReview] = useState<PendingReview | null>(
-    null,
-  );
-  const [pendingNote, setPendingNote] = useState("");
   const [playbackRevision, setPlaybackRevision] = useState<
     Record<string, number>
   >({});
@@ -84,6 +76,9 @@ export function RehabSpeechRecordingSection({
 
   const sessionRef = useRef<SpeechRecorderSession | null>(null);
   const pendingStartRef = useRef(false);
+  const uploadRecordingRef = useRef<
+    (blob: Blob, durationSeconds: number) => Promise<void>
+  >(async () => {});
 
 
   const canRecord = useMemo(
@@ -211,7 +206,6 @@ export function RehabSpeechRecordingSection({
           mimeType,
           sizeBytes: blob.size,
           durationSeconds,
-          note: pendingNote,
         });
         if (!result.ok) {
           await supabase.storage
@@ -220,8 +214,6 @@ export function RehabSpeechRecordingSection({
           throw new Error(result.message);
         }
 
-        setPendingReview(null);
-        setPendingNote("");
         setRecordAnother(false);
         toast.success("Recording saved.");
       } catch (err) {
@@ -233,8 +225,12 @@ export function RehabSpeechRecordingSection({
         setStatus("idle");
       }
     },
-    [completeSpeechRecordingUpload, eventId, eventStartAt, pendingNote],
+    [completeSpeechRecordingUpload, eventId, eventStartAt],
   );
+
+  useEffect(() => {
+    uploadRecordingRef.current = uploadRecording;
+  }, [uploadRecording]);
 
   useEffect(() => {
     sessionRef.current = new SpeechRecorderSession({
@@ -242,7 +238,7 @@ export function RehabSpeechRecordingSection({
         if (next === "recording") {
           setStatus("recording");
         } else if (next === "idle") {
-          setStatus("idle");
+          setStatus((current) => (current === "uploading" ? current : "idle"));
           setElapsed(0);
           setAmplitude(0);
           setWaveformSamples([]);
@@ -256,8 +252,7 @@ export function RehabSpeechRecordingSection({
         toast.error(message);
       },
       onComplete: ({ blob, durationSeconds }) => {
-        setPendingReview({ blob, durationSeconds });
-        setStatus("idle");
+        void uploadRecordingRef.current(blob, durationSeconds);
       },
     });
 
@@ -346,12 +341,11 @@ export function RehabSpeechRecordingSection({
   const hasRecordings = recordings.length > 0;
   const isRecording = status === "recording";
   const showRecorder =
-    !pendingReview &&
-    (status === "starting" ||
+    status === "starting" ||
     status === "recording" ||
     status === "uploading" ||
     (!hasRecordings && !readOnly) ||
-    (recordAnother && !readOnly));
+    (recordAnother && !readOnly);
 
   return (
     <>
@@ -366,28 +360,6 @@ export function RehabSpeechRecordingSection({
               <Plus className="size-3.5" aria-hidden />
               New recording
             </button>
-          </div>
-        ) : null}
-
-        {pendingReview ? (
-          <div className="w-full min-w-0 space-y-3">
-            <SpeechRecordingNoteField
-              value={pendingNote}
-              onChange={setPendingNote}
-              disabled={status === "uploading"}
-            />
-            <SpeechAudioPlayer
-              blob={pendingReview.blob}
-              durationHint={pendingReview.durationSeconds}
-              mimeType={pendingReview.blob.type}
-              postRecord
-              saving={status === "uploading"}
-              onSave={uploadRecording}
-              onDiscard={() => {
-                setPendingReview(null);
-                setPendingNote("");
-              }}
-            />
           </div>
         ) : null}
 
@@ -420,7 +392,7 @@ export function RehabSpeechRecordingSection({
         {isRecording ? (
           <p className="text-xs text-white/45">
             Recording continues while your phone sleeps. Tap stop when you are
-            done, or use the lock-screen control.
+            done — it saves automatically.
           </p>
         ) : null}
         {error ? <p className="text-xs text-red-400">{error}</p> : null}
