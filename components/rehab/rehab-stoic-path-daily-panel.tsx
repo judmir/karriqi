@@ -10,16 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import {
+  getStoicPathExerciseId,
   getStoicExerciseById,
   getStoicExerciseForDate,
   getStoicProgramDayIndex,
+  isPersistedStoicPathPlanEvent,
   STOIC_PROCESS_SCORE_LABELS,
   STOIC_REHAB_SLOT_LABELS,
   STOIC_SUGGESTED_WHEN_LABELS,
 } from "@/lib/rehab/stoic-rehab-utils";
-import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { cn } from "@/lib/utils";
+import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { useStoicRehabStore } from "@/stores/stoic-rehab-store";
 import type { StoicRehabProcessScore } from "@/types/stoic-rehab";
 
@@ -54,6 +57,10 @@ export function RehabStoicPathDailyPanel({
   compact = false,
 }: RehabStoicPathDailyPanelProps) {
   const saveCompletion = useStoicRehabStore((state) => state.saveCompletion);
+  const toggleOccurrenceCompleted = useRehabPlanStore(
+    (state) => state.toggleOccurrenceCompleted,
+  );
+  const planEvents = useRehabPlanStore((state) => state.events);
   const exercise = useMemo(() => {
     if (exerciseId) {
       const byId = getStoicExerciseById(exerciseId);
@@ -85,6 +92,14 @@ export function RehabStoicPathDailyPanel({
     setProcessScore(existing?.processScore);
   }, [existing, exercise.id]);
 
+  const planEvent = useMemo(
+    () =>
+      planEvents.find(
+        (event) => getStoicPathExerciseId(event) === exercise.id,
+      ) ?? null,
+    [exercise.id, planEvents],
+  );
+
   async function handleComplete() {
     if (pending) {
       return;
@@ -99,6 +114,9 @@ export function RehabStoicPathDailyPanel({
       });
       if (!result.ok) {
         return;
+      }
+      if (planEvent && isPersistedStoicPathPlanEvent(planEvent)) {
+        await toggleOccurrenceCompleted(planEvent, true);
       }
       toast.success("Calm rep completed.");
       onSaved?.();

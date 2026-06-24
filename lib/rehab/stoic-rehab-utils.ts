@@ -2,12 +2,18 @@ import {
   addDays,
   addMinutes,
   differenceInCalendarDays,
+  format,
   isBefore,
   setHours,
   setMinutes,
   setSeconds,
   startOfDay,
 } from "date-fns";
+
+import {
+  appendStoicExerciseIdMarker,
+  parseStoicExerciseIdFromDescription,
+} from "@/lib/rehab/stoic-path-event-metadata";
 
 import {
   NEURO_REHAB_PROGRAM_ID,
@@ -317,10 +323,34 @@ export const STOIC_PROCESS_SCORE_LABELS: Record<StoicRehabProcessScore, string> 
     3: "Calm rep completed",
   };
 
-export function isStoicPathPlanEvent(
+export function isSyntheticStoicPathPlanEvent(
   event: Pick<RehabPlanEvent, "id">,
 ): boolean {
   return event.id.startsWith(STOIC_PATH_PLAN_EVENT_ID_PREFIX);
+}
+
+export function isStoicPathPlanEvent(
+  event: Pick<
+    RehabPlanEvent,
+    "id" | "eventKind" | "description" | "recurrence"
+  >,
+): boolean {
+  if (isSyntheticStoicPathPlanEvent(event)) {
+    return true;
+  }
+  if (event.eventKind !== "stoic" || event.recurrence) {
+    return false;
+  }
+  return parseStoicExerciseIdFromDescription(event.description) != null;
+}
+
+export function isPersistedStoicPathPlanEvent(
+  event: Pick<
+    RehabPlanEvent,
+    "id" | "eventKind" | "description" | "recurrence"
+  >,
+): boolean {
+  return isStoicPathPlanEvent(event) && !isSyntheticStoicPathPlanEvent(event);
 }
 
 export function stoicPathPlanEventId(exerciseId: string): string {
@@ -331,6 +361,15 @@ export function parseStoicPathExerciseId(planEventId: string): string {
   return planEventId.slice(STOIC_PATH_PLAN_EVENT_ID_PREFIX.length);
 }
 
+export function getStoicPathExerciseId(
+  event: Pick<RehabPlanEvent, "id" | "description">,
+): string | null {
+  if (isSyntheticStoicPathPlanEvent(event)) {
+    return parseStoicPathExerciseId(event.id);
+  }
+  return parseStoicExerciseIdFromDescription(event.description);
+}
+
 /** Legacy recurring "Stoic intention" rows replaced by the 84-day Stoic Path task. */
 export function isLegacyStoicIntentionEvent(
   event: Pick<RehabPlanEvent, "eventKind" | "title">,
@@ -338,7 +377,7 @@ export function isLegacyStoicIntentionEvent(
   return event.eventKind === "stoic" && event.title === STOIC_INTENTION_TITLE;
 }
 
-function stoicSlotScheduleTime(day: Date, slot: StoicRehabSlot): Date {
+export function stoicSlotScheduleTime(day: Date, slot: StoicRehabSlot): Date {
   const schedule: Record<StoicRehabSlot, [number, number]> = {
     morning: [7, 0],
     midday: [12, 30],
@@ -363,7 +402,7 @@ function buildStoicEventDescription(exercise: StoicRehabExercise): string {
   if (exercise.journalPrompt) {
     lines.push("", `**Journal:** ${exercise.journalPrompt}`);
   }
-  return lines.join("\n");
+  return appendStoicExerciseIdMarker(lines.join("\n"), exercise.id);
 }
 
 /** Synthetic daily checklist row backed by stoic-rehab completion storage. */
@@ -423,7 +462,7 @@ export function mergeStoicPathIntoTodayEvents(
   );
 }
 
-/** Inject three Stoic Path tasks per program day in range (static content + completion store). */
+/** Inject Stoic Path tasks only when persisted rows are missing (offline fallback). */
 export function injectStoicPathEventsForRange(
   events: RehabPlanEvent[],
   windowStart: Date,
@@ -433,8 +472,16 @@ export function injectStoicPathEventsForRange(
   const withoutLegacy = events.filter(
     (event) => !isLegacyStoicIntentionEvent(event),
   );
-  const withoutExistingPath = withoutLegacy.filter(
-    (event) => !isStoicPathPlanEvent(event),
+  const persistedPath = withoutLegacy.filter(isPersistedStoicPathPlanEvent);
+  const nonPath = withoutLegacy.filter((event) => !isStoicPathPlanEvent(event));
+
+  const persistedDays = new Set(
+    persistedPath
+      .filter((event) => {
+        const day = startOfDay(new Date(event.startAt));
+        return day >= startOfDay(windowStart) && day <= startOfDay(windowEnd);
+      })
+      .map((event) => format(startOfDay(new Date(event.startAt)), "yyyy-MM-dd")),
   );
 
   const completionByExerciseId = new Map(
@@ -447,7 +494,11 @@ export function injectStoicPathEventsForRange(
   const end = startOfDay(windowEnd);
 
   while (day.getTime() <= end.getTime()) {
-    if (!isBefore(day, programStart)) {
+    const dayKey = format(day, "yyyy-MM-dd");
+    if (
+      !isBefore(day, programStart) &&
+      !persistedDays.has(dayKey)
+    ) {
       const exercises = getStoicExercisesForDate(PROGRAM_START, day);
       for (const exercise of exercises) {
         injected.push(
@@ -462,7 +513,7 @@ export function injectStoicPathEventsForRange(
     day = addDays(day, 1);
   }
 
-  return [...withoutExistingPath, ...injected];
+  return [...nonPath, ...persistedPath, ...injected];
 }
 
 export function summarizeStoicPathCompletion(
