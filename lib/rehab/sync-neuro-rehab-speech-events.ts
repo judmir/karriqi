@@ -72,12 +72,8 @@ export function buildSpeechEventSyncPlan(
       if (needsSchedulePatch || needsDescriptionPatch) {
         patches.push({
           id: primary.id,
-          ...(needsSchedulePatch
-            ? {
-                start_at: target.start_at,
-                end_at: target.end_at,
-              }
-            : {}),
+          start_at: target.start_at,
+          end_at: target.end_at,
           ...(needsDescriptionPatch
             ? { description: targetDescription }
             : {}),

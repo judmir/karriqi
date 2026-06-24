@@ -471,7 +471,7 @@ export function RehabUpcomingView() {
         }
         exerciseId={
           stoicPathEvent
-            ? getStoicPathExerciseId(stoicPathEvent)
+            ? (getStoicPathExerciseId(stoicPathEvent) ?? undefined)
             : undefined
         }
       />

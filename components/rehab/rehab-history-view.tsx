@@ -253,7 +253,7 @@ export function RehabHistoryView() {
         }
         exerciseId={
           stoicPathEvent
-            ? getStoicPathExerciseId(stoicPathEvent)
+            ? (getStoicPathExerciseId(stoicPathEvent) ?? undefined)
             : undefined
         }
       />

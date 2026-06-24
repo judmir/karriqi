@@ -68,12 +68,15 @@ export function buildStoicPathEventSyncPlan(
     const completionAt = completionsByExerciseId.get(exerciseId);
 
     if (!row) {
+      const id = crypto.randomUUID();
       inserts.push({
         ...target,
-        id: crypto.randomUUID(),
+        id,
         plan_week: clampProgramPlanWeek(target.plan_week),
-        completed_at: completionAt ?? null,
       });
+      if (completionAt) {
+        completionPatches.push({ id, completed_at: completionAt });
+      }
       continue;
     }
 

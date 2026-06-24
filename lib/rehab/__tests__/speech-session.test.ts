@@ -5,12 +5,13 @@ import {
   mergeSpeechEventDescription,
   parseSpeechSession,
   serializeSpeechSession,
+  type SpeechSessionData,
 } from "@/lib/rehab/speech-session";
 import { SPEECH_EVENT_DESCRIPTION_STUB } from "@/modules/rehab/neuro-rehab-2026/speech-content";
 
 describe("speech-session", () => {
   it("round-trips ratings and spontaneous selections", () => {
-    const session = {
+    const session: SpeechSessionData = {
       ...emptySpeechSession(),
       ratings: { clarity: 7, effort: 4 },
       spontaneousDone: true,
@@ -20,7 +21,7 @@ describe("speech-session", () => {
         bodyFelt: "tired",
         tomorrowNotice: "breath",
       },
-      hardSounds: ["rr", "gj"] as const,
+      hardSounds: ["rr", "gj"],
     };
 
     const raw = serializeSpeechSession(session);
