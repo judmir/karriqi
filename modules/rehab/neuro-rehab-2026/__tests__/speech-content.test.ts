@@ -10,7 +10,6 @@ import {
 import {
   SPEECH_BASELINE_A,
   SPEECH_BASELINE_B,
-  SPEECH_ENGLISH_BASELINE,
   SPEECH_ROTATING_TEXTS,
 } from "@/modules/rehab/neuro-rehab-2026/speech-reading-texts";
 
@@ -32,11 +31,17 @@ describe("speech-content", () => {
     );
   });
 
-  it("picks English text on Thu/Sun", () => {
+  it("never schedules English — Thu gets rotating Albanian text", () => {
     const thursday = new Date(2026, 5, 18);
     expect(speechReadingTextForDate(thursday).body).toBe(
-      SPEECH_ENGLISH_BASELINE.body,
+      SPEECH_ROTATING_TEXTS[4]!.body,
     );
+    expect(speechReadingTextForDate(thursday).title).not.toMatch(/English/i);
+  });
+
+  it("uses baseline A on program Sundays", () => {
+    const sunday = new Date(2026, 5, 21);
+    expect(speechReadingTextForDate(sunday).body).toBe(SPEECH_BASELINE_A.body);
   });
 
   it("uses baseline A on weekly anchor days", () => {

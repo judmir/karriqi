@@ -6,8 +6,6 @@ import {
   SPEECH_ARTICULATION_WEEKDAYS,
   SPEECH_BASELINE_A,
   SPEECH_BASELINE_B,
-  SPEECH_ENGLISH_BASELINE,
-  SPEECH_ENGLISH_WEEKDAYS,
   SPEECH_ROTATING_TEXTS,
 } from "@/modules/rehab/neuro-rehab-2026/speech-reading-texts";
 
@@ -25,7 +23,6 @@ export type SpeechDayPlan = {
   dayOfWeek: number;
   rotatingIndex: number;
   includeArticulation: boolean;
-  includeEnglish: boolean;
 };
 
 export function programDayOffsetForDate(day: Date): number {
@@ -47,9 +44,6 @@ export function speechDayPlanForDate(day: Date): SpeechDayPlan {
     includeArticulation: (
       SPEECH_ARTICULATION_WEEKDAYS as readonly number[]
     ).includes(dayOfWeek),
-    includeEnglish: (SPEECH_ENGLISH_WEEKDAYS as readonly number[]).includes(
-      dayOfWeek,
-    ),
   };
 }
 
@@ -66,13 +60,9 @@ export function speechReadingTextForDate(day: Date): SpeechReadingText {
     return SPEECH_BASELINE_A;
   }
 
-  if (plan.includeEnglish) {
-    return SPEECH_ENGLISH_BASELINE;
-  }
-
   return {
     title: rotating.theme,
-    hint: "Read slowly but naturally, not exaggerated.",
+    hint: "Lexo ngadalë por natyrshëm, jo të tepruar.",
     body: rotating.body,
   };
 }
