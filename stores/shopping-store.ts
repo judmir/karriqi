@@ -34,6 +34,7 @@ type ShoppingStoreState = {
   householdOwnerId: string | null;
   loadedAt: number | null;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
 };
 
@@ -71,6 +72,7 @@ const initialState: ShoppingStoreState = {
   householdOwnerId: null,
   loadedAt: null,
   loading: false,
+  refreshing: false,
   error: null,
 };
 
@@ -79,28 +81,182 @@ const positionsRef = new Map<string, number>();
 /** Blocks stale Realtime rows while a local write is in flight (+ grace period). */
 const pendingItemIds = new Set<string>();
 const pendingExpectedById = new Map<string, ShoppingListItem>();
-const PENDING_RELEASE_MS = 700;
+const pendingReleaseTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const persistDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const persistGenerationById = new Map<string, number>();
+/** Last checked state successfully synced to Supabase (for purchase recording). */
+const lastSyncedCheckedById = new Map<string, boolean>();
+const PENDING_MAX_MS = 3_000;
+const PERSIST_DEBOUNCE_MS = 450;
+
+type StoreGet = () => ShoppingStore;
 
 function markItemPending(item: ShoppingListItem) {
   pendingItemIds.add(item.id);
   pendingExpectedById.set(item.id, item);
+
+  const existingTimer = pendingReleaseTimers.get(item.id);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  pendingReleaseTimers.set(
+    item.id,
+    window.setTimeout(() => {
+      releaseItemPending(item.id, 0);
+    }, PENDING_MAX_MS),
+  );
 }
 
-function releaseItemPending(id: string, delayMs = PENDING_RELEASE_MS) {
+function releaseItemPending(id: string, delayMs = 0) {
+  const clearNow = () => {
+    pendingItemIds.delete(id);
+    pendingExpectedById.delete(id);
+    const timer = pendingReleaseTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      pendingReleaseTimers.delete(id);
+    }
+  };
+
   if (delayMs <= 0) {
-    pendingItemIds.delete(id);
-    pendingExpectedById.delete(id);
+    clearNow();
     return;
   }
+
   if (typeof window === "undefined") {
-    pendingItemIds.delete(id);
-    pendingExpectedById.delete(id);
+    clearNow();
     return;
   }
-  window.setTimeout(() => {
-    pendingItemIds.delete(id);
-    pendingExpectedById.delete(id);
-  }, delayMs);
+
+  const existingTimer = pendingReleaseTimers.get(id);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  pendingReleaseTimers.set(
+    id,
+    window.setTimeout(clearNow, delayMs),
+  );
+}
+
+function confirmPendingIfMatched(id: string, incoming: ShoppingListItem) {
+  const expected = pendingExpectedById.get(id);
+  if (!expected || expected.checked !== incoming.checked) {
+    return false;
+  }
+  releaseItemPending(id, 0);
+  return true;
+}
+
+function initSyncedCheckedState(items: ShoppingListItem[]) {
+  lastSyncedCheckedById.clear();
+  for (const item of items) {
+    lastSyncedCheckedById.set(item.id, item.checked);
+  }
+}
+
+function clearPersistDebounce(id: string) {
+  const timer = persistDebounceTimers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    persistDebounceTimers.delete(id);
+  }
+}
+
+function clearAllPersistDebounces() {
+  for (const timer of persistDebounceTimers.values()) {
+    clearTimeout(timer);
+  }
+  persistDebounceTimers.clear();
+}
+
+function scheduleItemPersist(id: string, get: StoreGet) {
+  const { listPersistence } = get();
+  if (!listPersistence) return;
+
+  const item = get().listItems.find((entry) => entry.id === id);
+  if (!item) return;
+
+  markItemPending(item);
+  clearPersistDebounce(id);
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  persistDebounceTimers.set(
+    id,
+    window.setTimeout(() => {
+      persistDebounceTimers.delete(id);
+      void flushItemPersist(id, get);
+    }, PERSIST_DEBOUNCE_MS),
+  );
+}
+
+async function flushItemPersist(id: string, get: StoreGet) {
+  const { listPersistence, listItems, purchasePersistence } = get();
+  if (!listPersistence) return;
+
+  const item = listItems.find((entry) => entry.id === id);
+  if (!item) return;
+
+  const position = listItems.findIndex((entry) => entry.id === id);
+  const generation = (persistGenerationById.get(id) ?? 0) + 1;
+  persistGenerationById.set(id, generation);
+
+  const snapshot = { ...item };
+  const wasChecked = lastSyncedCheckedById.get(id) ?? false;
+  markItemPending(snapshot);
+  positionsRef.set(id, position);
+
+  const result = await upsertShoppingListItem({
+    id: snapshot.id,
+    stapleId: snapshot.stapleId ?? null,
+    name: snapshot.name,
+    quantity: snapshot.quantity ?? null,
+    checked: snapshot.checked,
+    position,
+  });
+
+  if (persistGenerationById.get(id) !== generation) {
+    return;
+  }
+
+  if (!result.ok) {
+    releaseItemPending(id, 0);
+    return;
+  }
+
+  lastSyncedCheckedById.set(id, snapshot.checked);
+
+  if (purchasePersistence && snapshot.checked && !wasChecked) {
+    const rawId = snapshot.stapleId ?? null;
+    const stapleId = rawId && isUuid(rawId) ? rawId : null;
+    void recordPurchase({
+      stapleId,
+      itemName: snapshot.name,
+    }).then((r) => {
+      if (r.ok && r.stapleIdForCatalog && r.purchasedAt) {
+        useShoppingStore.setState((state) => ({
+          staples: state.staples.map((s) =>
+            s.id === r.stapleIdForCatalog
+              ? { ...s, lastPurchasedAt: r.purchasedAt! }
+              : s,
+          ),
+          loadedAt: Date.now(),
+        }));
+      }
+    });
+  }
+}
+
+function isItemLocallyAuthoritative(id: string): boolean {
+  return pendingItemIds.has(id) || persistDebounceTimers.has(id);
 }
 
 function initPositions(items: ShoppingListItem[]) {
@@ -143,53 +299,27 @@ function showStoreError(message: string) {
   }
 }
 
-function persistItem(
-  item: ShoppingListItem,
-  position: number,
-  listPersistence: boolean,
-): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (!listPersistence) return Promise.resolve({ ok: true });
-  positionsRef.set(item.id, position);
-  markItemPending(item);
-  return upsertShoppingListItem({
-    id: item.id,
-    stapleId: item.stapleId ?? null,
-    name: item.name,
-    quantity: item.quantity ?? null,
-    checked: item.checked,
-    position,
-  }).then((result) => {
-    if (result.ok) {
-      releaseItemPending(item.id);
-    } else {
-      releaseItemPending(item.id, 0);
-    }
-    return result;
-  });
+let bulkCheckPersistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleBulkCheckedPersist(checked: boolean) {
+  if (bulkCheckPersistTimer) {
+    clearTimeout(bulkCheckPersistTimer);
+  }
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  bulkCheckPersistTimer = window.setTimeout(() => {
+    bulkCheckPersistTimer = null;
+    void setAllShoppingListItemsChecked(checked);
+  }, PERSIST_DEBOUNCE_MS);
 }
 
-function recordCheckedPurchases(
-  ordered: ShoppingListItem[],
-  prevById: Map<string, ShoppingListItem>,
-  purchasePersistence: boolean,
-  patchCatalog: (stapleId: string, purchasedAt: string) => void,
-) {
-  if (!purchasePersistence) return;
-
-  for (const item of ordered) {
-    const prev = prevById.get(item.id);
-    if (prev && !prev.checked && item.checked) {
-      const rawId = item.stapleId ?? null;
-      const stapleId = rawId && isUuid(rawId) ? rawId : null;
-      void recordPurchase({
-        stapleId,
-        itemName: item.name,
-      }).then((r) => {
-        if (r.ok && r.stapleIdForCatalog && r.purchasedAt) {
-          patchCatalog(r.stapleIdForCatalog, r.purchasedAt);
-        }
-      });
-    }
+function clearBulkCheckPersist() {
+  if (bulkCheckPersistTimer) {
+    clearTimeout(bulkCheckPersistTimer);
+    bulkCheckPersistTimer = null;
   }
 }
 
@@ -209,6 +339,8 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     const hasCache = loadedAt !== null;
     if (!hasCache) {
       set({ loading: true, error: null });
+    } else {
+      set({ refreshing: true, error: null });
     }
 
     loadPromise = (async () => {
@@ -217,6 +349,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
         if (!result.ok) {
           set({
             loading: false,
+            refreshing: false,
             error:
               result.reason === "signed_out"
                 ? null
@@ -227,6 +360,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
         }
         const sortedItems = sortShoppingListItems(result.listItems);
         initPositions(sortedItems);
+        initSyncedCheckedState(sortedItems);
         set({
           staples: result.staples,
           listItems: sortedItems,
@@ -237,11 +371,13 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
           householdOwnerId: result.householdOwnerId,
           loadedAt: Date.now(),
           loading: false,
+          refreshing: false,
           error: null,
         });
       } catch (err) {
         set({
           loading: false,
+          refreshing: false,
           error:
             err instanceof Error ? err.message : "Could not load shopping.",
           loadedAt: hasCache ? get().loadedAt : null,
@@ -263,6 +399,14 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     positionsRef.clear();
     pendingItemIds.clear();
     pendingExpectedById.clear();
+    for (const timer of pendingReleaseTimers.values()) {
+      clearTimeout(timer);
+    }
+    pendingReleaseTimers.clear();
+    clearAllPersistDebounces();
+    clearBulkCheckPersist();
+    persistGenerationById.clear();
+    lastSyncedCheckedById.clear();
     set(initialState);
   },
 
@@ -275,7 +419,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   },
 
   replaceListItems(next, toggledId) {
-    const { listItems, listPersistence, purchasePersistence } = get();
+    const { listItems, listPersistence } = get();
     const ordered = toggledId
       ? reorderShoppingListAfterToggle(next, toggledId)
       : sortShoppingListItems(next);
@@ -291,34 +435,13 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       for (const item of removed) {
         markItemPending(item);
       }
-      ordered.forEach((item) => {
-        const prev = prevById.get(item.id);
-        const fieldsChanged =
-          prev &&
-          (prev.name !== item.name ||
-            prev.checked !== item.checked ||
-            (prev.quantity ?? null) !== (item.quantity ?? null) ||
-            (prev.stapleId ?? null) !== (item.stapleId ?? null));
-        if (!prev || fieldsChanged) {
-          markItemPending(item);
-        }
-      });
     }
 
     set({ listItems: ordered, loadedAt: Date.now() });
 
-    recordCheckedPurchases(ordered, prevById, purchasePersistence, (stapleId, purchasedAt) => {
-      set((state) => ({
-        staples: state.staples.map((s) =>
-          s.id === stapleId ? { ...s, lastPurchasedAt: purchasedAt } : s,
-        ),
-        loadedAt: Date.now(),
-      }));
-    });
-
     if (!listPersistence) return;
 
-    ordered.forEach((item, index) => {
+    for (const item of ordered) {
       const prev = prevById.get(item.id);
       const fieldsChanged =
         prev &&
@@ -327,21 +450,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
           (prev.quantity ?? null) !== (item.quantity ?? null) ||
           (prev.stapleId ?? null) !== (item.stapleId ?? null));
       if (!prev || fieldsChanged) {
-        void persistItem(item, index, listPersistence).then((r) => {
-          if (!r.ok && prev) {
-            set((state) => ({
-              listItems: sortShoppingListItems(
-                state.listItems.map((i) => (i.id === item.id ? prev : i)),
-              ),
-              loadedAt: Date.now(),
-            }));
-            showStoreError(`Couldn't save "${item.name}": ${r.message}`);
-          }
-        });
+        scheduleItemPersist(item.id, get);
       }
-    });
+    }
 
     for (const item of removed) {
+      clearPersistDebounce(item.id);
       positionsRef.delete(item.id);
       void deleteShoppingListItem(item.id).then((r) => {
         releaseItemPending(item.id, 0);
@@ -357,7 +471,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   },
 
   toggleListItem(id) {
-    const { listItems, listPersistence, purchasePersistence } = get();
+    const { listItems, listPersistence } = get();
     const prev = listItems.find((i) => i.id === id);
     if (!prev) return;
 
@@ -365,48 +479,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       i.id === id ? { ...i, checked: !i.checked } : i,
     );
     const ordered = reorderShoppingListAfterToggle(toggled, id);
-    const updated = ordered.find((i) => i.id === id);
-    if (!updated) return;
-
-    const position = ordered.findIndex((i) => i.id === id);
-    const prevById = new Map([[id, prev]]);
-
-    if (listPersistence) {
-      markItemPending(updated);
-    }
 
     set({ listItems: ordered, loadedAt: Date.now() });
 
-    recordCheckedPurchases(
-      ordered,
-      prevById,
-      purchasePersistence,
-      (stapleId, purchasedAt) => {
-        set((state) => ({
-          staples: state.staples.map((s) =>
-            s.id === stapleId ? { ...s, lastPurchasedAt: purchasedAt } : s,
-          ),
-          loadedAt: Date.now(),
-        }));
-      },
-    );
-
-    if (!listPersistence) return;
-
-    void persistItem(updated, position, listPersistence).then((r) => {
-      if (!r.ok) {
-        set((state) => ({
-          listItems: reorderShoppingListAfterToggle(
-            state.listItems.map((i) =>
-              i.id === id ? { ...i, checked: prev.checked } : i,
-            ),
-            id,
-          ),
-          loadedAt: Date.now(),
-        }));
-        showStoreError(`Couldn't save "${updated.name}": ${r.message}`);
-      }
-    });
+    if (listPersistence) {
+      scheduleItemPersist(id, get);
+    }
   },
 
   addItemFromStaple(staple) {
@@ -460,20 +538,10 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     set({ listItems: nextItems, loadedAt: Date.now() });
 
     if (listPersistence) {
-      nextItems.forEach((item, index) => {
-        void persistItem(item, index, listPersistence).then((r) => {
-          if (!r.ok) {
-            set({ listItems, loadedAt: Date.now() });
-            showStoreError(`Couldn't update list: ${r.message}`);
-          }
-        });
-      });
-      void setAllShoppingListItemsChecked(checked).then((r) => {
-        if (!r.ok) {
-          set({ listItems, loadedAt: Date.now() });
-          showStoreError(`Couldn't update list: ${r.message}`);
-        }
-      });
+      for (const item of nextItems) {
+        scheduleItemPersist(item.id, get);
+      }
+      scheduleBulkCheckedPersist(checked);
     }
   },
 
@@ -586,9 +654,11 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   },
 
   applyRemoteUpsert(row) {
+    const incoming = listRowToItem(row);
+    confirmPendingIfMatched(row.id, incoming);
+
     if (pendingItemIds.has(row.id)) return;
 
-    const incoming = listRowToItem(row);
     const expected = pendingExpectedById.get(row.id);
     if (expected && expected.checked !== incoming.checked) return;
 
@@ -600,6 +670,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       if (idx >= 0) {
         const existing = state.listItems[idx];
         if (rowsEqual(existing, incoming)) return state;
+        if (
+          existing.checked !== incoming.checked &&
+          isItemLocallyAuthoritative(incoming.id)
+        ) {
+          return state;
+        }
         merged = state.listItems.slice();
         merged[idx] = { ...existing, ...incoming };
         const listItems =
@@ -631,5 +707,5 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
 }));
 
 export function selectShoppingReady(state: ShoppingStore): boolean {
-  return state.loadedAt !== null;
+  return state.loadedAt !== null && !state.loading && !state.refreshing;
 }

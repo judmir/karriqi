@@ -67,7 +67,8 @@ export function mergeDevSuggestedStaples(
   options?: { includeMockSuggested?: boolean },
 ): StapleItem[] {
   const includeMockSuggested =
-    options?.includeMockSuggested ?? process.env.NODE_ENV === "development";
+    options?.includeMockSuggested ??
+    process.env.NEXT_PUBLIC_SHOPPING_MOCK_SUGGESTIONS === "1";
   if (!includeMockSuggested) {
     return staples;
   }

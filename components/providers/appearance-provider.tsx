@@ -17,8 +17,10 @@ import {
   APPEARANCE_RADIUS_VALUES,
   DEFAULT_APPEARANCE,
   sanitizeAppearanceState,
+  type AppearanceColorMode,
   type AppearanceState,
 } from "@/lib/theme/appearance";
+import { applyColorModeToDocument } from "@/lib/theme/color-mode-dom";
 
 type AppearanceContextValue = {
   appearance: AppearanceState;
@@ -57,20 +59,28 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     root.dataset.sidebarMode = appearance.sidebarMode;
     root.style.setProperty("--radius", APPEARANCE_RADIUS_VALUES[appearance.radius]);
 
-    if (resolvedTheme !== appearance.colorMode) {
+    if (
+      resolvedTheme !== undefined &&
+      resolvedTheme !== appearance.colorMode
+    ) {
       setTheme(appearance.colorMode);
     }
   }, [appearance, resolvedTheme, setTheme]);
 
+  const syncColorMode = useCallback((colorMode: AppearanceColorMode) => {
+    applyColorModeToDocument(colorMode);
+  }, []);
+
   const hydrateAppearance = useCallback((next: AppearanceState) => {
     const sanitizedAppearance = sanitizeAppearanceState(next);
+    syncColorMode(sanitizedAppearance.colorMode);
     setAppearanceState((current) =>
       isSameAppearance(current, sanitizedAppearance)
         ? current
         : sanitizedAppearance,
     );
     setSidebarOpen(sanitizedAppearance.sidebarMode !== "icon");
-  }, []);
+  }, [syncColorMode]);
 
   const resetAppearance = useCallback(() => {
     setAppearanceState((current) =>
@@ -83,15 +93,21 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
 
   const setAppearance = useCallback((next: AppearanceState) => {
     const sanitizedAppearance = sanitizeAppearanceState(next);
+    if (sanitizedAppearance.colorMode) {
+      syncColorMode(sanitizedAppearance.colorMode);
+    }
     setAppearanceState((current) =>
       isSameAppearance(current, sanitizedAppearance)
         ? current
         : sanitizedAppearance,
     );
     setSidebarOpen(sanitizedAppearance.sidebarMode !== "icon");
-  }, []);
+  }, [syncColorMode]);
 
   const updateAppearance = useCallback((patch: Partial<AppearanceState>) => {
+    if (patch.colorMode) {
+      syncColorMode(patch.colorMode);
+    }
     setAppearanceState((current) => {
       const nextAppearance = sanitizeAppearanceState({
         ...current,
@@ -104,7 +120,7 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
 
       return isSameAppearance(current, nextAppearance) ? current : nextAppearance;
     });
-  }, []);
+  }, [syncColorMode]);
 
   const value = useMemo<AppearanceContextValue>(
     () => ({

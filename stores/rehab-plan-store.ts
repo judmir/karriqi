@@ -155,6 +155,183 @@ const initialState: RehabPlanStoreState = {
 
 let loadPromise: Promise<void> | null = null;
 
+/** Blocks Realtime refresh from reverting optimistic completion toggles. */
+const pendingCompletionIds = new Set<string>();
+const pendingExpectedCompleted = new Map<string, boolean>();
+const pendingCompletionTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const completionPersistDebounceTimers = new Map<
+  string,
+  ReturnType<typeof setTimeout>
+>();
+const completionPersistGenerationById = new Map<string, number>();
+const PENDING_COMPLETION_MAX_MS = 3_000;
+const COMPLETION_PERSIST_DEBOUNCE_MS = 450;
+
+type RehabStoreGet = () => RehabPlanStore;
+type RehabStoreSet = (
+  partial:
+    | Partial<RehabPlanStore>
+    | ((state: RehabPlanStore) => Partial<RehabPlanStore>),
+) => void;
+
+function clearCompletionPersistDebounce(id: string) {
+  const timer = completionPersistDebounceTimers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    completionPersistDebounceTimers.delete(id);
+  }
+}
+
+function clearAllCompletionPersistDebounces() {
+  for (const timer of completionPersistDebounceTimers.values()) {
+    clearTimeout(timer);
+  }
+  completionPersistDebounceTimers.clear();
+}
+
+function scheduleCompletionPersist(id: string, get: RehabStoreGet, set: RehabStoreSet) {
+  const event = get().events.find((item) => item.id === id);
+  if (!event) return;
+
+  const completed = event.completedAt !== null;
+  markCompletionPending(id, completed);
+  clearCompletionPersistDebounce(id);
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  completionPersistDebounceTimers.set(
+    id,
+    window.setTimeout(() => {
+      completionPersistDebounceTimers.delete(id);
+      void flushCompletionPersist(id, get, set);
+    }, COMPLETION_PERSIST_DEBOUNCE_MS),
+  );
+}
+
+async function flushCompletionPersist(
+  id: string,
+  get: RehabStoreGet,
+  set: RehabStoreSet,
+) {
+  const event = get().events.find((item) => item.id === id);
+  if (!event) return;
+
+  const completed = event.completedAt !== null;
+  const generation = (completionPersistGenerationById.get(id) ?? 0) + 1;
+  completionPersistGenerationById.set(id, generation);
+  markCompletionPending(id, completed);
+
+  const result = await toggleRehabPlanEventCompleted({ id, completed });
+
+  if (completionPersistGenerationById.get(id) !== generation) {
+    return;
+  }
+
+  if (!result.ok) {
+    releaseCompletionPending(id);
+    showStoreError(result.message);
+  }
+}
+
+function markCompletionPending(id: string, completed: boolean) {
+  pendingCompletionIds.add(id);
+  pendingExpectedCompleted.set(id, completed);
+
+  const existingTimer = pendingCompletionTimers.get(id);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  pendingCompletionTimers.set(
+    id,
+    window.setTimeout(() => {
+      releaseCompletionPending(id);
+    }, PENDING_COMPLETION_MAX_MS),
+  );
+}
+
+function releaseCompletionPending(id: string) {
+  pendingCompletionIds.delete(id);
+  pendingExpectedCompleted.delete(id);
+  const timer = pendingCompletionTimers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    pendingCompletionTimers.delete(id);
+  }
+}
+
+function transferCompletionPending(fromId: string, toId: string) {
+  if (!pendingCompletionIds.has(fromId)) {
+    return;
+  }
+  const expected = pendingExpectedCompleted.get(fromId);
+  if (expected === undefined) {
+    return;
+  }
+  releaseCompletionPending(fromId);
+  markCompletionPending(toId, expected);
+}
+
+export function rehabPlanStoreHasPendingCompletions(): boolean {
+  return (
+    pendingCompletionIds.size > 0 || completionPersistDebounceTimers.size > 0
+  );
+}
+
+function completionMatches(
+  completedAt: string | null | undefined,
+  expectedCompleted: boolean,
+): boolean {
+  return (completedAt ?? null) !== null === expectedCompleted;
+}
+
+function mergeEventsPreservingPendingCompletions(
+  serverEvents: RehabPlanEvent[],
+  localEvents: RehabPlanEvent[],
+): RehabPlanEvent[] {
+  if (pendingCompletionIds.size === 0) {
+    return serverEvents;
+  }
+
+  const localById = new Map(localEvents.map((event) => [event.id, event]));
+
+  const merged = serverEvents.map((serverEvent) => {
+    const expectedCompleted = pendingExpectedCompleted.get(serverEvent.id);
+    if (expectedCompleted === undefined) {
+      return serverEvent;
+    }
+
+    if (completionMatches(serverEvent.completedAt, expectedCompleted)) {
+      releaseCompletionPending(serverEvent.id);
+      return serverEvent;
+    }
+
+    const local = localById.get(serverEvent.id);
+    if (local) {
+      return { ...serverEvent, completedAt: local.completedAt };
+    }
+
+    return serverEvent;
+  });
+
+  for (const localEvent of localEvents) {
+    if (
+      pendingCompletionIds.has(localEvent.id) &&
+      !merged.some((event) => event.id === localEvent.id)
+    ) {
+      merged.push(localEvent);
+    }
+  }
+
+  return sortEvents(merged);
+}
+
 function sortEvents(events: RehabPlanEvent[]): RehabPlanEvent[] {
   return [...events].sort(
     (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
@@ -339,6 +516,14 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
 
   reset() {
     loadPromise = null;
+    pendingCompletionIds.clear();
+    pendingExpectedCompleted.clear();
+    for (const timer of pendingCompletionTimers.values()) {
+      clearTimeout(timer);
+    }
+    pendingCompletionTimers.clear();
+    clearAllCompletionPersistDebounces();
+    completionPersistGenerationById.clear();
     set(initialState);
   },
 
@@ -735,15 +920,8 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
       return { ok: true };
     }
 
-    const result = await toggleRehabPlanEventCompleted({ id, completed });
-    if (!result.ok) {
-      set({
-        events: get().events.map((item) => (item.id === id ? prev : item)),
-        loadedAt: Date.now(),
-      });
-      showStoreError(result.message);
-    }
-    return result;
+    scheduleCompletionPersist(id, get, set);
+    return { ok: true };
   },
 
   async refresh() {
@@ -754,7 +932,10 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
     const result = await loadRehabPlanStoreAction();
     if (result.ok) {
       set({
-        events: sortEvents(result.events),
+        events: mergeEventsPreservingPendingCompletions(
+          sortEvents(result.events),
+          get().events,
+        ),
         persistence: result.persistence,
         loadedAt: Date.now(),
       });
@@ -890,6 +1071,12 @@ async function upsertOccurrence(
     tempId,
   );
   const prevEvents = events;
+  const pendingId = existing?.id ?? tempId;
+  const tracksCompletion = flags.completedAt !== undefined;
+
+  if (persistence && tracksCompletion) {
+    markCompletionPending(pendingId, flags.completedAt != null);
+  }
 
   set({
     events: sortEvents(
@@ -919,6 +1106,9 @@ async function upsertOccurrence(
   });
 
   if (!result.ok) {
+    if (tracksCompletion) {
+      releaseCompletionPending(pendingId);
+    }
     set({ events: prevEvents, loadedAt: Date.now() });
     showStoreError(result.message);
     return result;
@@ -926,6 +1116,9 @@ async function upsertOccurrence(
 
   // Reconcile the temp override id with the server id.
   if (!existing) {
+    if (tracksCompletion) {
+      transferCompletionPending(tempId, result.id);
+    }
     set({
       events: sortEvents(
         get().events.map((item) =>

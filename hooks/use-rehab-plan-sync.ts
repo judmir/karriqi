@@ -3,9 +3,14 @@
 import { useEffect } from "react";
 
 import { createClient } from "@/lib/supabase/client";
-import { useRehabPlanStore } from "@/stores/rehab-plan-store";
+import {
+  rehabPlanStoreHasPendingCompletions,
+  useRehabPlanStore,
+} from "@/stores/rehab-plan-store";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 400;
+const PENDING_REFRESH_RETRY_MS = 500;
+const PENDING_REFRESH_MAX_RETRIES = 8;
 
 /**
  * Keep rehab events aligned with Supabase across PWA, browser tabs, and push
@@ -22,6 +27,20 @@ export function useRehabPlanSync({ enabled }: { enabled: boolean }) {
     }
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingRetryCount = 0;
+
+    function flushRefresh() {
+      if (rehabPlanStoreHasPendingCompletions()) {
+        if (pendingRetryCount < PENDING_REFRESH_MAX_RETRIES) {
+          pendingRetryCount += 1;
+          debounceTimer = setTimeout(flushRefresh, PENDING_REFRESH_RETRY_MS);
+          return;
+        }
+      }
+
+      pendingRetryCount = 0;
+      void refresh();
+    }
 
     function scheduleRefresh() {
       if (debounceTimer) {
@@ -29,7 +48,7 @@ export function useRehabPlanSync({ enabled }: { enabled: boolean }) {
       }
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
-        void refresh();
+        flushRefresh();
       }, REALTIME_REFRESH_DEBOUNCE_MS);
     }
 
