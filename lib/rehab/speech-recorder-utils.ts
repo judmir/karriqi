@@ -35,9 +35,39 @@ export function replaceSpeechRecordingExtension(
 }
 
 export function formatSpeechDuration(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+/** Merge many small MediaRecorder chunks into fewer parts to reduce memory pressure. */
+export function consolidateSpeechRecorderChunks(
+  chunks: BlobPart[],
+  mimeType: string,
+  targetPartCount = 16,
+): BlobPart[] {
+  if (chunks.length <= targetPartCount) {
+    return chunks;
+  }
+
+  const next: BlobPart[] = [];
+  const groupSize = Math.ceil(chunks.length / targetPartCount);
+
+  for (let index = 0; index < chunks.length; index += groupSize) {
+    const slice = chunks.slice(index, index + groupSize);
+    if (slice.length === 1) {
+      next.push(slice[0]!);
+      continue;
+    }
+    next.push(new Blob(slice, { type: mimeType }));
+  }
+
+  return next;
 }
 
 export function computeSpeechAmplitude(data: Uint8Array): number {

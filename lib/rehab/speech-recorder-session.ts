@@ -1,5 +1,6 @@
 import {
   computeSpeechAmplitude,
+  consolidateSpeechRecorderChunks,
   preferredSpeechMimeType,
   pushWaveformSample,
   resetAudioSessionType,
@@ -22,6 +23,7 @@ export type SpeechRecorderSessionCallbacks = {
 
 const METER_INTERVAL_MS = 50;
 const RECORDER_HEALTH_GRACE_MS = 3_000;
+const CHUNK_CONSOLIDATE_INTERVAL_MS = 60_000;
 
 export class SpeechRecorderSession {
   private callbacks: SpeechRecorderSessionCallbacks;
@@ -32,6 +34,7 @@ export class SpeechRecorderSession {
   private elapsedTimer: number | null = null;
   private mediaSessionTimer: number | null = null;
   private healthTimer: number | null = null;
+  private consolidateTimer: number | null = null;
   private meterTimer: number | null = null;
   private audioContext: AudioContext | null = null;
   private meterAnalyser: AnalyserNode | null = null;
@@ -119,6 +122,7 @@ export class SpeechRecorderSession {
       this.recorder.start(SPEECH_RECORDER_TIMESLICE_MS);
       this.startMeter();
       this.startElapsedTimer();
+      this.startChunkConsolidation();
       this.configureMediaSession();
       this.attachLifecycleHandlers();
       void this.activateKeepAliveAudio();
@@ -237,6 +241,25 @@ export class SpeechRecorderSession {
     }, METER_INTERVAL_MS);
   }
 
+  private startChunkConsolidation() {
+    this.clearChunkConsolidationTimer();
+    this.consolidateTimer = window.setInterval(() => {
+      if (this.state !== "recording" || this.chunks.length < 120) {
+        return;
+      }
+      const mimeType =
+        this.recorder?.mimeType || preferredSpeechMimeType() || "audio/webm";
+      this.chunks = consolidateSpeechRecorderChunks(this.chunks, mimeType);
+    }, CHUNK_CONSOLIDATE_INTERVAL_MS);
+  }
+
+  private clearChunkConsolidationTimer() {
+    if (this.consolidateTimer !== null) {
+      window.clearInterval(this.consolidateTimer);
+      this.consolidateTimer = null;
+    }
+  }
+
   private startElapsedTimer() {
     this.clearElapsedTimer();
     this.elapsedTimer = window.setInterval(() => {
@@ -277,6 +300,7 @@ export class SpeechRecorderSession {
       window.clearInterval(this.healthTimer);
       this.healthTimer = null;
     }
+    this.clearChunkConsolidationTimer();
   }
 
   private configureMediaSession() {
@@ -430,6 +454,7 @@ export class SpeechRecorderSession {
       this.startedAt === null
         ? 0
         : Math.max(0, (Date.now() - this.startedAt) / 1000);
+    this.chunks = consolidateSpeechRecorderChunks(this.chunks, mimeType);
     const blob = new Blob(this.chunks, { type: mimeType });
     this.chunks = [];
     this.startedAt = null;
@@ -441,6 +466,10 @@ export class SpeechRecorderSession {
       this.callbacks.onComplete?.({ blob, durationSeconds });
     } else if (!wasUserStop) {
       this.callbacks.onError?.("Recording stopped unexpectedly.");
+    } else {
+      this.callbacks.onError?.(
+        "No audio was captured. Try again with the screen awake, or record shorter sessions.",
+      );
     }
   }
 }
