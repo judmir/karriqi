@@ -1,5 +1,6 @@
 import {
   fileExtensionForSpeechMime,
+  isSpeechRecordingAlreadyMp4,
   replaceSpeechRecordingExtension,
 } from "@/lib/rehab/speech-recorder-utils";
 
@@ -215,4 +216,59 @@ export async function fetchSpeechAudioBlob(url: string): Promise<Blob> {
     throw new Error("Could not load recording.");
   }
   return response.blob();
+}
+
+/** Transcode WebM/Opus (etc.) to AAC in an MP4 container for download. */
+export async function transcodeSpeechBlobToMp4(source: Blob): Promise<Blob> {
+  const {
+    ALL_FORMATS,
+    BlobSource,
+    BufferTarget,
+    Conversion,
+    Input,
+    Mp4OutputFormat,
+    Output,
+  } = await import("mediabunny");
+
+  const input = new Input({
+    formats: ALL_FORMATS,
+    source: new BlobSource(source),
+  });
+  const output = new Output({
+    format: new Mp4OutputFormat(),
+    target: new BufferTarget(),
+  });
+
+  const conversion = await Conversion.init({
+    input,
+    output,
+    video: { discard: true },
+    audio: { codec: "aac", numberOfChannels: 1 },
+  });
+
+  if (!conversion.isValid) {
+    throw new Error(
+      "This browser cannot export MP4 audio. Try Chrome or Safari.",
+    );
+  }
+
+  await conversion.execute();
+
+  const buffer = output.target.buffer;
+  if (!buffer) {
+    throw new Error("MP4 export failed.");
+  }
+
+  return new Blob([buffer], { type: "audio/mp4" });
+}
+
+export async function prepareSpeechRecordingDownloadBlob(
+  source: Blob,
+  mimeType: string | null | undefined,
+): Promise<Blob> {
+  if (isSpeechRecordingAlreadyMp4(mimeType || source.type)) {
+    return source;
+  }
+
+  return transcodeSpeechBlobToMp4(source);
 }

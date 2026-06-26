@@ -34,6 +34,20 @@ export function replaceSpeechRecordingExtension(
   return path.replace(/\.[^./]+$/, `.${extension}`);
 }
 
+/** Download filename for speech recordings (always `.mp4`). */
+export function speechRecordingDownloadFileName(fileName: string): string {
+  const trimmed = fileName.trim();
+  const stem = trimmed.includes(".")
+    ? trimmed.replace(/\.[^./]+$/, "")
+    : trimmed || "speech-recording";
+  return `${stem}.mp4`;
+}
+
+export function isSpeechRecordingAlreadyMp4(mimeType: string | null | undefined): boolean {
+  const normalized = (mimeType ?? "").toLowerCase();
+  return normalized.includes("mp4") || normalized.includes("m4a");
+}
+
 export function formatSpeechDuration(totalSeconds: number): string {
   const safe = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(safe / 3600);

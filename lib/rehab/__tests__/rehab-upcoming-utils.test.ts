@@ -5,11 +5,16 @@ import {
   buildUpcomingListSections,
   filterUpcomingEventsBySearch,
   hasMoreUpcomingDays,
-  maxUpcomingDaysFrom,
+  maxFutureDaysAfterToday,
   nextUpcomingVisibleDays,
+  formatUpcomingSearchResultsLabel,
+  paginateUpcomingSearchItems,
+  searchUpcomingItems,
   upcomingEventScheduleLabel,
-  UPCOMING_DAYS_CHUNK,
-  UPCOMING_INITIAL_DAYS,
+  upcomingSearchSummaryLabel,
+  UPCOMING_FUTURE_DAYS_CHUNK,
+  UPCOMING_FUTURE_DAYS_INITIAL,
+  UPCOMING_PAST_DAYS,
   upcomingDayLabel,
 } from "@/lib/rehab/rehab-upcoming-utils";
 import { generateNeuroRehabProgramEvents } from "@/modules/rehab/neuro-rehab-2026/generate-program-events";
@@ -50,50 +55,51 @@ describe("buildUpcomingListSections", () => {
     expect(upcomingDayLabel(addDays(today, 2), today)).toBe("Wed 3 Jun");
   });
 
-  it("shows two weeks of future day rows initially", () => {
+  it("shows today plus the next three days initially", () => {
     const events = mapGenerated();
     const sections = buildUpcomingListSections(
       events,
       today,
-      UPCOMING_INITIAL_DAYS,
+      UPCOMING_FUTURE_DAYS_INITIAL,
     );
 
     const futureSections = sections.filter((section) => !section.isPast);
-    expect(futureSections).toHaveLength(UPCOMING_INITIAL_DAYS);
+    expect(futureSections).toHaveLength(UPCOMING_FUTURE_DAYS_INITIAL + 1);
   });
 
-  it("adds two more weeks on each see more step", () => {
+  it("adds three more future days on each see more step", () => {
     const afterOne = nextUpcomingVisibleDays(
-      UPCOMING_INITIAL_DAYS,
+      UPCOMING_FUTURE_DAYS_INITIAL,
       today,
       mapGenerated(),
     );
-    expect(afterOne).toBe(UPCOMING_INITIAL_DAYS + UPCOMING_DAYS_CHUNK);
+    expect(afterOne).toBe(
+      UPCOMING_FUTURE_DAYS_INITIAL + UPCOMING_FUTURE_DAYS_CHUNK,
+    );
 
     const events = mapGenerated();
     const sections = buildUpcomingListSections(events, today, afterOne);
     const futureSections = sections.filter((section) => !section.isPast);
-    expect(futureSections).toHaveLength(afterOne);
+    expect(futureSections).toHaveLength(afterOne + 1);
   });
 
   it("caps at program end from stored events", () => {
     const events = mapGenerated();
-    const maxDays = maxUpcomingDaysFrom(today, events);
+    const maxDays = maxFutureDaysAfterToday(today, events);
     expect(hasMoreUpcomingDays(maxDays - 1, today, events)).toBe(true);
     expect(hasMoreUpcomingDays(maxDays, today, events)).toBe(false);
     expect(nextUpcomingVisibleDays(maxDays - 1, today, events)).toBe(maxDays);
   });
 
-  it("renders past program days as their own past sections", () => {
+  it("renders at most the last three past days with events", () => {
     const events = mapGenerated();
     const sections = buildUpcomingListSections(events, addDays(today, 30));
     const pastSections = sections.filter((section) => section.isPast);
     expect(pastSections.length).toBeGreaterThan(0);
-    // Past sections only include days that actually carry events.
+    expect(pastSections.length).toBeLessThanOrEqual(UPCOMING_PAST_DAYS);
     expect(pastSections.every((section) => section.events.length > 0)).toBe(
       true,
     );
-    // Past sections come before today/future sections.
     const firstFutureIndex = sections.findIndex((section) => !section.isPast);
     expect(
       sections.slice(0, firstFutureIndex).every((section) => section.isPast),
@@ -122,6 +128,43 @@ describe("buildUpcomingListSections", () => {
     expect(
       todaySection?.events.some((event) => event.id === completed.id),
     ).toBe(true);
+  });
+});
+
+
+describe("paginateUpcomingSearchItems", () => {
+  it("returns a page with total and hasMore", () => {
+    const events = mapGenerated().slice(0, 3).map((event, index) => ({
+      kind: "event" as const,
+      event: { ...event, id: `e-${index}` },
+    }));
+    const page = paginateUpcomingSearchItems(events, 0, 2);
+    expect(page.items).toHaveLength(2);
+    expect(page.total).toBe(3);
+    expect(page.hasMore).toBe(true);
+
+    const last = paginateUpcomingSearchItems(events, 2, 2);
+    expect(last.items).toHaveLength(1);
+    expect(last.hasMore).toBe(false);
+  });
+});
+
+describe("formatUpcomingSearchResultsLabel", () => {
+  it("formats partial and full counts with summary", () => {
+    expect(
+      formatUpcomingSearchResultsLabel({
+        shown: 25,
+        total: 733,
+        summary: "Run",
+      }),
+    ).toBe("25 of 733 results · Run");
+    expect(
+      formatUpcomingSearchResultsLabel({
+        shown: 733,
+        total: 733,
+        summary: "Run",
+      }),
+    ).toBe("733 results · Run");
   });
 });
 
@@ -154,6 +197,62 @@ describe("filterUpcomingEventsBySearch", () => {
     ).toEqual(["custom-1"]);
   });
 
+
+  it("matches speech events when searching with filler words", () => {
+    const events = mapGenerated();
+    const speechEvents = events.filter((event) => event.eventKind === "speech");
+    expect(speechEvents.length).toBeGreaterThan(0);
+
+    expect(filterUpcomingEventsBySearch(events, "speech events")).toHaveLength(
+      speechEvents.length,
+    );
+    expect(filterUpcomingEventsBySearch(events, "Speech")).toHaveLength(
+      speechEvents.length,
+    );
+  });
+
+  it("includes speech recordings in search results", () => {
+    const events = mapGenerated();
+    const speech = events.find((event) => event.eventKind === "speech");
+    expect(speech).toBeDefined();
+
+    const withRecording = {
+      ...speech!,
+      speechRecordings: [
+        {
+          id: "rec-1",
+          eventId: speech!.id,
+          userId: "u",
+          fileName: "speech-2026-06-05.webm",
+          mimeType: "audio/webm",
+          sizeBytes: 1200,
+          durationSeconds: 42,
+          storagePath: "u/event/rec-1.webm",
+          note: "Clear articulation",
+          createdAt: "2026-06-05T10:15:00.000Z",
+        },
+      ],
+    };
+
+    const allEvents = events.map((event) =>
+      event.id === withRecording.id ? withRecording : event,
+    );
+
+    const speechSearch = searchUpcomingItems(allEvents, "speech");
+    expect(
+      speechSearch.some(
+        (item) => item.kind === "recording" && item.recording.id === "rec-1",
+      ),
+    ).toBe(true);
+
+    const noteSearch = searchUpcomingItems(allEvents, "articulation");
+    expect(
+      noteSearch.some(
+        (item) => item.kind === "recording" && item.recording.id === "rec-1",
+      ),
+    ).toBe(true);
+  });
+
   it("includes completed events", () => {
     const event = {
       ...mapGenerated()[0]!,
@@ -164,6 +263,43 @@ describe("filterUpcomingEventsBySearch", () => {
     expect(filterUpcomingEventsBySearch([event], "stretch")).toHaveLength(1);
   });
 });
+
+
+  it("filters by task type chips without text search", () => {
+    const events = mapGenerated();
+    const runEvents = events.filter((event) => event.eventKind === "run_walk");
+    expect(runEvents.length).toBeGreaterThan(0);
+
+    const results = searchUpcomingItems(events, { kindFilters: ["run"] });
+    expect(results.every((item) => item.kind === "event")).toBe(true);
+    expect(
+      results.every((item) => item.event.eventKind === "run_walk"),
+    ).toBe(true);
+    expect(results).toHaveLength(runEvents.length);
+  });
+
+  it("combines kind filters with text search", () => {
+    const events = mapGenerated();
+    const speech = events.filter((event) => event.eventKind === "speech");
+    expect(speech.length).toBeGreaterThan(0);
+
+    const results = searchUpcomingItems(events, {
+      kindFilters: ["speech"],
+      query: "practice",
+    });
+    expect(results).toHaveLength(speech.length);
+  });
+
+  it("builds a readable search summary label", () => {
+    expect(
+      upcomingSearchSummaryLabel({
+        kindFilters: ["run", "speech"],
+        query: "morning",
+      }),
+    ).toBe('Run, Speech · “morning”');
+    expect(upcomingSearchSummaryLabel({ kindFilters: ["run"] })).toBe("Run");
+  });
+
 
 describe("upcomingEventScheduleLabel", () => {
   it("shows date and time", () => {

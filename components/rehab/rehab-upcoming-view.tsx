@@ -1,7 +1,7 @@
 "use client";
 
 import { addDays, endOfDay, isSameDay, startOfDay } from "date-fns";
-import { ChevronDown, History, Search, X } from "lucide-react";
+import { ChevronDown, History, Loader2, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -24,6 +24,9 @@ import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabJournalDialog } from "@/components/rehab/rehab-journal-dialog";
 import { RehabStoicPathDialog } from "@/components/rehab/rehab-stoic-path-dialog";
 import { RehabStoicDialog } from "@/components/rehab/rehab-stoic-dialog";
+import { RehabUpcomingKindFilters } from "@/components/rehab/rehab-upcoming-kind-filters";
+import { UpcomingSearchLoading } from "@/components/rehab/upcoming-search-loading";
+import { UpcomingSearchRecordingRow } from "@/components/rehab/upcoming-search-recording-row";
 import {
   RehabUpcomingViewSwitcher,
   type RehabUpcomingViewMode,
@@ -48,16 +51,23 @@ import {
   allEventSubtasksDone,
   resolveEventSubtasks,
 } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
+import { searchUpcomingRehabAction } from "@/lib/rehab/rehab-upcoming-search-actions";
 import {
   buildUpcomingListSections,
   defaultStartForUpcomingDay,
-  filterUpcomingEventsBySearch,
+  formatUpcomingSearchResultsLabel,
   hasMoreUpcomingDays,
-  maxUpcomingDaysFrom,
   nextUpcomingVisibleDays,
+  maxFutureDaysAfterToday,
+  paginateUpcomingSearchItems,
+  searchUpcomingItems,
   upcomingEventScheduleLabel,
-  UPCOMING_INITIAL_DAYS,
+  upcomingListExpandWindow,
+  upcomingSearchSummaryLabel,
+  UPCOMING_FUTURE_DAYS_INITIAL,
+  type UpcomingKindFilterId,
   type UpcomingListSection,
+  type UpcomingSearchItem,
 } from "@/lib/rehab/rehab-upcoming-utils";
 import { rehabEventTimeLabel } from "@/lib/rehab/rehab-today-utils";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
@@ -70,6 +80,7 @@ import {
 } from "@/lib/rehab/stoic-rehab-utils";
 import { PROGRAM_START } from "@/modules/rehab/neuro-rehab-2026/constants";
 import { useOpenRehabEventEdit } from "@/lib/rehab/use-open-rehab-event-edit";
+
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import { useStoicRehabStore } from "@/stores/stoic-rehab-store";
 import { cn } from "@/lib/utils";
@@ -123,20 +134,89 @@ export function RehabUpcomingView() {
   const [expandedPastDays, setExpandedPastDays] = useState<Set<string>>(
     () => new Set(),
   );
-  const [visibleDays, setVisibleDays] = useState(UPCOMING_INITIAL_DAYS);
+  const [visibleFutureDays, setVisibleFutureDays] = useState(
+    UPCOMING_FUTURE_DAYS_INITIAL,
+  );
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [kindFilters, setKindFilters] = useState<UpcomingKindFilterId[]>([]);
+  const [searchPage, setSearchPage] = useState<{
+    items: UpcomingSearchItem[];
+    total: number;
+    hasMore: boolean;
+  } | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<RehabPlanEvent | null>(null);
 
   const trimmedSearch = searchQuery.trim();
-  const searchActive = trimmedSearch.length > 0;
+  const textSearchActive = trimmedSearch.length > 0;
+  const filterActive = kindFilters.length > 0;
+  const searchModeActive = textSearchActive || filterActive;
+  const searchPending = textSearchActive && debouncedSearch !== trimmedSearch;
+  const showSearchLoading = searchPending || searchLoading;
 
-  /** Expand recurring masters across the full past-program + forward window. */
+  const handleKindFiltersChange = useCallback((next: UpcomingKindFilterId[]) => {
+    setKindFilters(next);
+  }, []);
+
+  const searchSummary = useMemo(
+    () =>
+      upcomingSearchSummaryLabel({
+        query: debouncedSearch,
+        kindFilters,
+      }),
+    [debouncedSearch, kindFilters],
+  );
+
+  const searchFetchKey = useMemo(
+    () =>
+      JSON.stringify({
+        query: debouncedSearch,
+        kindFilters,
+      }),
+    [debouncedSearch, kindFilters],
+  );
+
+  useEffect(() => {
+    if (!textSearchActive) {
+      setDebouncedSearch("");
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(trimmedSearch);
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [textSearchActive, trimmedSearch]);
+
+  /** Expand recurring masters only for the visible list window (not the full program). */
   const expandedEvents = useMemo(() => {
+    const now = new Date();
+    const { start: windowStart, end: windowEnd } = upcomingListExpandWindow(
+      now,
+      visibleFutureDays,
+    );
+    const expanded = expandRehabEvents(allEvents, windowStart, windowEnd);
+    return injectStoicPathEventsForRange(
+      expanded,
+      windowStart,
+      windowEnd,
+      stoicCompletions,
+    );
+  }, [allEvents, stoicCompletions, visibleFutureDays]);
+
+  const sections = useMemo(
+    () => buildUpcomingListSections(expandedEvents, new Date(), visibleFutureDays),
+    [expandedEvents, visibleFutureDays],
+  );
+
+  /** Full-window expansion for server search + client fallback. */
+  const searchExpandedEvents = useMemo(() => {
     const now = new Date();
     const windowStart = startOfDay(addDays(PROGRAM_START, -1));
     const windowEnd = endOfDay(
-      addDays(startOfDay(now), maxUpcomingDaysFrom(now, allEvents)),
+      addDays(startOfDay(now), maxFutureDaysAfterToday(now, allEvents)),
     );
     const expanded = expandRehabEvents(allEvents, windowStart, windowEnd);
     return injectStoicPathEventsForRange(
@@ -147,17 +227,162 @@ export function RehabUpcomingView() {
     );
   }, [allEvents, stoicCompletions]);
 
-  const sections = useMemo(
-    () => buildUpcomingListSections(expandedEvents, new Date(), visibleDays),
-    [expandedEvents, visibleDays],
-  );
+  useEffect(() => {
+    if (!searchModeActive) {
+      setSearchPage(null);
+      setSearchLoading(false);
+      return;
+    }
+    if (searchPending) {
+      return;
+    }
 
-  const searchResults = useMemo(
-    () => filterUpcomingEventsBySearch(expandedEvents, trimmedSearch),
-    [expandedEvents, trimmedSearch],
-  );
+    let cancelled = false;
+    setSearchLoading(true);
+    setSearchPage(null);
 
-  const canShowMore = hasMoreUpcomingDays(visibleDays, new Date(), allEvents);
+    const { query, kindFilters: activeKindFilters } = JSON.parse(
+      searchFetchKey,
+    ) as {
+      query: string;
+      kindFilters: UpcomingKindFilterId[];
+    };
+
+    void searchUpcomingRehabAction({
+      query,
+      kindFilters: activeKindFilters,
+      offset: 0,
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (result.ok) {
+          setSearchPage({
+            items: result.page.items,
+            total: result.page.total,
+            hasMore: result.page.hasMore,
+          });
+          return;
+        }
+
+        const page = paginateUpcomingSearchItems(
+          searchUpcomingItems(searchExpandedEvents, {
+            query,
+            kindFilters: activeKindFilters,
+          }),
+        );
+        setSearchPage({
+          items: page.items,
+          total: page.total,
+          hasMore: page.hasMore,
+        });
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        const page = paginateUpcomingSearchItems(
+          searchUpcomingItems(searchExpandedEvents, {
+            query,
+            kindFilters: activeKindFilters,
+          }),
+        );
+        setSearchPage({
+          items: page.items,
+          total: page.total,
+          hasMore: page.hasMore,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSearchLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchModeActive, searchPending, searchFetchKey, searchExpandedEvents]);
+
+  const searchResultsLabel = useMemo(() => {
+    if (!searchPage) {
+      return null;
+    }
+    return formatUpcomingSearchResultsLabel({
+      shown: searchPage.items.length,
+      total: searchPage.total,
+      summary: searchSummary,
+    });
+  }, [searchPage, searchSummary]);
+
+  const loadMoreSearch = useCallback(async () => {
+    if (!searchPage?.hasMore || searchLoadingMore || showSearchLoading) {
+      return;
+    }
+
+    setSearchLoadingMore(true);
+    const result = await searchUpcomingRehabAction({
+      query: debouncedSearch,
+      kindFilters,
+      offset: searchPage.items.length,
+    });
+
+    if (result.ok) {
+      setSearchPage((current) => {
+        if (!current) {
+          return {
+            items: result.page.items,
+            total: result.page.total,
+            hasMore: result.page.hasMore,
+          };
+        }
+        const items = [...current.items, ...result.page.items];
+        return {
+          items,
+          total: result.page.total,
+          hasMore: items.length < result.page.total,
+        };
+      });
+    } else {
+      const page = paginateUpcomingSearchItems(
+        searchUpcomingItems(searchExpandedEvents, {
+          query: debouncedSearch,
+          kindFilters,
+        }),
+        searchPage.items.length,
+      );
+      setSearchPage((current) => {
+        if (!current) {
+          return {
+            items: page.items,
+            total: page.total,
+            hasMore: page.hasMore,
+          };
+        }
+        const items = [...current.items, ...page.items];
+        return {
+          items,
+          total: page.total,
+          hasMore: items.length < page.total,
+        };
+      });
+    }
+    setSearchLoadingMore(false);
+  }, [
+    debouncedSearch,
+    kindFilters,
+    searchExpandedEvents,
+    searchLoadingMore,
+    searchPage,
+    showSearchLoading,
+  ]);
+
+  const canShowMore = hasMoreUpcomingDays(
+    visibleFutureDays,
+    new Date(),
+    allEvents,
+  );
 
   const todayBlockRef = useRef<HTMLElement | null>(null);
   const scrolledToTodayRef = useRef(false);
@@ -179,7 +404,7 @@ export function RehabUpcomingView() {
     if (scrolledToTodayRef.current) {
       return;
     }
-    if (view !== "list" || searchActive) {
+    if (view !== "list" || searchModeActive) {
       return;
     }
     const el = todayBlockRef.current;
@@ -188,21 +413,7 @@ export function RehabUpcomingView() {
     }
     el.scrollIntoView({ block: "start" });
     scrolledToTodayRef.current = true;
-  }, [view, searchActive, sections]);
-
-  useEffect(() => {
-    if (calendarMounted) {
-      return;
-    }
-    if (typeof requestIdleCallback !== "undefined") {
-      const id = requestIdleCallback(() => setCalendarMounted(true), {
-        timeout: 1500,
-      });
-      return () => cancelIdleCallback(id);
-    }
-    const timer = window.setTimeout(() => setCalendarMounted(true), 0);
-    return () => window.clearTimeout(timer);
-  }, [calendarMounted]);
+  }, [view, searchModeActive, sections]);
 
   const handleViewChange = useCallback((next: RehabUpcomingViewMode) => {
     setCalendarMounted(true);
@@ -326,50 +537,108 @@ export function RehabUpcomingView() {
           </div>
         </div>
 
-        <div className="relative min-w-0">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <Input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search tasks"
-            className="bg-muted/40 h-9 rounded-lg border-transparent pl-9 text-sm shadow-none"
-            aria-label="Search upcoming tasks"
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Filter tasks…"
+              className="bg-muted/40 h-8 rounded-lg border-transparent pl-9 text-sm shadow-none"
+              aria-label="Filter upcoming tasks and speech recordings"
+            />
+          </div>
+
+          <RehabUpcomingKindFilters
+            selected={kindFilters}
+            onChange={handleKindFiltersChange}
           />
         </div>
       </div>
 
       <div className="relative min-h-0 flex-1">
-        {searchActive ? (
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 md:px-6">
-            <div className="text-muted-foreground py-4 text-xs">
-              {searchResults.length === 0
-                ? `No tasks match “${trimmedSearch}”.`
-                : `${searchResults.length} task${searchResults.length === 1 ? "" : "s"}`}
+        {searchModeActive ? (
+          <div className="relative min-h-0 flex-1 overflow-y-auto px-4 pb-8 md:px-6">
+            <div className="text-muted-foreground flex min-h-8 items-center gap-2 py-3 text-xs">
+              {!showSearchLoading && searchPage && searchPage.total === 0 ? (
+                <span>
+                  No tasks or recordings match {searchSummary ?? "your filters"}.
+                </span>
+              ) : !showSearchLoading && searchResultsLabel ? (
+                <span>{searchResultsLabel}</span>
+              ) : null}
             </div>
-            <div className="flex flex-col gap-1">
-              {searchResults.map((event) => (
-                <UpcomingEventRow
-                  key={event.id}
-                  event={event}
-                  scheduleLabel={upcomingEventScheduleLabel(event)}
-                  onToggleCompleted={(completed) =>
-                    void handleToggleCompleted(event, completed)
-                  }
-                  onUpdateSubtasks={(subtasks) =>
-                    void handleUpdateSubtasks(event, subtasks)
-                  }
-                  onToggleAllSubtasks={(subtasks, completed) =>
-                    void handleToggleAllSubtasks(event, subtasks, completed)
-                  }
-                  onEdit={() => openEdit(event)}
-                  onDelete={() => requestDelete(event)}
-                />
-              ))}
-            </div>
+
+            {showSearchLoading && (!searchPage || searchPage.items.length === 0) ? (
+              <UpcomingSearchLoading />
+            ) : (
+              <div
+                className={cn(
+                  "relative flex flex-col gap-2",
+                  showSearchLoading && "opacity-60",
+                )}
+              >
+                {showSearchLoading ? (
+                  <UpcomingSearchLoading variant="overlay" />
+                ) : null}
+                {searchPage?.items.map((item) => {
+                if (item.kind === "recording") {
+                  return (
+                    <UpcomingSearchRecordingRow
+                      key={`recording-${item.recording.id}`}
+                      event={item.event}
+                      recording={item.recording}
+                      persistence={persistence}
+                    />
+                  );
+                }
+
+                const event = item.event;
+                return (
+                  <UpcomingEventRow
+                    key={event.id}
+                    event={event}
+                    scheduleLabel={upcomingEventScheduleLabel(event)}
+                    onToggleCompleted={(completed) =>
+                      void handleToggleCompleted(event, completed)
+                    }
+                    onUpdateSubtasks={(subtasks) =>
+                      void handleUpdateSubtasks(event, subtasks)
+                    }
+                    onToggleAllSubtasks={(subtasks, completed) =>
+                      void handleToggleAllSubtasks(event, subtasks, completed)
+                    }
+                    onEdit={() => openEdit(event)}
+                    onDelete={() => requestDelete(event)}
+                  />
+                );
+              })}
+
+                {searchPage?.hasMore ? (
+                  <div className="border-border border-t pt-4">
+                    <button
+                      type="button"
+                      onClick={() => void loadMoreSearch()}
+                      disabled={searchLoadingMore || showSearchLoading}
+                      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {searchLoadingMore ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                          Loading more…
+                        </>
+                      ) : (
+                        "Load more"
+                      )}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         ) : null}
 
-        {calendarMounted && !searchActive ? (
+        {calendarMounted && !searchModeActive ? (
           <div
             className={cn(
               "flex min-h-0 flex-1 flex-col",
@@ -381,7 +650,7 @@ export function RehabUpcomingView() {
           </div>
         ) : null}
 
-        {!searchActive ? (
+        {!searchModeActive ? (
           <div
             className={cn(
               "min-h-0 flex-1 overflow-y-auto px-4 pb-8 md:px-6",
@@ -417,7 +686,7 @@ export function RehabUpcomingView() {
                 <button
                   type="button"
                   onClick={() =>
-                    setVisibleDays((current) =>
+                    setVisibleFutureDays((current) =>
                       nextUpcomingVisibleDays(current, new Date(), allEvents),
                     )
                   }

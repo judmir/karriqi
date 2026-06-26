@@ -1,7 +1,8 @@
 import { normalizeSpeechRecordingNote } from "@/lib/rehab/speech-recording-note";
 import { softDeletePatch } from "@/lib/db/soft-delete";
+import { fetchSpeechAudioBlob, prepareSpeechRecordingDownloadBlob } from "@/lib/rehab/speech-audio-utils";
 import { mapSpeechRecording } from "@/lib/rehab/map-speech-recording";
-import { replaceSpeechRecordingExtension } from "@/lib/rehab/speech-recorder-utils";
+import { replaceSpeechRecordingExtension, speechRecordingDownloadFileName } from "@/lib/rehab/speech-recorder-utils";
 import { createClient } from "@/lib/supabase/client";
 import type { RehabSpeechRecording } from "@/types/rehab";
 
@@ -254,4 +255,65 @@ export async function deleteSpeechRecordingClient(input: {
   }
 
   return { ok: true };
+}
+
+export type DownloadSpeechRecordingResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function createSpeechRecordingSignedUrlClient(
+  storagePath: string,
+  expiresInSeconds = 60 * 60,
+): Promise<{ ok: true; signedUrl: string } | { ok: false; message: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.storage
+    .from(SPEECH_RECORDINGS_BUCKET)
+    .createSignedUrl(storagePath, expiresInSeconds);
+  if (error || !data?.signedUrl) {
+    return {
+      ok: false,
+      message: error?.message ?? "Could not prepare recording.",
+    };
+  }
+  return { ok: true, signedUrl: data.signedUrl };
+}
+
+export async function downloadSpeechRecordingClient(input: {
+  storagePath: string;
+  fileName: string;
+  mimeType?: string | null;
+  signedUrl?: string | null;
+}): Promise<DownloadSpeechRecordingResult> {
+  let signedUrl = input.signedUrl ?? null;
+  if (!signedUrl) {
+    const signed = await createSpeechRecordingSignedUrlClient(input.storagePath);
+    if (!signed.ok) {
+      return signed;
+    }
+    signedUrl = signed.signedUrl;
+  }
+
+  try {
+    const sourceBlob = await fetchSpeechAudioBlob(signedUrl);
+    const downloadBlob = await prepareSpeechRecordingDownloadBlob(
+      sourceBlob,
+      input.mimeType ?? sourceBlob.type,
+    );
+    const objectUrl = URL.createObjectURL(downloadBlob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = speechRecordingDownloadFileName(input.fileName);
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : "Could not download recording.",
+    };
+  }
 }
