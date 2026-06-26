@@ -70,7 +70,9 @@ import { RehabEventKindPicker } from "@/components/rehab/rehab-event-kind-picker
 import { RehabRecurringIcon } from "@/components/rehab/rehab-recurring-icon";
 import { RehabSpeechRecordingSection } from "@/components/rehab/rehab-speech-recording-section";
 import { SpeechTaskPanel } from "@/components/rehab/speech-task-panel";
+import { mergeSpeechEventDescription } from "@/lib/rehab/speech-session";
 import { allEventSubtasksDone } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
+import { SPEECH_EVENT_DESCRIPTION_STUB } from "@/modules/rehab/neuro-rehab-2026/speech-content";
 import {
   useRehabPlanStore,
   type SeriesEditScope,
@@ -204,6 +206,9 @@ function EventFormDialogBody({
   const toggleOccurrenceCompleted = useRehabPlanStore(
     (s) => s.toggleOccurrenceCompleted,
   );
+  const storeEventDescription = useRehabPlanStore((state) =>
+    event ? state.events.find((item) => item.id === event.id)?.description : null,
+  );
   const isEditing = event !== null;
   const viewOnly = readOnly;
   const isRehab = variant === "rehab";
@@ -283,6 +288,14 @@ function EventFormDialogBody({
   }, [event?.id]);
 
   function storedDescription(): string | null {
+    if (isSpeechTask && event) {
+      const current = storeEventDescription ?? event.description;
+      return mergeSpeechEventDescription(
+        SPEECH_EVENT_DESCRIPTION_STUB,
+        current,
+      );
+    }
+
     return serializeEventDescription(
       description,
       subtasks,

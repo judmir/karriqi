@@ -39,7 +39,7 @@ export const SPEECH_HARD_SOUND_OPTIONS = [
 export type SpeechHardSound = (typeof SPEECH_HARD_SOUND_OPTIONS)[number];
 
 export type SpontaneousSelections = Partial<
-  Record<SpontaneousPromptKey, string>
+  Record<SpontaneousPromptKey, string[]>
 >;
 
 export type SpeechSessionData = {
@@ -77,6 +77,27 @@ function isPromptKey(value: string): value is SpontaneousPromptKey {
   return PROMPT_KEYS.has(value as SpontaneousPromptKey);
 }
 
+function parseSpontaneousOptionIds(value: unknown): string[] {
+  if (typeof value === "string" && isSpontaneousOptionId(value)) {
+    return [value];
+  }
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const ids: string[] = [];
+  for (const item of value) {
+    if (typeof item === "string" && isSpontaneousOptionId(item)) {
+      if (!ids.includes(item)) {
+        ids.push(item);
+      }
+    }
+  }
+
+  return ids;
+}
+
 function parseSpontaneousSelections(
   record: Record<string, unknown>,
 ): SpontaneousSelections {
@@ -88,12 +109,13 @@ function parseSpontaneousSelections(
 
   if (raw) {
     for (const [key, value] of Object.entries(raw)) {
-      if (
-        isPromptKey(key) &&
-        typeof value === "string" &&
-        isSpontaneousOptionId(value)
-      ) {
-        spontaneous[key] = value;
+      if (!isPromptKey(key)) {
+        continue;
+      }
+
+      const optionIds = parseSpontaneousOptionIds(value);
+      if (optionIds.length > 0) {
+        spontaneous[key] = optionIds;
       }
     }
   }

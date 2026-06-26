@@ -44,22 +44,22 @@ export function SpeechTaskPanel({
   const initial = parseSpeechSession(description ?? storeDescription);
   const [session, setSession] = useState<SpeechSessionData>(initial);
   const savingRef = useRef(false);
+  const pendingSessionRef = useRef<SpeechSessionData | null>(null);
 
   useEffect(() => {
     setSession(parseSpeechSession(storeDescription ?? description));
   }, [description, eventId, storeDescription]);
 
-  const persistSession = useCallback(
-    async (next: SpeechSessionData) => {
-      setSession(next);
-      if (readOnly || !eventId || !persistence) {
-        return;
-      }
+  const flushPendingSession = useCallback(async () => {
+    if (readOnly || !eventId || !persistence || savingRef.current) {
+      return;
+    }
 
-      if (savingRef.current) {
-        return;
-      }
-      savingRef.current = true;
+    savingRef.current = true;
+
+    while (pendingSessionRef.current) {
+      const next = pendingSessionRef.current;
+      pendingSessionRef.current = null;
 
       const serialized = serializeSpeechSession(next);
       const result = await updateEvent({ id: eventId, description: serialized });
@@ -67,11 +67,29 @@ export function SpeechTaskPanel({
       if (!result.ok) {
         toast.error(result.message);
         setSession(parseSpeechSession(storeDescription ?? description));
+        pendingSessionRef.current = null;
+        break;
+      }
+    }
+
+    savingRef.current = false;
+
+    if (pendingSessionRef.current) {
+      void flushPendingSession();
+    }
+  }, [description, eventId, persistence, readOnly, storeDescription, updateEvent]);
+
+  const persistSession = useCallback(
+    (next: SpeechSessionData) => {
+      setSession(next);
+      if (readOnly || !eventId || !persistence) {
+        return;
       }
 
-      savingRef.current = false;
+      pendingSessionRef.current = next;
+      void flushPendingSession();
     },
-    [description, eventId, readOnly, storeDescription, updateEvent],
+    [eventId, flushPendingSession, persistence, readOnly],
   );
 
   function setRating(key: SpeechRatingKey, value: number) {
@@ -85,14 +103,21 @@ export function SpeechTaskPanel({
   }
 
   function setSpontaneousChoice(key: SpontaneousPromptKey, optionId: string) {
+    const current = session.spontaneous[key] ?? [];
+    const nextIds = current.includes(optionId)
+      ? current.filter((item) => item !== optionId)
+      : [...current, optionId];
+
     const nextSpontaneous = { ...session.spontaneous };
-    if (nextSpontaneous[key] === optionId) {
+    if (nextIds.length === 0) {
       delete nextSpontaneous[key];
     } else {
-      nextSpontaneous[key] = optionId;
+      nextSpontaneous[key] = nextIds;
     }
 
-    const hasSelection = Object.keys(nextSpontaneous).length > 0;
+    const hasSelection = Object.values(nextSpontaneous).some(
+      (items) => items.length > 0,
+    );
     void persistSession({
       ...session,
       spontaneous: nextSpontaneous,
@@ -135,7 +160,7 @@ export function SpeechTaskPanel({
           <h4 className="text-sm font-medium text-white">
             Spontaneous speech (~30 sec)
           </h4>
-          <p className="text-xs text-white/50">Optional — tap one per line</p>
+          <p className="text-xs text-white/50">Optional — tap one or more per line</p>
         </div>
 
         {SPEECH_SPONTANEOUS_PROMPTS.map((prompt) => (
@@ -143,7 +168,9 @@ export function SpeechTaskPanel({
             <span className="text-sm text-white/75">{prompt.lead}</span>
             <div className="flex flex-wrap gap-1.5">
               {prompt.options.map((option) => {
-                const selected = session.spontaneous[prompt.key] === option.id;
+                const selected = (session.spontaneous[prompt.key] ?? []).includes(
+                  option.id,
+                );
                 return (
                   <button
                     key={option.id}

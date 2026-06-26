@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { Loader2, Mic, Plus, Square, Trash2 } from "lucide-react";
+import { Download, Loader2, Mic, Plus, Square, Trash2 } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -323,6 +323,31 @@ export function RehabSpeechRecordingSection({
     }
   }
 
+  async function handleDownload(recording: RehabSpeechRecording) {
+    const url = signedUrls[recording.id];
+    if (!url) {
+      toast.error("Recording is not ready to download yet.");
+      return;
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Could not fetch recording.");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = recording.fileName || "speech-recording.webm";
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast.error("Could not download recording.");
+    }
+  }
+
   async function handleReplaceRecording(
     recording: RehabSpeechRecording,
     blob: Blob,
@@ -398,6 +423,17 @@ export function RehabSpeechRecordingSection({
                     ) : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    {signedUrls[item.id] ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDownload(item)}
+                        className="rounded-md p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+                        aria-label="Download recording"
+                        title="Download recording"
+                      >
+                        <Download className="size-3.5" aria-hidden />
+                      </button>
+                    ) : null}
                     {!readOnly ? (
                       <button
                         type="button"
@@ -424,10 +460,14 @@ export function RehabSpeechRecordingSection({
                     ) : null}
                   </div>
                 </div>
-                {isExpanded && !readOnly ? (
+                {(item.note || (isExpanded && !readOnly)) ? (
                   <SavedRecordingNote
                     recording={item}
+                    readOnly={readOnly || !isExpanded}
                     onSave={async (note) => {
+                      if (readOnly || !isExpanded) {
+                        return;
+                      }
                       const result = await updateSpeechRecordingNote(
                         item,
                         note,
@@ -436,12 +476,6 @@ export function RehabSpeechRecordingSection({
                         toast.success("Note saved.");
                       }
                     }}
-                  />
-                ) : item.note && isExpanded ? (
-                  <SavedRecordingNote
-                    recording={item}
-                    readOnly
-                    onSave={async () => {}}
                   />
                 ) : null}
                 {signedUrls[item.id] ? (

@@ -17,9 +17,9 @@ describe("speech-session", () => {
       spontaneousDone: true,
       spontaneousDoneAt: "2026-06-24T10:00:00.000Z",
       spontaneous: {
-        speechFelt: "clear",
-        bodyFelt: "tired",
-        tomorrowNotice: "breath",
+        speechFelt: ["clear", "slow"],
+        bodyFelt: ["tired"],
+        tomorrowNotice: ["breath", "rhythm"],
       },
       hardSounds: ["rr", "gj"],
     };
@@ -27,6 +27,16 @@ describe("speech-session", () => {
     const raw = serializeSpeechSession(session);
     expect(raw).toBeTruthy();
     expect(parseSpeechSession(raw)).toEqual(session);
+  });
+
+  it("migrates legacy single-string spontaneous selections", () => {
+    const legacy =
+      '<!-- karriqi-speech-session:{"ratings":{},"spontaneous":{"speechFelt":"clear","bodyFelt":"tired"},"spontaneousDoneAt":null,"hardSounds":[]} -->';
+
+    expect(parseSpeechSession(legacy).spontaneous).toEqual({
+      speechFelt: ["clear"],
+      bodyFelt: ["tired"],
+    });
   });
 
   it("preserves session data when syncing template descriptions", () => {
