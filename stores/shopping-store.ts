@@ -81,8 +81,8 @@ const positionsRef = new Map<string, number>();
 /** Blocks stale Realtime rows while a local write is in flight (+ grace period). */
 const pendingItemIds = new Set<string>();
 const pendingExpectedById = new Map<string, ShoppingListItem>();
-const pendingReleaseTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const persistDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingReleaseTimers = new Map<string, number>();
+const persistDebounceTimers = new Map<string, number>();
 const persistGenerationById = new Map<string, number>();
 /** Last checked state successfully synced to Supabase (for purchase recording). */
 const lastSyncedCheckedById = new Map<string, boolean>();
@@ -299,7 +299,7 @@ function showStoreError(message: string) {
   }
 }
 
-let bulkCheckPersistTimer: ReturnType<typeof setTimeout> | null = null;
+let bulkCheckPersistTimer: number | null = null;
 
 function scheduleBulkCheckedPersist(checked: boolean) {
   if (bulkCheckPersistTimer) {

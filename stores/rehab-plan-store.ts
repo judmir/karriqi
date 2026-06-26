@@ -158,11 +158,8 @@ let loadPromise: Promise<void> | null = null;
 /** Blocks Realtime refresh from reverting optimistic completion toggles. */
 const pendingCompletionIds = new Set<string>();
 const pendingExpectedCompleted = new Map<string, boolean>();
-const pendingCompletionTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const completionPersistDebounceTimers = new Map<
-  string,
-  ReturnType<typeof setTimeout>
->();
+const pendingCompletionTimers = new Map<string, number>();
+const completionPersistDebounceTimers = new Map<string, number>();
 const completionPersistGenerationById = new Map<string, number>();
 const PENDING_COMPLETION_MAX_MS = 3_000;
 const COMPLETION_PERSIST_DEBOUNCE_MS = 450;

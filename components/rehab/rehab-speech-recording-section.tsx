@@ -572,9 +572,9 @@ export function RehabSpeechRecordingSection({
             recording={stagedRecording}
             busy={status === "uploading"}
             readOnly={readOnly}
-            onSave={(blob, durationSeconds) =>
-              void handleSaveStagedRecording(blob, durationSeconds)
-            }
+            onSave={async (blob, durationSeconds) => {
+              await handleSaveStagedRecording(blob, durationSeconds);
+            }}
             onDownload={() =>
               void handleDownloadBlob(
                 stagedRecording.blob,
@@ -762,7 +762,7 @@ function StagedRecordingTrimPanel({
   recording: LocalStagedRecording;
   busy: boolean;
   readOnly: boolean;
-  onSave: (blob: Blob, durationSeconds: number) => void;
+  onSave: (blob: Blob, durationSeconds: number) => Promise<void>;
   onDownload: () => void;
   onDiscard: () => void;
 }) {

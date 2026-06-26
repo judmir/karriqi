@@ -150,4 +150,5 @@ export type RehabPlanEventInsert = {
   recurrence_rule?: string | null;
   /** Override rows only; masters/standalone leave this null. */
   recurrence_at?: string | null;
+  recurrence_cancelled?: boolean;
 };
