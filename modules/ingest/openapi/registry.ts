@@ -13,6 +13,7 @@ import {
   ingestErrorResponseSchema,
   ingestSuccessResponseSchema,
 } from "@/modules/ingest/schemas/responses";
+import { pulseItemsIngestSchema } from "@/modules/ingest/schemas/pulse-items";
 import { shoppingListIngestSchema } from "@/modules/ingest/schemas/shopping-list";
 
 import packageJson from "@/package.json";
@@ -36,7 +37,8 @@ function registerIngestPost(
   bodySchema:
     | typeof shoppingListIngestSchema
     | typeof kanbanIngestSchema
-    | typeof calendarEventsIngestSchema,
+    | typeof calendarEventsIngestSchema
+    | typeof pulseItemsIngestSchema,
 ) {
   ingestOpenApiRegistry.registerPath({
     method: "post",
@@ -124,6 +126,14 @@ registerIngestPost(
   calendarEventsIngestSchema,
 );
 
+registerIngestPost(
+  "/api/ingest/pulse-items",
+  "pulse-items",
+  "Create or update pulse feed items",
+  "Creates or updates private Pulse intelligence rows for `userId`. Upserts by `dedupeKey` (and optional stable `id`).",
+  pulseItemsIngestSchema,
+);
+
 export function generateIngestOpenApiDocument() {
   // OpenAPI 3.0 for Swagger UI compatibility (3.1 + Turbopack breaks apidom refract).
   const generator = new OpenApiGeneratorV3(ingestOpenApiRegistry.definitions);
@@ -162,6 +172,10 @@ export function generateIngestOpenApiDocument() {
       {
         name: "calendar-events",
         description: "Calendar events",
+      },
+      {
+        name: "pulse-items",
+        description: "Private Pulse intelligence feed",
       },
     ],
   });

@@ -15,6 +15,7 @@ export const ROUTES = {
   todo: "/kanban",
   calendar: "/calendar",
   notes: "/notes",
+  pulse: "/pulse",
   settings: "/settings",
   dev: "/dev",
   devPush: "/dev/push",
@@ -60,6 +61,7 @@ export const PROTECTED_ROUTE_PREFIXES: string[] = [
   ROUTES.todo,
   ROUTES.calendar,
   ROUTES.notes,
+  ROUTES.pulse,
   ROUTES.settings,
   ROUTES.dev,
 ];
