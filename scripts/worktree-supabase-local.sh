@@ -178,6 +178,9 @@ required_schema_tables() {
   if [[ -f supabase/migrations/20260527150000_google_calendar_sources.sql ]]; then
     echo "google_calendar_sources"
   fi
+  if [[ -f supabase/migrations/20260626220000_pulse_items.sql ]]; then
+    echo "pulse_items"
+  fi
 }
 
 local_postgres_ready() {
@@ -217,10 +220,17 @@ seed_local_dev_pins() {
   fi
 }
 
+seed_local_pulse_items() {
+  if command -v node >/dev/null 2>&1; then
+    node "$ROOT/scripts/seed-local-pulse-items.mjs" || echo "Warning: Pulse fixture seed failed (run pnpm worktree:seed-local-pulse)." >&2
+  fi
+}
+
 apply_local_post_reset() {
   patch_env_for_local
   set_env_var "AUTH_PIN_PEPPER" "karriqi-local-dev-pin-pepper-v1-not-for-production"
   seed_local_dev_pins
+  seed_local_pulse_items
   touch "$MARKER"
 }
 

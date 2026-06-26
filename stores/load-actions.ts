@@ -7,6 +7,7 @@ import { ensureNeuroRehabProgramMaterialized } from "@/lib/rehab/ensure-neuro-re
 import { fetchRehabPlanEventsForUser } from "@/lib/rehab/fetch-rehab-plan-events";
 import { isGoogleCalendarConfigured } from "@/lib/env/google-calendar";
 import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
+import { fetchPulseItemsForUser } from "@/lib/pulse/fetch-pulse-items";
 import { fetchRuleOf3DaysForUser } from "@/lib/rule-of-3/fetch-rule-of-3";
 import { fetchRecentPurchaseEventsForCadence } from "@/lib/shopping/fetch-recent-purchase-events";
 import { fetchShoppingListForUser } from "@/lib/shopping/fetch-shopping-list";
@@ -27,6 +28,7 @@ import type { RehabPlanEvent } from "@/types/rehab";
 import type { RehabPlanListItem } from "@/types/rehab";
 import type { RehabClinicalItem } from "@/types/rehab";
 import type { StoicRehabCompletion } from "@/types/stoic-rehab";
+import type { PulseItem } from "@/types/pulse";
 import type { RuleOf3Day } from "@/types/rule-of-3";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 import type {
@@ -430,4 +432,27 @@ export async function loadDashboardPageData(): Promise<DashboardPageData> {
     loadRuleOf3StoreAction(),
   ]);
   return { rehab, ruleOf3 };
+}
+
+
+export type PulseStorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      items: PulseItem[];
+      persistence: boolean;
+    };
+
+export async function loadPulseStoreAction(): Promise<PulseStorePayload> {
+  if (!isSupabaseConfigured()) {
+    return { ok: true, items: [], persistence: false };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const items = await fetchPulseItemsForUser(user.id);
+  return { ok: true, items, persistence: true };
 }

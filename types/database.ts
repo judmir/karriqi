@@ -401,6 +401,78 @@ export type Database = {
         };
         Relationships: [];
       };
+      pulse_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          summary: string;
+          why_it_matters: string | null;
+          suggested_action: string | null;
+          category: string;
+          impact: string;
+          urgency: string;
+          status: string;
+          source_type: string;
+          source_url: string | null;
+          source_title: string | null;
+          starts_at: string | null;
+          due_at: string | null;
+          expires_at: string | null;
+          dedupe_key: string;
+          confidence: number | null;
+          payload: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          summary: string;
+          why_it_matters?: string | null;
+          suggested_action?: string | null;
+          category: string;
+          impact: string;
+          urgency: string;
+          status?: string;
+          source_type?: string;
+          source_url?: string | null;
+          source_title?: string | null;
+          starts_at?: string | null;
+          due_at?: string | null;
+          expires_at?: string | null;
+          dedupe_key: string;
+          confidence?: number | null;
+          payload?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          summary?: string;
+          why_it_matters?: string | null;
+          suggested_action?: string | null;
+          category?: string;
+          impact?: string;
+          urgency?: string;
+          status?: string;
+          source_type?: string;
+          source_url?: string | null;
+          source_title?: string | null;
+          starts_at?: string | null;
+          due_at?: string | null;
+          expires_at?: string | null;
+          dedupe_key?: string;
+          confidence?: number | null;
+          payload?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       user_pins: {
         Row: {
           user_id: string;

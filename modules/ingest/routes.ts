@@ -6,6 +6,7 @@ export const INGEST_ROUTE_PATHS = [
   "/api/ingest/shopping-list",
   "/api/ingest/kanban",
   "/api/ingest/calendar-events",
+  "/api/ingest/pulse-items",
 ] as const;
 
 export type IngestRoutePath = (typeof INGEST_ROUTE_PATHS)[number];

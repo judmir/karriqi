@@ -43,6 +43,7 @@ If a resource is **not** listed in `openapi.json`, stop and report. Do not call 
 | Errands / groceries | `POST /api/ingest/shopping-list` |
 | Tasks / listings / follow-ups | `POST /api/ingest/kanban` |
 | Viewings / appointments | `POST /api/ingest/calendar-events` |
+| Berlin Life / local intel feed | `POST /api/ingest/pulse-items` |
 | Apartment domain (future) | `POST /api/ingest/apartment` when it appears in the spec |
 
 Until `apartment` exists, use **kanban** (task per listing) and/or **calendar-events** (viewings).

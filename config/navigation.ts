@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   SquareKanban,
   Stethoscope,
+  Activity,
   StickyNote,
   Target,
 } from "lucide-react";
@@ -95,6 +96,12 @@ export const mainNavItems: MainNavItem[] = [
     label: "Notes",
     shortLabel: "Notes",
     icon: StickyNote,
+  },
+  {
+    href: ROUTES.pulse,
+    label: "Pulse",
+    shortLabel: "Pulse",
+    icon: Activity,
   },
 ];
 
