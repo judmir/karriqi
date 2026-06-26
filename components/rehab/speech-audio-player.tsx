@@ -38,6 +38,7 @@ type SpeechAudioPlayerProps = {
   readOnly?: boolean;
   saving?: boolean;
   postRecord?: boolean;
+  initialTrimMode?: boolean;
   compact?: boolean;
   onSave?: (blob: Blob, durationSeconds: number) => Promise<void>;
   onReplace?: (
@@ -56,6 +57,7 @@ export function SpeechAudioPlayer({
   readOnly = false,
   saving = false,
   postRecord = false,
+  initialTrimMode = false,
   compact = false,
   onSave,
   onReplace,
@@ -79,7 +81,9 @@ export function SpeechAudioPlayer({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [trimMode, setTrimMode] = useState(false);
+  const [trimMode, setTrimMode] = useState(
+    Boolean(initialTrimMode && postRecord && !readOnly),
+  );
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
   const [processing, setProcessing] = useState(false);
@@ -87,6 +91,15 @@ export function SpeechAudioPlayer({
   const durationSeconds =
     metadata?.durationSeconds ?? durationHint ?? 0;
   const peaks = metadata?.peaks ?? [];
+
+  useEffect(() => {
+    if (!initialTrimMode || !postRecord || durationSeconds <= 0) {
+      return;
+    }
+    setTrimStart(0);
+    setTrimEnd(durationSeconds);
+    setTrimMode(true);
+  }, [durationSeconds, initialTrimMode, postRecord]);
 
   useEffect(() => {
     if (blobProp) {
@@ -638,10 +651,14 @@ export function SpeechAudioPlayer({
                 <button
                   type="button"
                   onClick={() => void handleApplyTrim()}
-                  disabled={busy || !hasTrimChanges}
+                  disabled={busy || (!postRecord && !hasTrimChanges)}
                   className="rounded-full bg-[#ffd60a] px-3 py-2 text-xs font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 sm:text-sm"
                 >
-                  {busy ? "Trimming…" : "Apply"}
+                  {busy
+                    ? "Saving…"
+                    : postRecord
+                      ? "Save"
+                      : "Apply"}
                 </button>
               </>
             ) : postRecord ? (

@@ -1,3 +1,5 @@
+export type StagedSpeechRecordingStatus = "pending-trim" | "upload-failed";
+
 export type StagedSpeechRecording = {
   eventId: string;
   blob: Blob;
@@ -5,6 +7,7 @@ export type StagedSpeechRecording = {
   mimeType: string;
   fileName: string;
   stagedAt: string;
+  status: StagedSpeechRecordingStatus;
   uploadError?: string | null;
 };
 

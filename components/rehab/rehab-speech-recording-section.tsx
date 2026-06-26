@@ -21,6 +21,7 @@ import {
   clearStagedSpeechRecording,
   loadStagedSpeechRecording,
   stageSpeechRecordingForUpload,
+  type StagedSpeechRecordingStatus,
 } from "@/lib/rehab/speech-recording-staging";
 import {
   fileExtensionForSpeechMime,
@@ -36,11 +37,12 @@ const EMPTY_RECORDINGS: RehabSpeechRecording[] = [];
 
 type RecorderStatus = "idle" | "starting" | "recording" | "uploading";
 type MicPermissionState = "prompt" | "granted" | "denied" | "unknown";
-type PendingSpeechUpload = {
+type LocalStagedRecording = {
   blob: Blob;
   durationSeconds: number;
   mimeType: string;
   fileName: string;
+  status: StagedSpeechRecordingStatus;
   uploadError?: string | null;
 };
 
@@ -92,18 +94,15 @@ export function RehabSpeechRecordingSection({
   );
   const [micPermission, setMicPermission] =
     useState<MicPermissionState>("unknown");
-  const [recoveryRecording, setRecoveryRecording] =
-    useState<PendingSpeechUpload | null>(null);
+  const [stagedRecording, setStagedRecording] =
+    useState<LocalStagedRecording | null>(null);
 
   const sessionRef = useRef<SpeechRecorderSession | null>(null);
   const pendingStartRef = useRef(false);
   const longRecordingWarningsShownRef = useRef<Set<number>>(new Set());
-  const uploadRecordingRef = useRef<
+  const stageRecordingAfterStopRef = useRef<
     (blob: Blob, durationSeconds: number) => Promise<void>
   >(async () => {});
-  const uploadPendingRecordingRef = useRef<
-    (pending: PendingSpeechUpload) => Promise<boolean>
-  >(async () => false);
 
 
   const canRecord = useMemo(
@@ -198,17 +197,25 @@ export function RehabSpeechRecordingSection({
         return;
       }
 
-      setRecoveryRecording({
+      const status =
+        staged.status ??
+        (staged.uploadError ? "upload-failed" : "pending-trim");
+
+      setStagedRecording({
         blob: staged.blob,
         durationSeconds: staged.durationSeconds,
         mimeType: staged.mimeType,
         fileName: staged.fileName,
+        status,
         uploadError: staged.uploadError,
       });
-      setError(
-        staged.uploadError ??
-          "A previous recording could not be uploaded. Retry or download it below.",
-      );
+
+      if (status === "upload-failed") {
+        setError(
+          staged.uploadError ??
+            "Cloud save failed. Trim and save again, or download the recording below.",
+        );
+      }
     });
 
     return () => {
@@ -217,9 +224,15 @@ export function RehabSpeechRecordingSection({
   }, [eventId]);
 
   const uploadPendingRecording = useCallback(
-    async (pending: PendingSpeechUpload): Promise<boolean> => {
+    async (pending: LocalStagedRecording): Promise<boolean> => {
       setStatus("uploading");
       setError(null);
+
+      const mimeType = pending.mimeType;
+      const extension = fileExtensionForSpeechMime(mimeType);
+      const fileName = pending.fileName.includes(".")
+        ? pending.fileName.replace(/\.[^./]+$/, `.${extension}`)
+        : `${pending.fileName}.${extension}`;
 
       try {
         const supabase = createClient();
@@ -235,12 +248,12 @@ export function RehabSpeechRecordingSection({
           typeof crypto !== "undefined" && crypto.randomUUID
             ? crypto.randomUUID()
             : `${Date.now()}`;
-        const storagePath = `${user.id}/${eventId}/${recordingId}.${fileExtensionForSpeechMime(pending.mimeType)}`;
+        const storagePath = `${user.id}/${eventId}/${recordingId}.${extension}`;
 
         const { error: uploadError } = await supabase.storage
           .from(SPEECH_RECORDINGS_BUCKET)
           .upload(storagePath, pending.blob, {
-            contentType: pending.mimeType,
+            contentType: mimeType,
             upsert: false,
           });
         if (uploadError) {
@@ -250,8 +263,8 @@ export function RehabSpeechRecordingSection({
         const result = await completeSpeechRecordingUpload({
           eventId,
           storagePath,
-          fileName: pending.fileName,
-          mimeType: pending.mimeType,
+          fileName,
+          mimeType,
           sizeBytes: pending.blob.size,
           durationSeconds: pending.durationSeconds,
         });
@@ -263,7 +276,7 @@ export function RehabSpeechRecordingSection({
         }
 
         await clearStagedSpeechRecording(eventId);
-        setRecoveryRecording(null);
+        setStagedRecording(null);
         setRecordAnother(false);
         toast.success("Recording saved.");
         return true;
@@ -271,27 +284,33 @@ export function RehabSpeechRecordingSection({
         const message =
           err instanceof Error ? err.message : "Could not save recording.";
 
+        const failed: LocalStagedRecording = {
+          ...pending,
+          mimeType,
+          fileName,
+          status: "upload-failed",
+          uploadError: message,
+        };
+
         try {
           await stageSpeechRecordingForUpload({
             eventId,
-            blob: pending.blob,
-            durationSeconds: pending.durationSeconds,
-            mimeType: pending.mimeType,
-            fileName: pending.fileName,
+            blob: failed.blob,
+            durationSeconds: failed.durationSeconds,
+            mimeType: failed.mimeType,
+            fileName: failed.fileName,
             stagedAt: new Date().toISOString(),
+            status: "upload-failed",
             uploadError: message,
           });
         } catch {
-          // IndexedDB may be unavailable; recovery UI still keeps the in-memory blob.
+          // IndexedDB may be unavailable; in-memory staging still allows retry.
         }
 
-        setRecoveryRecording({
-          ...pending,
-          uploadError: message,
-        });
+        setStagedRecording(failed);
         setError(message);
         toast.error(
-          `${message} Your recording is kept on this device — retry or download below.`,
+          `${message} Your recording is still on this device — adjust trim and save again, or download it.`,
           { duration: 10_000 },
         );
         return false;
@@ -302,29 +321,39 @@ export function RehabSpeechRecordingSection({
     [completeSpeechRecordingUpload, eventId],
   );
 
-  const uploadRecording = useCallback(
+  const stageRecordingAfterStop = useCallback(
     async (blob: Blob, durationSeconds: number) => {
       const mimeType = blob.type || preferredSpeechMimeType() || "audio/webm";
       const extension = fileExtensionForSpeechMime(mimeType);
       const fileName = `speech-${format(new Date(eventStartAt), "yyyy-MM-dd-HHmm")}.${extension}`;
-
-      await uploadPendingRecording({
+      const staged: LocalStagedRecording = {
         blob,
         durationSeconds,
         mimeType,
         fileName,
-      });
+        status: "pending-trim",
+      };
+
+      try {
+        await stageSpeechRecordingForUpload({
+          eventId,
+          ...staged,
+          stagedAt: new Date().toISOString(),
+        });
+      } catch {
+        // IndexedDB may be unavailable; trim UI still works in memory until reload.
+      }
+
+      setStagedRecording(staged);
+      setRecordAnother(false);
+      setError(null);
     },
-    [eventStartAt, uploadPendingRecording],
+    [eventId, eventStartAt],
   );
 
   useEffect(() => {
-    uploadPendingRecordingRef.current = uploadPendingRecording;
-  }, [uploadPendingRecording]);
-
-  useEffect(() => {
-    uploadRecordingRef.current = uploadRecording;
-  }, [uploadRecording]);
+    stageRecordingAfterStopRef.current = stageRecordingAfterStop;
+  }, [stageRecordingAfterStop]);
 
   useEffect(() => {
     sessionRef.current = new SpeechRecorderSession({
@@ -348,11 +377,11 @@ export function RehabSpeechRecordingSection({
             longRecordingWarningsShownRef.current.add(threshold);
             if (threshold === 10 * 60) {
               toast.info(
-                "Long recording in progress. If cloud save fails, you can retry or download from this device.",
+                "Long recording in progress. When you stop, trim and save — the full recording stays on this device until then.",
               );
             } else {
               toast.info(
-                `Recording is ${formatSpeechDuration(seconds)}. Saving may take a minute when you stop.`,
+                `Recording is ${formatSpeechDuration(seconds)}. Trim and save when you stop.`,
               );
             }
           }
@@ -365,7 +394,7 @@ export function RehabSpeechRecordingSection({
         toast.error(message);
       },
       onComplete: ({ blob, durationSeconds }) => {
-        void uploadRecordingRef.current(blob, durationSeconds);
+        void stageRecordingAfterStopRef.current(blob, durationSeconds);
       },
     });
 
@@ -378,6 +407,10 @@ export function RehabSpeechRecordingSection({
   async function startRecording() {
     if (!persistence) {
       setError("Sign in with sync enabled to save recordings.");
+      return;
+    }
+    if (stagedRecording) {
+      setError("Trim and save or discard the current recording before starting a new one.");
       return;
     }
     if (!canRecord) {
@@ -465,10 +498,27 @@ export function RehabSpeechRecordingSection({
     }
   }
 
-  async function handleDiscardRecovery() {
+  async function handleDiscardStaged() {
     await clearStagedSpeechRecording(eventId).catch(() => {});
-    setRecoveryRecording(null);
+    setStagedRecording(null);
     setError(null);
+  }
+
+  async function handleSaveStagedRecording(
+    blob: Blob,
+    durationSeconds: number,
+  ) {
+    if (!stagedRecording) {
+      return;
+    }
+
+    const mimeType = blob.type || stagedRecording.mimeType;
+    await uploadPendingRecording({
+      ...stagedRecording,
+      blob,
+      durationSeconds,
+      mimeType,
+    });
   }
 
   async function handleReplaceRecording(
@@ -494,11 +544,12 @@ export function RehabSpeechRecordingSection({
   const hasRecordings = recordings.length > 0;
   const isRecording = status === "recording";
   const showRecorder =
-    status === "starting" ||
-    status === "recording" ||
-    status === "uploading" ||
-    (!hasRecordings && !readOnly) ||
-    (recordAnother && !readOnly);
+    !stagedRecording &&
+    (status === "starting" ||
+      status === "recording" ||
+      status === "uploading" ||
+      (!hasRecordings && !readOnly) ||
+      (recordAnother && !readOnly));
 
   const isSidebar = layout === "sidebar";
 
@@ -516,21 +567,21 @@ export function RehabSpeechRecordingSection({
           <p className="text-xs text-white/45">Recordings</p>
         ) : null}
 
-        {recoveryRecording ? (
-          <PendingUploadRecoveryPanel
-            recording={recoveryRecording}
+        {stagedRecording ? (
+          <StagedRecordingTrimPanel
+            recording={stagedRecording}
             busy={status === "uploading"}
             readOnly={readOnly}
-            onRetry={() =>
-              void uploadPendingRecordingRef.current(recoveryRecording)
+            onSave={(blob, durationSeconds) =>
+              void handleSaveStagedRecording(blob, durationSeconds)
             }
             onDownload={() =>
               void handleDownloadBlob(
-                recoveryRecording.blob,
-                recoveryRecording.fileName,
+                stagedRecording.blob,
+                stagedRecording.fileName,
               )
             }
-            onDiscard={() => void handleDiscardRecovery()}
+            onDiscard={() => void handleDiscardStaged()}
           />
         ) : null}
 
@@ -690,8 +741,8 @@ export function RehabSpeechRecordingSection({
         ) : null}
         {isRecording ? (
           <p className="text-xs text-white/45">
-            Recording continues while your phone sleeps. Tap stop when you are
-            done — it saves automatically.
+            Recording continues while your phone sleeps. Tap stop when finished
+            — then trim and save.
           </p>
         ) : null}
         {error ? <p className="text-xs text-red-400">{error}</p> : null}
@@ -700,73 +751,67 @@ export function RehabSpeechRecordingSection({
   );
 }
 
-function PendingUploadRecoveryPanel({
+function StagedRecordingTrimPanel({
   recording,
   busy,
   readOnly,
-  onRetry,
+  onSave,
   onDownload,
   onDiscard,
 }: {
-  recording: PendingSpeechUpload;
+  recording: LocalStagedRecording;
   busy: boolean;
   readOnly: boolean;
-  onRetry: () => void;
+  onSave: (blob: Blob, durationSeconds: number) => void;
   onDownload: () => void;
   onDiscard: () => void;
 }) {
   const sizeMb = (recording.blob.size / (1024 * 1024)).toFixed(1);
+  const isUploadFailed = recording.status === "upload-failed";
 
   return (
-    <div className="space-y-2 rounded-lg border border-amber-400/25 bg-amber-400/8 p-3">
+    <div
+      className={cn(
+        "space-y-3 rounded-lg border p-3",
+        isUploadFailed
+          ? "border-amber-400/25 bg-amber-400/8"
+          : "border-white/12 bg-white/5",
+      )}
+    >
       <div className="space-y-1">
-        <p className="text-sm font-medium text-amber-100">
-          Recording not saved to cloud
+        <p className="text-sm font-medium text-white">
+          {isUploadFailed ? "Cloud save failed" : "Trim and save"}
         </p>
-        <p className="text-xs leading-relaxed text-amber-100/75">
-          {recording.uploadError
-            ? recording.uploadError
-            : "Upload did not finish."}{" "}
-          Your {formatSpeechDuration(Math.round(recording.durationSeconds))}{" "}
-          recording ({sizeMb} MB) is kept on this device.
+        <p className="text-xs leading-relaxed text-white/55">
+          {isUploadFailed && recording.uploadError ? (
+            <>
+              {recording.uploadError}{" "}
+            </>
+          ) : null}
+          {formatSpeechDuration(Math.round(recording.durationSeconds))} recording
+          ({sizeMb} MB) — kept on this device until you save or discard.
         </p>
       </div>
       <SpeechAudioPlayer
         blob={recording.blob}
         mimeType={recording.mimeType}
         durationHint={recording.durationSeconds}
-        readOnly
-        compact
+        postRecord
+        initialTrimMode
+        saving={busy}
+        readOnly={readOnly}
+        onSave={onSave}
+        onDiscard={readOnly ? undefined : onDiscard}
       />
       <div className="flex flex-wrap gap-2">
-        {!readOnly ? (
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={busy}
-            className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? "Saving…" : "Retry save"}
-          </button>
-        ) : null}
         <button
           type="button"
           onClick={onDownload}
           className="inline-flex items-center gap-1 rounded-md border border-white/20 px-3 py-1.5 text-xs font-medium text-white/85 transition-colors hover:bg-white/8"
         >
           <Download className="size-3.5" aria-hidden />
-          Download
+          Download full recording
         </button>
-        {!readOnly ? (
-          <button
-            type="button"
-            onClick={onDiscard}
-            disabled={busy}
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-white/45 transition-colors hover:bg-white/8 hover:text-white/70 disabled:opacity-50"
-          >
-            Discard
-          </button>
-        ) : null}
       </div>
     </div>
   );
