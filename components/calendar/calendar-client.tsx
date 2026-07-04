@@ -1,15 +1,9 @@
 "use client";
 
 import {
-  addDays,
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
   setHours,
   setMinutes,
   startOfDay,
-  startOfMonth,
-  startOfWeek,
 } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +11,7 @@ import { useRouter } from "next/navigation";
 
 import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import { CalendarDndProvider } from "@/components/calendar/calendar-dnd";
+import { CalendarEventsLoader } from "@/components/calendar/calendar-events-loader";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarSourcesProvider } from "@/components/calendar/calendar-sources-context";
@@ -30,10 +25,18 @@ import {
   calendarEventActionsFor,
   type CalendarClientVariant,
 } from "@/lib/calendar/calendar-event-actions";
+import {
+  calendarViewRange,
+  calendarViewRangeKey,
+} from "@/lib/calendar/calendar-view-range";
 import { filterEventsBySelectedCalendars } from "@/lib/calendar/google-event-colors";
 import { navigateDate } from "@/lib/calendar/calendar-utils";
 import { expandRehabEvents } from "@/lib/rehab/expand-rehab-events";
 import { syncGoogleCalendarAction } from "@/lib/google-calendar/sync-actions";
+import {
+  loadCalendarEventsInRangeAction,
+  loadRehabEventsInRangeAction,
+} from "@/stores/load-actions";
 import { useCalendarStore } from "@/stores/calendar-store";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import type { CalendarEvent, CalendarView, GoogleCalendarSource } from "@/types/calendar";
@@ -49,30 +52,6 @@ type GoogleSyncOptions = {
   calendarSources?: GoogleCalendarSource[];
   syncOnMount?: boolean;
 };
-
-/** Window of dates currently visible for a given view, for recurrence expansion. */
-function expansionRange(
-  view: CalendarView,
-  date: Date,
-): { start: Date; end: Date } {
-  switch (view) {
-    case "month":
-      return {
-        start: startOfWeek(startOfMonth(date), { weekStartsOn: 1 }),
-        end: endOfWeek(endOfMonth(date), { weekStartsOn: 1 }),
-      };
-    case "week":
-      return {
-        start: startOfWeek(date, { weekStartsOn: 1 }),
-        end: endOfWeek(date, { weekStartsOn: 1 }),
-      };
-    case "day":
-      return { start: startOfDay(date), end: endOfDay(date) };
-    case "agenda":
-    default:
-      return { start: startOfDay(date), end: endOfDay(addDays(date, 60)) };
-  }
-}
 
 export function CalendarClient({
   initialEvents = [],
@@ -95,22 +74,34 @@ export function CalendarClient({
   const router = useRouter();
   const didMountSync = useRef(false);
   const lastFocusSyncAt = useRef(0);
-  const rehabStoreEvents = useRehabPlanStore((state) => state.events);
   const [localEvents, setLocalEvents] = useState(initialEvents);
+  const [rehabRangeEvents, setRehabRangeEvents] = useState<RehabPlanEvent[]>([]);
   const setEvents = syncRehabStore ? undefined : setLocalEvents;
+  const [rangeLoading, setRangeLoading] = useState(() => persistence);
   const [calendarSources, setCalendarSources] = useState<GoogleCalendarSource[]>(
     googleSync?.calendarSources ?? [],
   );
   const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()));
-  // Rehab: expand recurring masters into concrete occurrences for the window.
+  const viewRange = useMemo(
+    () => calendarViewRange(view, currentDate),
+    [view, currentDate],
+  );
+  const rangeKey = useMemo(
+    () => calendarViewRangeKey(view, currentDate),
+    [view, currentDate],
+  );
+
   const events = useMemo(() => {
     if (syncRehabStore) {
-      const { start, end } = expansionRange(view, currentDate);
-      return expandRehabEvents(rehabStoreEvents, start, end);
+      return expandRehabEvents(
+        rehabRangeEvents,
+        viewRange.start,
+        viewRange.end,
+      );
     }
     return localEvents;
-  }, [syncRehabStore, rehabStoreEvents, localEvents, view, currentDate]);
+  }, [syncRehabStore, rehabRangeEvents, localEvents, viewRange.end, viewRange.start]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [journalOpen, setJournalOpen] = useState(false);
@@ -122,11 +113,49 @@ export function CalendarClient({
   );
 
   useEffect(() => {
-    if (syncRehabStore) {
+    if (!persistence) {
       return;
     }
-    setLocalEvents(initialEvents);
-  }, [initialEvents, syncRehabStore]);
+
+    let cancelled = false;
+    setRangeLoading(true);
+
+    const payload = {
+      startIso: viewRange.start.toISOString(),
+      endIso: viewRange.end.toISOString(),
+    };
+
+    const finish = () => {
+      if (!cancelled) {
+        setRangeLoading(false);
+      }
+    };
+
+    if (syncRehabStore) {
+      void loadRehabEventsInRangeAction(payload)
+        .then((result) => {
+          if (cancelled || !result.ok) {
+            return;
+          }
+          setRehabRangeEvents(result.events);
+        })
+        .finally(finish);
+    } else {
+      void loadCalendarEventsInRangeAction(payload)
+        .then((result) => {
+          if (cancelled || !result.ok) {
+            return;
+          }
+          setLocalEvents(result.events);
+          useCalendarStore.getState().setEvents(result.events);
+        })
+        .finally(finish);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [persistence, rangeKey, syncRehabStore, viewRange.end, viewRange.start]);
 
   useEffect(() => {
     if (!syncGlobalStore) {
@@ -153,6 +182,30 @@ export function CalendarClient({
     [visibleEvents],
   );
 
+  const refetchViewRange = useCallback(async () => {
+    if (!persistence) {
+      return;
+    }
+    const payload = {
+      startIso: viewRange.start.toISOString(),
+      endIso: viewRange.end.toISOString(),
+    };
+    if (syncRehabStore) {
+      const result = await loadRehabEventsInRangeAction(payload);
+      if (!result.ok) {
+        return;
+      }
+      setRehabRangeEvents(result.events);
+      return;
+    }
+    const result = await loadCalendarEventsInRangeAction(payload);
+    if (!result.ok) {
+      return;
+    }
+    setLocalEvents(result.events);
+    useCalendarStore.getState().setEvents(result.events);
+  }, [persistence, syncRehabStore, viewRange.end, viewRange.start]);
+
   const runSync = useCallback(
     async (options?: { quiet?: boolean }) => {
       if (!googleSync?.enabled) {
@@ -160,8 +213,13 @@ export function CalendarClient({
       }
 
       setSyncing(true);
+      setRangeLoading(true);
       try {
-        const result = await syncGoogleCalendarAction();
+        const rangePayload = {
+          startIso: viewRange.start.toISOString(),
+          endIso: viewRange.end.toISOString(),
+        };
+        const result = await syncGoogleCalendarAction(rangePayload);
         if (!result.ok) {
           toast.error(result.message);
           return;
@@ -187,9 +245,10 @@ export function CalendarClient({
         }
       } finally {
         setSyncing(false);
+        setRangeLoading(false);
       }
     },
-    [googleSync?.enabled, readOnly],
+    [googleSync?.enabled, readOnly, setEvents, viewRange.end, viewRange.start],
   );
 
   useEffect(() => {
@@ -287,7 +346,11 @@ export function CalendarClient({
   }, []);
 
   function handleSaved(event: CalendarEvent) {
-    if (syncRehabStore || !setEvents) {
+    if (syncRehabStore) {
+      void refetchViewRange();
+      return;
+    }
+    if (!setEvents) {
       return;
     }
     setEvents((prev) => {
@@ -303,6 +366,7 @@ export function CalendarClient({
     if (syncRehabStore) {
       setDialogOpen(false);
       setSelectedEvent(null);
+      void refetchViewRange();
       return;
     }
     if (!setEvents) {
@@ -345,6 +409,8 @@ export function CalendarClient({
           .updateEventSchedule(event);
         if (!result.ok) {
           toast.error(result.message);
+        } else {
+          void refetchViewRange();
         }
         return;
       }
@@ -367,12 +433,29 @@ export function CalendarClient({
       if (!result.ok) {
         toast.error(result.message);
         if (syncGlobalStore) {
-          useCalendarStore.getState().invalidate();
-          void useCalendarStore.getState().ensureLoaded();
+          void loadCalendarEventsInRangeAction({
+            startIso: viewRange.start.toISOString(),
+            endIso: viewRange.end.toISOString(),
+          }).then((fresh) => {
+            if (fresh.ok) {
+              setLocalEvents(fresh.events);
+              useCalendarStore.getState().setEvents(fresh.events);
+            }
+          });
         }
       }
     },
-    [eventActions, persistence, readOnly, syncGlobalStore, syncRehabStore],
+    [
+      eventActions,
+      persistence,
+      readOnly,
+      refetchViewRange,
+      setEvents,
+      syncGlobalStore,
+      syncRehabStore,
+      viewRange.end,
+      viewRange.start,
+    ],
   );
 
   return (
@@ -405,7 +488,11 @@ export function CalendarClient({
             readOnly={readOnly}
           />
 
-          <div className="min-h-0 flex-1">
+          <div className="relative min-h-0 flex-1">
+          {rangeLoading ? (
+            <CalendarEventsLoader view={view} />
+          ) : (
+            <>
           {view === "month" ? (
             <CalendarMonthView
               date={currentDate}
@@ -444,6 +531,8 @@ export function CalendarClient({
               onSelectEvent={openEdit}
             />
           ) : null}
+            </>
+          )}
           </div>
 
           <EventFormDialog

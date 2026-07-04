@@ -17,7 +17,7 @@ import {
 } from "@/lib/rehab/rehab-plan-actions";
 import { parseOccurrenceId } from "@/lib/rehab/expand-rehab-events";
 import type { RecurrenceRule } from "@/lib/rehab/recurrence";
-import { loadRehabPlanStoreAction } from "@/stores/load-actions";
+import { loadRehabPlanStoreAction, loadRehabUpcomingStoreAction } from "@/stores/load-actions";
 import { isStoreStale } from "@/stores/store-utils";
 import type { CalendarEventColor } from "@/types/calendar";
 import type { RehabPlanEvent, RehabSpeechRecording } from "@/types/rehab";
@@ -69,6 +69,7 @@ export type SeriesEditScope = "occurrence" | "following" | "all";
 
 type RehabPlanStoreActions = {
   ensureLoaded: () => Promise<void>;
+  ensureUpcomingLoaded: () => Promise<void>;
   hydrate: (events: RehabPlanEvent[], persistence: boolean) => void;
   invalidate: () => void;
   reset: () => void;
@@ -154,6 +155,9 @@ const initialState: RehabPlanStoreState = {
 };
 
 let loadPromise: Promise<void> | null = null;
+
+type RehabLoadScope = "full" | "upcoming";
+let currentLoadScope: RehabLoadScope = "full";
 
 /** Cache younger than this skips the stale-while-revalidate background refetch. */
 const REVALIDATE_MIN_AGE_MS = 10_000;
@@ -443,11 +447,11 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
 
   async ensureLoaded() {
     const { loadedAt, loading, events } = get();
-    if (loadedAt !== null && !isStoreStale(loadedAt)) {
-      // Stale-while-revalidate: keep showing cache, pull latest from Supabase.
-      // Skip when the cache is only seconds old (e.g. just hydrated from the
-      // dashboard RSC prefetch) — refetching immediately would double the
-      // full rehab-events load on every PWA open.
+    if (
+      currentLoadScope === "full" &&
+      loadedAt !== null &&
+      !isStoreStale(loadedAt)
+    ) {
       const ageMs = Date.now() - loadedAt;
       if (events.length > 0 && ageMs > REVALIDATE_MIN_AGE_MS) {
         void get().refresh();
@@ -466,6 +470,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
 
     loadPromise = (async () => {
       try {
+        currentLoadScope = "full";
         const result = await loadRehabPlanStoreAction();
         if (!result.ok) {
           set({
@@ -500,11 +505,65 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
     await loadPromise;
   },
 
+  async ensureUpcomingLoaded() {
+    const { loadedAt, loading } = get();
+    if (
+      currentLoadScope === "upcoming" &&
+      loadedAt !== null &&
+      !isStoreStale(loadedAt)
+    ) {
+      return;
+    }
+    if (loading && loadPromise) {
+      await loadPromise;
+      return;
+    }
+
+    set({ loading: true, error: null });
+
+    loadPromise = (async () => {
+      try {
+        currentLoadScope = "upcoming";
+        const result = await loadRehabUpcomingStoreAction();
+        if (!result.ok) {
+          set({
+            loading: false,
+            error:
+              result.reason === "signed_out"
+                ? null
+                : "Could not load rehab events.",
+            loadedAt: null,
+          });
+          return;
+        }
+        set({
+          events: sortEvents(result.events),
+          persistence: result.persistence,
+          loadedAt: Date.now(),
+          loading: false,
+          error: null,
+        });
+      } catch (err) {
+        set({
+          loading: false,
+          error:
+            err instanceof Error ? err.message : "Could not load rehab events.",
+          loadedAt: null,
+        });
+      } finally {
+        loadPromise = null;
+      }
+    })();
+
+    await loadPromise;
+  },
+
   hydrate(events, persistence) {
     const { loadedAt, events: current } = get();
     if (loadedAt !== null && current.length > 0) {
       return;
     }
+    currentLoadScope = "full";
     set({
       events: sortEvents(events),
       persistence,
@@ -520,6 +579,7 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
 
   reset() {
     loadPromise = null;
+    currentLoadScope = "full";
     pendingCompletionIds.clear();
     pendingExpectedCompleted.clear();
     for (const timer of pendingCompletionTimers.values()) {
@@ -933,7 +993,10 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
     if (!persistence) {
       return;
     }
-    const result = await loadRehabPlanStoreAction();
+    const result =
+      currentLoadScope === "upcoming"
+        ? await loadRehabUpcomingStoreAction()
+        : await loadRehabPlanStoreAction();
     if (result.ok) {
       set({
         events: mergeEventsPreservingPendingCompletions(

@@ -232,11 +232,11 @@ function upcomingSearchItemSortKey(item: UpcomingSearchItem): number {
   return new Date(item.event.startAt).getTime();
 }
 
-/** Past day rows shown above today (last N days only). */
-export const UPCOMING_PAST_DAYS = 3;
+/** Past day rows shown above today (yesterday only). */
+export const UPCOMING_PAST_DAYS = 1;
 
-/** Initial count of day rows after today (today + next N days). */
-export const UPCOMING_FUTURE_DAYS_INITIAL = 3;
+/** Day rows after today in the list (tomorrow only). Today is always included. */
+export const UPCOMING_FUTURE_DAYS_INITIAL = 1;
 
 /** Each "See more" adds this many future day rows. */
 export const UPCOMING_FUTURE_DAYS_CHUNK = 3;

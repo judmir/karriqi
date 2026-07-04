@@ -6,12 +6,16 @@ import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
 import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
 
 /**
- * Default fetch window. Matches the Google sync window (see
- * `lib/google-calendar/sync.ts`) so the UI never misses synced events while
- * avoiding an unbounded full-table read on every load.
+ * Fallback fetch window when no explicit range is passed (e.g. Google sync diff).
+ * Matches the Google sync window in `lib/google-calendar/sync.ts`.
  */
 export const CALENDAR_FETCH_MONTHS_BACK = 3;
 export const CALENDAR_FETCH_MONTHS_FORWARD = 12;
+
+export type CalendarFetchWindow = {
+  start: Date;
+  end: Date;
+};
 
 type EventRow = {
   id: string;
@@ -50,18 +54,35 @@ function mapEvent(row: EventRow): CalendarEvent {
   };
 }
 
-export async function fetchCalendarEventsForUser(): Promise<CalendarEvent[]> {
-  const supabase = await createClient();
+function resolveFetchWindow(window?: CalendarFetchWindow): {
+  windowStart: string;
+  windowEnd: string;
+} {
+  if (window) {
+    return {
+      windowStart: window.start.toISOString(),
+      windowEnd: window.end.toISOString(),
+    };
+  }
+
   const now = new Date();
-  const windowStart = subMonths(now, CALENDAR_FETCH_MONTHS_BACK).toISOString();
-  const windowEnd = addMonths(now, CALENDAR_FETCH_MONTHS_FORWARD).toISOString();
+  return {
+    windowStart: subMonths(now, CALENDAR_FETCH_MONTHS_BACK).toISOString(),
+    windowEnd: addMonths(now, CALENDAR_FETCH_MONTHS_FORWARD).toISOString(),
+  };
+}
+
+export async function fetchCalendarEventsForUser(
+  window?: CalendarFetchWindow,
+): Promise<CalendarEvent[]> {
+  const supabase = await createClient();
+  const { windowStart, windowEnd } = resolveFetchWindow(window);
 
   const { data, error } = await withoutSoftDeleted(
     supabase.from("calendar_events").select(
       "id, user_id, title, description, start_at, end_at, all_day, color, google_calendar_id, source, created_at, updated_at",
     ),
   )
-    // Overlap check: event ends after window start and starts before window end.
     .gte("end_at", windowStart)
     .lte("start_at", windowEnd)
     .order("start_at", { ascending: true });

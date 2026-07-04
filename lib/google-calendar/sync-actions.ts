@@ -20,7 +20,14 @@ export type SyncGoogleCalendarResult =
     }
   | { ok: false; message: string };
 
-export async function syncGoogleCalendarAction(): Promise<SyncGoogleCalendarResult> {
+export type SyncGoogleCalendarInput = {
+  startIso: string;
+  endIso: string;
+};
+
+export async function syncGoogleCalendarAction(
+  range?: SyncGoogleCalendarInput,
+): Promise<SyncGoogleCalendarResult> {
   const user = await getSessionUser();
   if (!user) {
     return { ok: false, message: "Not signed in." };
@@ -33,8 +40,11 @@ export async function syncGoogleCalendarAction(): Promise<SyncGoogleCalendarResu
 
   try {
     const result = await syncGoogleCalendarForUser(user.id);
+    const fetchWindow = range
+      ? { start: new Date(range.startIso), end: new Date(range.endIso) }
+      : undefined;
     const [events, calendarSources, refreshed] = await Promise.all([
-      fetchCalendarEventsForUser(),
+      fetchCalendarEventsForUser(fetchWindow),
       fetchGoogleCalendarSourcesForUser(),
       getGoogleCalendarConnection(user.id),
     ]);

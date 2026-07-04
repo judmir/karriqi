@@ -5,6 +5,7 @@ import { CalendarConnectPrompt } from "@/components/calendar/calendar-connect-pr
 import { CalendarPageView } from "@/components/calendar/calendar-page-view";
 import { ROUTES } from "@/config/routes";
 import { isCalendarReadOnly } from "@/lib/calendar/calendar-readonly";
+import { calendarViewRange } from "@/lib/calendar/calendar-view-range";
 import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getGoogleCalendarConnectionStatus } from "@/lib/google-calendar/connection-actions";
@@ -42,9 +43,11 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     );
   }
 
+  const monthRange = calendarViewRange("month", new Date());
+
   const [params, events, calendarSources] = await Promise.all([
     searchParams,
-    fetchCalendarEventsForUser(),
+    fetchCalendarEventsForUser(monthRange),
     fetchGoogleCalendarSourcesForUser(),
   ]);
 

@@ -56,8 +56,6 @@ import {
   buildUpcomingListSections,
   defaultStartForUpcomingDay,
   formatUpcomingSearchResultsLabel,
-  hasMoreUpcomingDays,
-  nextUpcomingVisibleDays,
   maxFutureDaysAfterToday,
   paginateUpcomingSearchItems,
   searchUpcomingItems,
@@ -134,9 +132,6 @@ export function RehabUpcomingView() {
   const [expandedPastDays, setExpandedPastDays] = useState<Set<string>>(
     () => new Set(),
   );
-  const [visibleFutureDays, setVisibleFutureDays] = useState(
-    UPCOMING_FUTURE_DAYS_INITIAL,
-  );
   const [activeAddId, setActiveAddId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -195,7 +190,7 @@ export function RehabUpcomingView() {
     const now = new Date();
     const { start: windowStart, end: windowEnd } = upcomingListExpandWindow(
       now,
-      visibleFutureDays,
+      UPCOMING_FUTURE_DAYS_INITIAL,
     );
     const expanded = expandRehabEvents(allEvents, windowStart, windowEnd);
     return injectStoicPathEventsForRange(
@@ -204,11 +199,16 @@ export function RehabUpcomingView() {
       windowEnd,
       stoicCompletions,
     );
-  }, [allEvents, stoicCompletions, visibleFutureDays]);
+  }, [allEvents, stoicCompletions]);
 
   const sections = useMemo(
-    () => buildUpcomingListSections(expandedEvents, new Date(), visibleFutureDays),
-    [expandedEvents, visibleFutureDays],
+    () =>
+      buildUpcomingListSections(
+        expandedEvents,
+        new Date(),
+        UPCOMING_FUTURE_DAYS_INITIAL,
+      ),
+    [expandedEvents],
   );
 
   /** Full-window expansion for server search + client fallback. */
@@ -377,12 +377,6 @@ export function RehabUpcomingView() {
     searchPage,
     showSearchLoading,
   ]);
-
-  const canShowMore = hasMoreUpcomingDays(
-    visibleFutureDays,
-    new Date(),
-    allEvents,
-  );
 
   const todayBlockRef = useRef<HTMLElement | null>(null);
   const scrolledToTodayRef = useRef(false);
@@ -681,21 +675,6 @@ export function RehabUpcomingView() {
               );
             })}
 
-            {!canShowMore ? null : (
-              <div className="border-border border-t py-4">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setVisibleFutureDays((current) =>
-                      nextUpcomingVisibleDays(current, new Date(), allEvents),
-                    )
-                  }
-                  className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
-                >
-                  See more
-                </button>
-              </div>
-            )}
           </div>
         ) : null}
       </div>

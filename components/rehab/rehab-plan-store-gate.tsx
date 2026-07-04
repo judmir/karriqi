@@ -26,18 +26,32 @@ function RehabPlanStoreSkeleton() {
   );
 }
 
-export function RehabPlanStoreGate({ children }: { children: React.ReactNode }) {
+export function RehabPlanStoreGate({
+  children,
+  mode = "full",
+}: {
+  children: React.ReactNode;
+  /** `upcoming` loads yesterday + today + tomorrow from Supabase. */
+  mode?: "full" | "upcoming";
+}) {
   const ensureLoaded = useRehabPlanStore((state) => state.ensureLoaded);
+  const ensureUpcomingLoaded = useRehabPlanStore(
+    (state) => state.ensureUpcomingLoaded,
+  );
   const ready = useRehabPlanStore(selectRehabPlanReady);
   const loading = useRehabPlanStore((state) => state.loading);
   const persistence = useRehabPlanStore((state) => state.persistence);
 
   useEffect(() => {
+    if (mode === "upcoming") {
+      void ensureUpcomingLoaded();
+      return;
+    }
     if (ready) {
       return;
     }
     void ensureLoaded();
-  }, [ensureLoaded, ready]);
+  }, [ensureLoaded, ensureUpcomingLoaded, mode, ready]);
 
   useRehabPlanSync({ enabled: ready && persistence });
 

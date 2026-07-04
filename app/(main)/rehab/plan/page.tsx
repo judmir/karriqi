@@ -22,7 +22,7 @@ export default async function RehabUpcomingPage() {
 
   return (
     <Suspense fallback={null}>
-      <RehabPlanStoreGate>
+      <RehabPlanStoreGate mode="upcoming">
         <RehabStoicPathStoreGate>
           <RehabUpcomingView />
         </RehabStoicPathStoreGate>

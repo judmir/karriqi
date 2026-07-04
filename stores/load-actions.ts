@@ -4,7 +4,14 @@ import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events
 import { getMockCalendarEvents } from "@/lib/calendar/mock-calendar-events";
 import { isSupabaseConfigured } from "@/lib/env";
 import { ensureNeuroRehabProgramMaterialized } from "@/lib/rehab/ensure-neuro-rehab-program";
-import { fetchRehabPlanEventsForUser } from "@/lib/rehab/fetch-rehab-plan-events";
+import {
+  fetchRehabPlanEventsForUser,
+  fetchRehabPlanEventsInWindow,
+} from "@/lib/rehab/fetch-rehab-plan-events";
+import {
+  upcomingListExpandWindow,
+  UPCOMING_FUTURE_DAYS_INITIAL,
+} from "@/lib/rehab/rehab-upcoming-utils";
 import { isGoogleCalendarConfigured } from "@/lib/env/google-calendar";
 import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
 import { fetchPulseItemsForUser } from "@/lib/pulse/fetch-pulse-items";
@@ -185,6 +192,35 @@ export async function loadCalendarStoreAction(): Promise<CalendarStorePayload> {
   };
 }
 
+export type CalendarEventsRangePayload =
+  | SignedOut
+  | { ok: true; events: CalendarEvent[]; persistence: boolean };
+
+export async function loadCalendarEventsInRangeAction(input: {
+  startIso: string;
+  endIso: string;
+}): Promise<CalendarEventsRangePayload> {
+  if (!isSupabaseConfigured()) {
+    return {
+      ok: true,
+      events: getMockCalendarEvents(),
+      persistence: false,
+    };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const events = await fetchCalendarEventsForUser({
+    start: new Date(input.startIso),
+    end: new Date(input.endIso),
+  }).catch(() => []);
+
+  return { ok: true, events, persistence: true };
+}
+
 export type RehabPlanStorePayload =
   | SignedOut
   | {
@@ -232,6 +268,47 @@ export async function loadRehabPlanStoreAction(): Promise<RehabPlanStorePayload>
 
   await ensureNeuroRehabProgramMaterialized(user.id);
   const events = await fetchRehabPlanEventsForUser();
+  return { ok: true, events, persistence: true };
+}
+
+/** Upcoming list: yesterday + today + tomorrow only. */
+export async function loadRehabUpcomingStoreAction(): Promise<RehabPlanStorePayload> {
+  if (!isSupabaseConfigured()) {
+    return loadRehabPlanStoreAction();
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  await ensureNeuroRehabProgramMaterialized(user.id);
+  const window = upcomingListExpandWindow(
+    new Date(),
+    UPCOMING_FUTURE_DAYS_INITIAL,
+  );
+  const events = await fetchRehabPlanEventsInWindow(window);
+  return { ok: true, events, persistence: true };
+}
+
+export async function loadRehabEventsInRangeAction(input: {
+  startIso: string;
+  endIso: string;
+}): Promise<RehabPlanStorePayload> {
+  if (!isSupabaseConfigured()) {
+    return loadRehabPlanStoreAction();
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  await ensureNeuroRehabProgramMaterialized(user.id);
+  const events = await fetchRehabPlanEventsInWindow({
+    start: new Date(input.startIso),
+    end: new Date(input.endIso),
+  });
   return { ok: true, events, persistence: true };
 }
 

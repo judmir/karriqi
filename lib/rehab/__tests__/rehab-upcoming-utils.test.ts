@@ -55,7 +55,7 @@ describe("buildUpcomingListSections", () => {
     expect(upcomingDayLabel(addDays(today, 2), today)).toBe("Wed 3 Jun");
   });
 
-  it("shows today plus the next three days initially", () => {
+  it("shows today and tomorrow initially", () => {
     const events = mapGenerated();
     const sections = buildUpcomingListSections(
       events,
@@ -91,7 +91,7 @@ describe("buildUpcomingListSections", () => {
     expect(nextUpcomingVisibleDays(maxDays - 1, today, events)).toBe(maxDays);
   });
 
-  it("renders at most the last three past days with events", () => {
+  it("renders at most yesterday as the past day with events", () => {
     const events = mapGenerated();
     const sections = buildUpcomingListSections(events, addDays(today, 30));
     const pastSections = sections.filter((section) => section.isPast);
