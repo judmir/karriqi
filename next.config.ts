@@ -29,6 +29,12 @@ const withPWA = withPWAInit({
    * or add a `push` event listener in a future phase — see `lib/push/README.md`.
    */
   extendDefaultRuntimeCaching: true,
+  /**
+   * Cache pages visited via client-side navigation too, so a cold PWA open
+   * of e.g. /dashboard can fall back to a cached copy even when the last
+   * visit arrived through an in-app <Link> instead of a hard navigation.
+   */
+  cacheOnFrontEndNav: true,
   workboxOptions: {
     disableDevLogs: true,
     runtimeCaching: pageRuntimeCaching,

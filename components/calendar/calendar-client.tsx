@@ -39,6 +39,9 @@ import { useRehabPlanStore } from "@/stores/rehab-plan-store";
 import type { CalendarEvent, CalendarView, GoogleCalendarSource } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
 
+/** Minimum gap between focus-triggered Google syncs. */
+const FOCUS_SYNC_MIN_INTERVAL_MS = 60_000;
+
 type GoogleSyncOptions = {
   enabled: boolean;
   lastSyncedAt: string | null;
@@ -91,6 +94,7 @@ export function CalendarClient({
   const syncRehabStore = variant === "rehab";
   const router = useRouter();
   const didMountSync = useRef(false);
+  const lastFocusSyncAt = useRef(0);
   const rehabStoreEvents = useRehabPlanStore((state) => state.events);
   const [localEvents, setLocalEvents] = useState(initialEvents);
   const setEvents = syncRehabStore ? undefined : setLocalEvents;
@@ -207,6 +211,12 @@ export function CalendarClient({
       if (document.visibilityState !== "visible" || syncing) {
         return;
       }
+      // Throttle: quick app/tab switches should not trigger a full Google
+      // sync + event refetch every time the window regains focus.
+      if (Date.now() - lastFocusSyncAt.current < FOCUS_SYNC_MIN_INTERVAL_MS) {
+        return;
+      }
+      lastFocusSyncAt.current = Date.now();
       void runSync({ quiet: true });
     }
 

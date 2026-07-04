@@ -389,6 +389,3 @@ export const REHAB_WIKI_NAV_PARENT = {
   body: "",
 };
 
-export function rehabWikiPagesForNav(): RehabWikiPage[] {
-  return REHAB_WIKI_PAGES.filter((p) => p.slug !== "overview");
-}

@@ -87,6 +87,15 @@ export const ensureHouseholdLinked = cache(async function ensureHouseholdLinked(
   const admin = createAdminClient();
   if (!admin) return;
 
+  // Fast path: once any household link exists, skip the expensive
+  // Auth-users pagination that otherwise runs on every kanban/shopping load.
+  const { data: anyLink } = await admin
+    .from("household_members")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+  if (anyLink) return;
+
   const configuredEmails = getHouseholdUserEmails();
   const allUsers = await listAuthUsers(admin);
   const householdUsers = resolveHouseholdUsers(allUsers, configuredEmails);

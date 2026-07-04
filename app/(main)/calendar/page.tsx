@@ -42,19 +42,19 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     );
   }
 
-  const params = await searchParams;
-
-  const events = await fetchCalendarEventsForUser();
-  const calendarSources = await fetchGoogleCalendarSourcesForUser();
-  const refreshed = await getGoogleCalendarConnectionStatus(user.id);
+  const [params, events, calendarSources] = await Promise.all([
+    searchParams,
+    fetchCalendarEventsForUser(),
+    fetchGoogleCalendarSourcesForUser(),
+  ]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <CalendarPageView
         initialEvents={events}
         calendarSources={calendarSources}
-        lastSyncedAt={refreshed.lastSyncedAt}
-        googleEmail={refreshed.googleEmail}
+        lastSyncedAt={status.lastSyncedAt}
+        googleEmail={status.googleEmail}
         googleError={params.google_error ?? null}
         syncOnMount={params.google_connected === "1"}
         readOnly={isCalendarReadOnly()}

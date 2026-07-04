@@ -8,7 +8,7 @@ import {
   isValidPin,
 } from "@/lib/auth/pin-hash";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getSessionUser } from "@/lib/supabase/server";
 
 export type PinActionResult =
   | { ok: true }
@@ -33,10 +33,8 @@ export async function getOwnPinStatus(): Promise<PinStatus> {
   const configured = pepperConfigured();
   if (!configured) return { hasPin: false, configured: false };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims-based lookup: local JWT verification, no Auth server round-trip.
+  const user = await getSessionUser();
   if (!user) return { hasPin: false, configured };
 
   const admin = createAdminClient();

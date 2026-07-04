@@ -7,6 +7,7 @@ import {
   rehabPlanStoreHasPendingCompletions,
   useRehabPlanStore,
 } from "@/stores/rehab-plan-store";
+import { isStoreStale } from "@/stores/store-utils";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 400;
 const PENDING_REFRESH_RETRY_MS = 500;
@@ -53,7 +54,12 @@ export function useRehabPlanSync({ enabled }: { enabled: boolean }) {
     }
 
     function onVisibilityChange() {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      // Only refetch when the cache is actually stale — quick tab/app
+      // switches otherwise trigger a full rehab-events reload every time.
+      if (isStoreStale(useRehabPlanStore.getState().loadedAt)) {
         void refresh();
       }
     }

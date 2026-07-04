@@ -155,6 +155,9 @@ const initialState: RehabPlanStoreState = {
 
 let loadPromise: Promise<void> | null = null;
 
+/** Cache younger than this skips the stale-while-revalidate background refetch. */
+const REVALIDATE_MIN_AGE_MS = 10_000;
+
 /** Blocks Realtime refresh from reverting optimistic completion toggles. */
 const pendingCompletionIds = new Set<string>();
 const pendingExpectedCompleted = new Map<string, boolean>();
@@ -441,8 +444,12 @@ export const useRehabPlanStore = create<RehabPlanStore>((set, get) => ({
   async ensureLoaded() {
     const { loadedAt, loading, events } = get();
     if (loadedAt !== null && !isStoreStale(loadedAt)) {
-      if (events.length > 0) {
-        // Stale-while-revalidate: keep showing cache, pull latest from Supabase.
+      // Stale-while-revalidate: keep showing cache, pull latest from Supabase.
+      // Skip when the cache is only seconds old (e.g. just hydrated from the
+      // dashboard RSC prefetch) — refetching immediately would double the
+      // full rehab-events load on every PWA open.
+      const ageMs = Date.now() - loadedAt;
+      if (events.length > 0 && ageMs > REVALIDATE_MIN_AGE_MS) {
         void get().refresh();
       }
       return;

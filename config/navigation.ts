@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 import { ROUTES } from "@/config/routes";
-import { rehabWikiPagesForNav } from "@/modules/rehab/neuro-rehab-2026/wiki-content";
+import { REHAB_WIKI_NAV_ITEMS } from "@/modules/rehab/neuro-rehab-2026/wiki-nav";
 
 export type MainNavItem = {
   href: string;
@@ -113,7 +113,7 @@ export const devNavItem: MainNavItem = {
 };
 
 const wikiTitleBySlug: Record<string, string> = Object.fromEntries(
-  rehabWikiPagesForNav().map((p) => [p.slug, p.title]),
+  REHAB_WIKI_NAV_ITEMS.map((p) => [p.slug, p.title]),
 );
 wikiTitleBySlug.overview = "Wiki";
 

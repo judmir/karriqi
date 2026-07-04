@@ -1,8 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { ROUTES } from "@/config/routes";
 import { fetchCalendarEventsForUser } from "@/lib/calendar/fetch-calendar-events";
 import { fetchGoogleCalendarSourcesForUser } from "@/lib/google-calendar/calendar-sources";
 import { getGoogleCalendarConnection } from "@/lib/google-calendar/connection";
@@ -36,10 +33,11 @@ export async function syncGoogleCalendarAction(): Promise<SyncGoogleCalendarResu
 
   try {
     const result = await syncGoogleCalendarForUser(user.id);
-    const events = await fetchCalendarEventsForUser();
-    const calendarSources = await fetchGoogleCalendarSourcesForUser();
-    const refreshed = await getGoogleCalendarConnection(user.id);
-    revalidatePath(ROUTES.calendar);
+    const [events, calendarSources, refreshed] = await Promise.all([
+      fetchCalendarEventsForUser(),
+      fetchGoogleCalendarSourcesForUser(),
+      getGoogleCalendarConnection(user.id),
+    ]);
 
     return {
       ok: true,

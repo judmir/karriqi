@@ -172,32 +172,17 @@ export async function loadCalendarStoreAction(): Promise<CalendarStorePayload> {
     };
   }
 
-  try {
-    const events = await fetchCalendarEventsForUser();
-    const refreshed = await getGoogleCalendarConnection(user.id);
-    return {
-      ok: true,
-      events,
-      persistence: true,
-      googleConfigured,
-      googleConnected: true,
-      requiresGoogleConnection: false,
-      googleEmail: refreshed?.googleEmail ?? connection.googleEmail,
-      lastSyncedAt: refreshed?.lastSyncedAt ?? connection.lastSyncedAt,
-    };
-  } catch {
-    const events = await fetchCalendarEventsForUser().catch(() => []);
-    return {
-      ok: true,
-      events,
-      persistence: true,
-      googleConfigured,
-      googleConnected: true,
-      requiresGoogleConnection: false,
-      googleEmail: connection.googleEmail,
-      lastSyncedAt: connection.lastSyncedAt,
-    };
-  }
+  const events = await fetchCalendarEventsForUser().catch(() => []);
+  return {
+    ok: true,
+    events,
+    persistence: true,
+    googleConfigured,
+    googleConnected: true,
+    requiresGoogleConnection: false,
+    googleEmail: connection.googleEmail,
+    lastSyncedAt: connection.lastSyncedAt,
+  };
 }
 
 export type RehabPlanStorePayload =

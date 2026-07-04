@@ -1,7 +1,17 @@
+import { addMonths, subMonths } from "date-fns";
+
 import { withoutSoftDeleted } from "@/lib/db/soft-delete";
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEvent, CalendarEventColor } from "@/types/calendar";
 import { CALENDAR_EVENT_COLORS } from "@/types/calendar";
+
+/**
+ * Default fetch window. Matches the Google sync window (see
+ * `lib/google-calendar/sync.ts`) so the UI never misses synced events while
+ * avoiding an unbounded full-table read on every load.
+ */
+export const CALENDAR_FETCH_MONTHS_BACK = 3;
+export const CALENDAR_FETCH_MONTHS_FORWARD = 12;
 
 type EventRow = {
   id: string;
@@ -42,11 +52,19 @@ function mapEvent(row: EventRow): CalendarEvent {
 
 export async function fetchCalendarEventsForUser(): Promise<CalendarEvent[]> {
   const supabase = await createClient();
+  const now = new Date();
+  const windowStart = subMonths(now, CALENDAR_FETCH_MONTHS_BACK).toISOString();
+  const windowEnd = addMonths(now, CALENDAR_FETCH_MONTHS_FORWARD).toISOString();
+
   const { data, error } = await withoutSoftDeleted(
     supabase.from("calendar_events").select(
       "id, user_id, title, description, start_at, end_at, all_day, color, google_calendar_id, source, created_at, updated_at",
     ),
-  ).order("start_at", { ascending: true });
+  )
+    // Overlap check: event ends after window start and starts before window end.
+    .gte("end_at", windowStart)
+    .lte("start_at", windowEnd)
+    .order("start_at", { ascending: true });
 
   if (error) {
     throw new Error(error.message);
