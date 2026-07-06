@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Code2,
   History,
+  Home,
   LayoutDashboard,
   List,
   ShoppingCart,
@@ -64,8 +65,14 @@ export const mainNavItems: MainNavItem[] = [
   {
     href: ROUTES.dashboard,
     label: "Dashboard",
-    shortLabel: "Home",
+    shortLabel: "Dash",
     icon: LayoutDashboard,
+  },
+  {
+    href: ROUTES.homePlanner,
+    label: "Home",
+    shortLabel: "Home",
+    icon: Home,
   },
   {
     href: ROUTES.ruleOfThree,

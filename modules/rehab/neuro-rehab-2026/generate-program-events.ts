@@ -2,10 +2,6 @@ import { addDays, addMinutes } from "date-fns";
 
 import { calendarDateToStorage } from "@/lib/calendar/all-day-events";
 import {
-  serializeRecurrenceRule,
-  type RecurrenceRule,
-} from "@/lib/rehab/recurrence";
-import {
   NEURO_REHAB_PROGRAM_ID,
   PROGRAM_EXTRA_DAYS,
   PROGRAM_START,
@@ -15,10 +11,6 @@ import {
   SPEECH_PRACTICE_MINUTE,
   isRetestWeek,
 } from "@/modules/rehab/neuro-rehab-2026/constants";
-import {
-  STOIC_WEEKLY_REVIEW_TITLE,
-  buildStoicWeeklyDescription,
-} from "@/modules/rehab/neuro-rehab-2026/stoic-content";
 import { buildDay0EventDescription } from "@/modules/rehab/neuro-rehab-2026/day0-checklist";
 import {
   GYM_A_DESCRIPTION,
@@ -100,89 +92,6 @@ function allDay(
     program_id: NEURO_REHAB_PROGRAM_ID,
     plan_week: week,
   };
-}
-
-/** Local YYYY-MM-DD (recurrence `until` is a date-only string). */
-function toDateOnly(date: Date): string {
-  const y = date.getFullYear();
-  const m = `${date.getMonth() + 1}`.padStart(2, "0");
-  const d = `${date.getDate()}`.padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-/**
- * A recurring master row: id === series_id so per-occurrence overrides
- * (completion / skip / edit) group correctly. The recurrence rule expands into
- * concrete occurrences at read time (see lib/rehab/expand-rehab-events.ts), so a
- * single row covers many days instead of materializing one row per day.
- */
-function recurringMaster(
-  userId: string,
-  day: Date,
-  week: number,
-  hour: number,
-  minute: number,
-  durationMin: number,
-  title: string,
-  description: string,
-  eventKind: RehabEventKind,
-  color: CalendarEventColor,
-  rule: RecurrenceRule,
-): RehabPlanEventInsert {
-  const start = atTime(day, hour, minute);
-  const end = addMinutes(start, durationMin);
-  const id = crypto.randomUUID();
-  return {
-    id,
-    user_id: userId,
-    title,
-    description,
-    start_at: start.toISOString(),
-    end_at: end.toISOString(),
-    all_day: false,
-    color,
-    event_kind: eventKind,
-    program_id: NEURO_REHAB_PROGRAM_ID,
-    plan_week: week,
-    series_id: id,
-    recurrence_rule: serializeRecurrenceRule(rule),
-    recurrence_at: null,
-  };
-}
-
-/**
- * Stoicism layer: weekly Sunday review (recurring master) plus concrete daily
- * Stoic Path rows materialized in rehab_plan_events for reminders + completion.
- */
-function stoicSeriesEvents(userId: string): RehabPlanEventInsert[] {
-  const events: RehabPlanEventInsert[] = [];
-
-  // Weekly Sunday Stoic review, starting the first Sunday of the program.
-  const firstSundayOffset = (7 - PROGRAM_START.getDay()) % 7;
-  const firstSunday = addDays(PROGRAM_START, firstSundayOffset);
-  const programEnd = addDays(PROGRAM_START, PROGRAM_WEEKS * 7 + PROGRAM_EXTRA_DAYS - 1);
-  events.push(
-    recurringMaster(
-      userId,
-      firstSunday,
-      1,
-      19,
-      30,
-      10,
-      STOIC_WEEKLY_REVIEW_TITLE,
-      buildStoicWeeklyDescription(),
-      "stoic",
-      "purple",
-      {
-        freq: "weekly",
-        interval: 1,
-        weekdays: [0],
-        until: toDateOnly(programEnd),
-      },
-    ),
-  );
-
-  return events;
 }
 
 function gymDescription(kind: RehabEventKind): string {
@@ -470,8 +379,9 @@ function dailyNonNegotiables(
 export function generateNeuroRehabProgramEvents(userId: string): RehabPlanEventInsert[] {
   const events: RehabPlanEventInsert[] = [];
 
-  // Stoicism layer: weekly review master + one row per Stoic Path exercise.
-  events.push(...stoicSeriesEvents(userId));
+  // Stoic Path: one concrete timed row per exercise (morning / midday / evening).
+  // Legacy recurring "Stoic weekly review" masters were removed — they collided
+  // with Sunday evening Stoic Path rows on the program_dedupe index.
   events.push(...generateStoicPathProgramEvents(userId));
 
   const totalDays = PROGRAM_WEEKS * 7 + PROGRAM_EXTRA_DAYS;

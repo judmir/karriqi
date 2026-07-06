@@ -36,6 +36,7 @@ import type { RehabPlanListItem } from "@/types/rehab";
 import type { RehabClinicalItem } from "@/types/rehab";
 import type { StoicRehabCompletion } from "@/types/stoic-rehab";
 import type { PulseItem } from "@/types/pulse";
+import type { DesignRender, RoomDesign } from "@/types/home";
 import type { RuleOf3Day } from "@/types/rule-of-3";
 import type { ShoppingListItem, StapleItem } from "@/types/shopping";
 import type {
@@ -496,6 +497,32 @@ export async function loadDashboardPageData(): Promise<DashboardPageData> {
   return { rehab, ruleOf3 };
 }
 
+
+export type HomeStorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      designs: RoomDesign[];
+      renders: DesignRender[];
+      persistence: boolean;
+    };
+
+export async function loadHomeStoreAction(): Promise<HomeStorePayload> {
+  if (!isSupabaseConfigured()) {
+    return { ok: true, designs: [], renders: [], persistence: false };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const { fetchHomeDataForUser } = await import(
+    "@/lib/home/fetch-home-designs"
+  );
+  const { designs, renders } = await fetchHomeDataForUser();
+  return { ok: true, designs, renders, persistence: true };
+}
 
 export type PulseStorePayload =
   | SignedOut

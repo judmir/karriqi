@@ -9,6 +9,7 @@ export const ROUTES = {
   rehabWiki: "/rehab/wiki",
   rehabWikiOverview: "/rehab/wiki",
   dashboard: "/dashboard",
+  homePlanner: "/home",
   ruleOfThree: "/rule-of-3",
   shopping: "/shopping",
   shoppingAdmin: "/shopping/admin",
@@ -52,10 +53,16 @@ export function todoTaskPath(id: string) {
   return `/kanban/${id}`;
 }
 
+/** Home planner: single room page. */
+export function homeRoomPath(roomId: string) {
+  return `${ROUTES.homePlanner}/rooms/${encodeURIComponent(roomId)}`;
+}
+
 /** URL prefixes that require an authenticated session (middleware). */
 export const PROTECTED_ROUTE_PREFIXES: string[] = [
   "/rehab",
   ROUTES.dashboard,
+  ROUTES.homePlanner,
   ROUTES.ruleOfThree,
   ROUTES.shopping,
   ROUTES.todo,

@@ -1,6 +1,7 @@
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
 import { DevMenuSettings } from "@/components/settings/dev-menu-settings";
 import { GoogleCalendarSettings } from "@/components/settings/google-calendar-settings";
+import { OpenAiApiKeySettings } from "@/components/settings/openai-api-key-settings";
 import { PinSettingsForm } from "@/components/settings/pin-settings-form";
 import { PushNotificationsSettings } from "@/components/settings/push-notifications-settings";
 import { PageContainer } from "@/components/layout/page-container";
@@ -13,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getOwnPinStatus } from "@/lib/auth/pin-actions";
+import { getOwnOpenAiKeyStatus } from "@/lib/home/openai-key-actions";
 import { avatarPresetFromUserMeta } from "@/lib/avatar/presets";
 import {
   isDevMenuEmail,
@@ -53,9 +55,10 @@ export default async function SettingsPage() {
 
   const devMenuInitial =
     isDevMenuEmail(user.email) && isDevMenuEnabledInMetadata(meta);
-  const [pinStatus, googleCalendarStatus] = await Promise.all([
+  const [pinStatus, googleCalendarStatus, openAiKeyStatus] = await Promise.all([
     getOwnPinStatus(),
     getGoogleCalendarConnectionStatus(user.id),
+    getOwnOpenAiKeyStatus(),
   ]);
 
   return (
@@ -105,6 +108,22 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
         ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle>OpenAI API key</CardTitle>
+            <CardDescription>
+              Powers the Home apartment planner&apos;s AI furnishing and render
+              features. Stored encrypted, used server-side only.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <OpenAiApiKeySettings
+              initialHasKey={openAiKeyStatus.hasKey}
+              configured={openAiKeyStatus.configured}
+              hint={openAiKeyStatus.hint}
+            />
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Google Calendar</CardTitle>

@@ -156,7 +156,7 @@ describe("generateNeuroRehabProgramEvents", () => {
     }
   });
 
-  it("materializes Stoic Path exercises and keeps weekly review as a recurring master", () => {
+  it("materializes Stoic Path exercises without a recurring weekly master", () => {
     const stoic = events.filter((e) => e.event_kind === "stoic");
     const pathRows = stoic.filter((e) => !e.recurrence_rule);
     const weeklyMasters = stoic.filter(
@@ -164,18 +164,10 @@ describe("generateNeuroRehabProgramEvents", () => {
     );
 
     expect(pathRows.length).toBe(252);
-    expect(weeklyMasters.length).toBe(1);
-
-    for (const event of weeklyMasters) {
-      expect(event.id).toBeTruthy();
-      expect(event.series_id).toBe(event.id);
-      expect(event.recurrence_at ?? null).toBeNull();
-      expect(event.color).toBe("purple");
-    }
-
-    const weeklyRule = JSON.parse(weeklyMasters[0]!.recurrence_rule!);
-    expect(weeklyRule.weekdays).toEqual([0]);
-    expect(new Date(weeklyMasters[0]!.start_at).getDay()).toBe(0);
+    // Legacy recurring "Stoic weekly review" masters were removed: they
+    // collided with Sunday evening Stoic Path rows on the program dedupe
+    // index (see lib/rehab/__tests__/generate-program-events-dedupe.test.ts).
+    expect(weeklyMasters.length).toBe(0);
 
     expect(pathRows.every((row) => row.description?.includes("karriqi-stoic-exercise-id"))).toBe(
       true,

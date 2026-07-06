@@ -1106,6 +1106,105 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_openai_keys: {
+        Row: {
+          user_id: string;
+          encrypted_key: string;
+          key_hint: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          encrypted_key: string;
+          key_hint: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          encrypted_key?: string;
+          key_hint?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      home_room_designs: {
+        Row: {
+          id: string;
+          user_id: string;
+          apartment_id: string;
+          room_id: string;
+          title: string;
+          style_prompt: string;
+          layout: Json;
+          warnings: Json;
+          status: string;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          apartment_id?: string;
+          room_id: string;
+          title: string;
+          style_prompt?: string;
+          layout?: Json;
+          warnings?: Json;
+          status?: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          apartment_id?: string;
+          room_id?: string;
+          title?: string;
+          style_prompt?: string;
+          layout?: Json;
+          warnings?: Json;
+          status?: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      home_design_renders: {
+        Row: {
+          id: string;
+          design_id: string;
+          user_id: string;
+          prompt: string;
+          storage_path: string;
+          deleted_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          design_id: string;
+          user_id: string;
+          prompt?: string;
+          storage_path: string;
+          deleted_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          design_id?: string;
+          user_id?: string;
+          prompt?: string;
+          storage_path?: string;
+          deleted_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
