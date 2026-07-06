@@ -17,6 +17,8 @@ describe("parseRoomLayout", () => {
           rotationDeg: 88,
           material: " oak ",
           color: null,
+          product: " KIVIK 3-seat sofa ",
+          retailer: "IKEA",
         },
       ],
     });
@@ -26,6 +28,30 @@ describe("parseRoomLayout", () => {
     expect(f.widthCm).toBe(220);
     expect(f.rotationDeg).toBe(90);
     expect(f.material).toBe("oak");
+    expect(f.product).toBe("KIVIK 3-seat sofa");
+    expect(f.retailer).toBe("IKEA");
+  });
+
+  it("accepts layouts without product suggestions (older rows)", () => {
+    const parsed = parseRoomLayout({
+      styleSummary: "x",
+      furniture: [
+        {
+          type: "t",
+          label: "t",
+          widthCm: 10,
+          depthCm: 10,
+          xCm: 0,
+          yCm: 0,
+          rotationDeg: 0,
+          material: null,
+          color: null,
+        },
+      ],
+    });
+    expect(parsed).not.toBeNull();
+    expect(parsed!.furniture[0].product).toBeNull();
+    expect(parsed!.furniture[0].retailer).toBeNull();
   });
 
   it("returns null for invalid input", () => {

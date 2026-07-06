@@ -30,7 +30,7 @@ export function RenderGallery({ designId }: { designId: string }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Inspiration renders</h3>
+        <h3 className="text-sm font-medium">Realistic photos</h3>
         <Button
           type="button"
           variant="outline"
@@ -38,17 +38,20 @@ export function RenderGallery({ designId }: { designId: string }) {
           disabled={pending}
           onClick={generate}
         >
-          {pending ? "Rendering…" : "Generate render"}
+          {pending ? "Generating photo…" : "Generate photo"}
         </Button>
       </div>
       <p className="text-muted-foreground text-xs">
-        AI style renders for inspiration — not to scale. The exact plan above is
-        the source of truth.
+        Photorealistic AI photos of this design in your room&apos;s exact
+        proportions. Generation takes ~30–60 seconds.
       </p>
       {renders.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No renders yet.</p>
+        <p className="text-muted-foreground text-sm">
+          No photos yet — generate one to see this design as a realistic
+          interior photograph.
+        </p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {renders.map((render) =>
             render.url ? (
               <a
@@ -60,9 +63,9 @@ export function RenderGallery({ designId }: { designId: string }) {
               >
                 <Image
                   src={render.url}
-                  alt="AI inspiration render"
-                  width={512}
-                  height={512}
+                  alt="Photorealistic AI render of the room design"
+                  width={1536}
+                  height={1024}
                   className="h-auto w-full"
                   unoptimized
                 />

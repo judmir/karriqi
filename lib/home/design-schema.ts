@@ -16,6 +16,8 @@ export const furnitureItemSchema = z.object({
   rotationDeg: z.number(),
   material: z.string().max(120).nullable().optional(),
   color: z.string().max(120).nullable().optional(),
+  product: z.string().max(160).nullable().optional(),
+  retailer: z.string().max(80).nullable().optional(),
 });
 
 export const roomLayoutSchema = z.object({
@@ -48,6 +50,8 @@ function normalizeFurniture(item: FurnitureItem): FurnitureItem {
     rotationDeg: rotation,
     material: item.material?.trim() || null,
     color: item.color?.trim() || null,
+    product: item.product?.trim() || null,
+    retailer: item.retailer?.trim() || null,
   };
 }
 
@@ -73,6 +77,8 @@ export const ROOM_LAYOUT_JSON_SCHEMA: Record<string, unknown> = {
           "rotationDeg",
           "material",
           "color",
+          "product",
+          "retailer",
         ],
         properties: {
           type: { type: "string" },
@@ -84,6 +90,15 @@ export const ROOM_LAYOUT_JSON_SCHEMA: Record<string, unknown> = {
           rotationDeg: { type: "number" },
           material: { type: ["string", "null"] },
           color: { type: ["string", "null"] },
+          product: {
+            type: ["string", "null"],
+            description:
+              "Real purchasable product name that matches the size and style, e.g. 'KIVIK 3-seat sofa'.",
+          },
+          retailer: {
+            type: ["string", "null"],
+            description: "Retailer that sells the product, e.g. 'IKEA'.",
+          },
         },
       },
     },

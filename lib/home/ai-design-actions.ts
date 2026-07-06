@@ -54,6 +54,11 @@ const SYSTEM_PROMPT = [
   `4. Keep at least ${DOOR_CLEARANCE_CM} cm clear in front of every door.`,
   "5. Use realistic furniture dimensions in centimeters.",
   "6. rotationDeg must be one of 0, 90, 180, 270.",
+  "7. For every item, suggest a REAL purchasable product in `product` and the",
+  "   store in `retailer`. If the user names a brand or store (e.g. IKEA),",
+  "   use real current products from that store whose dimensions match the",
+  "   footprint you place (e.g. product: 'KIVIK 3-seat sofa', retailer:",
+  "   'IKEA'). Otherwise pick well-known products or set both to null.",
   "Return ONLY the structured layout. xCm/yCm are the top-left of the footprint",
   "in the room's coordinate system.",
 ].join(" ");
@@ -183,21 +188,50 @@ export async function generateRoomDesign(
 function buildRenderPrompt(room: Room, layout: RoomLayout): string {
   const items = layout.furniture
     .map((f) => {
-      const parts = [f.label, `${f.widthCm}×${f.depthCm} cm`];
+      const parts = [f.label];
+      if (f.product) {
+        parts.push(
+          f.retailer ? `${f.retailer} ${f.product}` : f.product,
+        );
+      }
+      parts.push(`${f.widthCm}×${f.depthCm} cm`);
       if (f.material) parts.push(f.material);
       if (f.color) parts.push(f.color);
-      return `- ${parts.join(", ")} at (${f.xCm}, ${f.yCm}) cm, rotated ${f.rotationDeg}°`;
+      const wall = describePosition(room, f);
+      return `- ${parts.join(", ")} — ${wall}`;
     })
     .join("\n");
 
+  const windows = room.openings.filter((o) => o.kind === "window");
+  const windowNote =
+    windows.length > 0
+      ? `Daylight comes through ${windows.length === 1 ? "a window" : `${windows.length} windows`} on the ${[...new Set(windows.map((w) => w.wall))].join(" and ")} wall${windows.length > 1 ? "s" : ""}.`
+      : "Soft warm artificial lighting.";
+
   return [
-    `Top-down architectural render (floor plan view from directly above) of a ${room.nameEn.toLowerCase()}.`,
-    `The room is a rectangle ${room.widthCm} cm by ${room.depthCm} cm. Do not change these proportions.`,
-    `Style: ${layout.styleSummary || room.name}.`,
-    "Furniture, placed to scale:",
-    items || "- (empty room)",
-    "Clean, realistic materials and lighting. No text, labels, or dimension lines.",
+    `Photorealistic interior photograph of a real ${room.nameEn.toLowerCase()} in a renovated Berlin Altbau apartment.`,
+    `The room is ${(room.widthCm / 100).toFixed(2)} m wide by ${(room.depthCm / 100).toFixed(2)} m deep with ${(room.ceilingHeightCm / 100).toFixed(1)} m ceilings — keep these true proportions.`,
+    `Interior style: ${layout.styleSummary || "warm contemporary"}.`,
+    windowNote,
+    "Furnished with (keep placement and true-to-scale sizes):",
+    items || "- (empty room, freshly renovated)",
+    "Shot at eye level with a 24mm wide-angle lens from the doorway, natural",
+    "daylight, realistic materials and textures, oak parquet floor, white",
+    "walls, magazine-quality interior photography. Absolutely no text, labels,",
+    "watermarks, people, or dimension lines.",
   ].join("\n");
+}
+
+/** Rough human placement description for the render prompt. */
+function describePosition(room: Room, f: RoomLayout["furniture"][number]): string {
+  const cx = f.xCm + f.widthCm / 2;
+  const cy = f.yCm + f.depthCm / 2;
+  const horizontal =
+    cx < room.widthCm / 3 ? "left" : cx > (room.widthCm * 2) / 3 ? "right" : "center";
+  const vertical =
+    cy < room.depthCm / 3 ? "back" : cy > (room.depthCm * 2) / 3 ? "front" : "middle";
+  if (horizontal === "center" && vertical === "middle") return "in the middle of the room";
+  return `at the ${vertical} ${horizontal} of the room`;
 }
 
 /** Generate an inspiration render image for a saved design. */
@@ -239,7 +273,8 @@ export async function generateDesignRender(
   }
 
   const prompt = buildRenderPrompt(room, layout);
-  const image = await generateImageBytes({ apiKey, prompt });
+  // Landscape format suits eye-level interior photography.
+  const image = await generateImageBytes({ apiKey, prompt, size: "1536x1024" });
   if (!image.ok) {
     return { ok: false, message: image.message };
   }

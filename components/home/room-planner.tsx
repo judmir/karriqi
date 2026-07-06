@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { DesignList } from "@/components/home/design-list";
 import { DesignPromptForm } from "@/components/home/design-prompt-form";
+import { FurnitureShoppingList } from "@/components/home/furniture-shopping-list";
 import { RenderGallery } from "@/components/home/render-gallery";
 import { RoomPlanSvg } from "@/components/home/room-plan-svg";
 import {
@@ -138,6 +139,17 @@ export function RoomPlanner({ roomId }: { roomId: string }) {
             <Card>
               <CardContent className="pt-6">
                 <RenderGallery designId={selected.id} />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {selected ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Shopping list</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FurnitureShoppingList layout={selected.layout} />
               </CardContent>
             </Card>
           ) : null}

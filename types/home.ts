@@ -17,6 +17,10 @@ export type FurnitureItem = {
   /** Optional material/colour note for the render prompt. */
   material?: string | null;
   color?: string | null;
+  /** Suggested real purchasable product, e.g. "KIVIK 3-seat sofa". */
+  product?: string | null;
+  /** Retailer the product comes from, e.g. "IKEA". */
+  retailer?: string | null;
 };
 
 export type RoomLayout = {
