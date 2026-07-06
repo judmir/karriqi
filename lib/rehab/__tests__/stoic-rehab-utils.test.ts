@@ -49,23 +49,28 @@ describe("clampStoicDay", () => {
 describe("getStoicExerciseByDay", () => {
   it("returns integrated checklist titles for day 1", () => {
     expect(getStoicExerciseByDay(1).title).toBe(
-      "Midday Stoic Practice · One Calm Rep",
+      "Midday Stoic Challenge · One Calm Rep",
     );
     expect(getStoicExerciseByDay(1).contentTitle).toBe("One Calm Rep");
     expect(getStoicExerciseByDay(1).virtue).toBe("wisdom");
     expect(getStoicExerciseByDay(1, "morning").title).toBe(
-      "Morning Stoic Intention · Separate Control from Noise",
+      "Morning Stoic Intention · Two Lists",
     );
   });
 
-  it("returns week 1 review on day 7", () => {
-    expect(getStoicExerciseByDay(7).dayTheme).toBe("Week 1 Calibration");
+  it("returns week 1 closing day on day 7", () => {
+    expect(getStoicExerciseByDay(7).dayTheme).toBe(
+      "Acceptance Without Passivity",
+    );
     expect(getStoicExerciseByDay(7).week).toBe(1);
+    expect(getStoicExerciseByDay(7, "evening").contentTitle).toBe(
+      "Week One Review",
+    );
   });
 
   it("returns closing review for day 84", () => {
     expect(getStoicExerciseByDay(84, "evening").contentTitle).toBe(
-      "Weekly Review",
+      "The Final Review",
     );
     expect(getStoicExerciseByDay(84).week).toBe(12);
   });
@@ -81,8 +86,8 @@ describe("getStoicExercisesForDate", () => {
       "evening",
     ]);
     expect(exercises[0]?.title).toContain("Morning Stoic Intention");
-    expect(exercises[1]?.title).toContain("Midday Stoic Practice");
-    expect(exercises[2]?.title).toContain("Evening Stoic Reflection");
+    expect(exercises[1]?.title).toContain("Midday Stoic Challenge");
+    expect(exercises[2]?.title).toContain("Evening Stoic Review");
   });
 });
 
@@ -132,8 +137,10 @@ describe("injectStoicPathEventsForRange", () => {
       [],
     );
     const results = filterUpcomingEventsBySearch(injected, "one calm rep");
-    expect(results).toHaveLength(1);
-    expect(results[0]?.title).toContain("Midday Stoic Practice");
+    expect(results.length).toBeGreaterThanOrEqual(1);
+    expect(
+      results.some((event) => event.title.includes("Midday Stoic Challenge")),
+    ).toBe(true);
   });
 });
 

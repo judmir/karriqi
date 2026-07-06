@@ -22,7 +22,7 @@ describe("RehabStoicPathDailyPanel", () => {
 
     expect(screen.getByText("Why this matters")).toBeInTheDocument();
     expect(
-      screen.getByText("Morning Stoic Intention · Separate Control from Noise"),
+      screen.getByText("Morning Stoic Intention · Two Lists"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Train the response")).not.toBeInTheDocument();
     expect(screen.queryByText("Process score")).not.toBeInTheDocument();

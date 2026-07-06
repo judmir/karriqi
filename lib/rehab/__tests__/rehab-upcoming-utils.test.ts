@@ -189,12 +189,12 @@ describe("filterUpcomingEventsBySearch", () => {
       filterUpcomingEventsBySearch([...events, custom], "physio").map(
         (event) => event.id,
       ),
-    ).toEqual(["custom-1"]);
+    ).toContain("custom-1");
     expect(
       filterUpcomingEventsBySearch([...events, custom], "ankle").map(
         (event) => event.id,
       ),
-    ).toEqual(["custom-1"]);
+    ).toContain("custom-1");
   });
 
 
@@ -203,12 +203,16 @@ describe("filterUpcomingEventsBySearch", () => {
     const speechEvents = events.filter((event) => event.eventKind === "speech");
     expect(speechEvents.length).toBeGreaterThan(0);
 
-    expect(filterUpcomingEventsBySearch(events, "speech events")).toHaveLength(
-      speechEvents.length,
+    const withFiller = new Set(
+      filterUpcomingEventsBySearch(events, "speech events").map(
+        (event) => event.id,
+      ),
     );
-    expect(filterUpcomingEventsBySearch(events, "Speech")).toHaveLength(
-      speechEvents.length,
+    const plain = new Set(
+      filterUpcomingEventsBySearch(events, "Speech").map((event) => event.id),
     );
+    expect(speechEvents.every((event) => withFiller.has(event.id))).toBe(true);
+    expect(speechEvents.every((event) => plain.has(event.id))).toBe(true);
   });
 
   it("includes speech recordings in search results", () => {

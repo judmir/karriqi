@@ -69,8 +69,8 @@ const VIRTUE_TAGS: StoicRehabVirtue[] = [
 
 export const STOIC_REHAB_SLOT_LABELS: Record<StoicRehabSlot, string> = {
   morning: "Morning Stoic Intention",
-  midday: "Midday Stoic Practice",
-  evening: "Evening Stoic Reflection",
+  midday: "Midday Stoic Challenge",
+  evening: "Evening Stoic Review",
 };
 
 /** Program day index (1–84) from rehab start date and a calendar date. */
