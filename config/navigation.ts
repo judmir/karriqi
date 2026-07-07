@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
+  Building2,
   Calendar,
   CalendarDays,
   Code2,
@@ -102,6 +103,12 @@ export const mainNavItems: MainNavItem[] = [
     label: "Pulse",
     shortLabel: "Pulse",
     icon: Activity,
+  },
+  {
+    href: ROUTES.apartment,
+    label: "Apartment",
+    shortLabel: "Apt",
+    icon: Building2,
   },
 ];
 

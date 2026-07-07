@@ -1,3 +1,4 @@
+import { useApartmentStore } from "@/stores/apartment-store";
 import { useCalendarStore } from "@/stores/calendar-store";
 import { useNotesStore } from "@/stores/notes-store";
 import { useRehabPlanStore } from "@/stores/rehab-plan-store";
@@ -15,6 +16,7 @@ export function resetAllStores(): void {
   useRehabPlanStore.getState().reset();
   useRuleOf3Store.getState().reset();
   useStoicRehabStore.getState().reset();
+  useApartmentStore.getState().reset();
 }
 
 export {
@@ -35,5 +37,9 @@ export {
   useStoicRehabStore,
   selectStoicRehabReady,
 } from "@/stores/stoic-rehab-store";
+export {
+  useApartmentStore,
+  selectApartmentReady,
+} from "@/stores/apartment-store";
 export { STORE_STALE_MS } from "@/stores/store-utils";
 export { useNotesStore } from "@/stores/notes-store";

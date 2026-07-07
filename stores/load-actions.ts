@@ -30,6 +30,11 @@ import {
   fetchTodoByIdForUser,
   fetchTodosBoardSummary,
 } from "@/lib/todo/fetch-todos";
+import type {
+  ApartmentImage,
+  ApartmentRoom,
+  ApartmentStepState,
+} from "@/types/apartment";
 import type { CalendarEvent } from "@/types/calendar";
 import type { RehabPlanEvent } from "@/types/rehab";
 import type { RehabPlanListItem } from "@/types/rehab";
@@ -496,6 +501,60 @@ export async function loadDashboardPageData(): Promise<DashboardPageData> {
   return { rehab, ruleOf3 };
 }
 
+
+export type ApartmentStorePayload =
+  | SignedOut
+  | {
+      ok: true;
+      images: ApartmentImage[];
+      notes: string;
+      stepStates: ApartmentStepState[];
+      rooms: ApartmentRoom[];
+      persistence: boolean;
+    };
+
+export async function loadApartmentStoreAction(): Promise<ApartmentStorePayload> {
+  if (!isSupabaseConfigured()) {
+    return {
+      ok: true,
+      images: [],
+      notes: "",
+      stepStates: [],
+      rooms: [],
+      persistence: false,
+    };
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return { ok: false, reason: "signed_out" };
+  }
+
+  const {
+    fetchApartmentImagesForUser,
+    fetchApartmentNotesForUser,
+    fetchApartmentRoomsForUser,
+    fetchApartmentStepStatesForUser,
+  } = await import("@/lib/apartment/fetch-apartment-data");
+
+  const [imagesResult, notesResult, stepStatesResult, roomsResult] =
+    await Promise.allSettled([
+      fetchApartmentImagesForUser(user.id),
+      fetchApartmentNotesForUser(user.id),
+      fetchApartmentStepStatesForUser(user.id),
+      fetchApartmentRoomsForUser(user.id),
+    ]);
+
+  return {
+    ok: true,
+    images: imagesResult.status === "fulfilled" ? imagesResult.value : [],
+    notes: notesResult.status === "fulfilled" ? notesResult.value : "",
+    stepStates:
+      stepStatesResult.status === "fulfilled" ? stepStatesResult.value : [],
+    rooms: roomsResult.status === "fulfilled" ? roomsResult.value : [],
+    persistence: imagesResult.status === "fulfilled",
+  };
+}
 
 export type PulseStorePayload =
   | SignedOut

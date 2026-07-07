@@ -16,6 +16,7 @@ export const ROUTES = {
   calendar: "/calendar",
   notes: "/notes",
   pulse: "/pulse",
+  apartment: "/apartment",
   settings: "/settings",
   dev: "/dev",
   devPush: "/dev/push",
@@ -62,6 +63,7 @@ export const PROTECTED_ROUTE_PREFIXES: string[] = [
   ROUTES.calendar,
   ROUTES.notes,
   ROUTES.pulse,
+  ROUTES.apartment,
   ROUTES.settings,
   ROUTES.dev,
 ];

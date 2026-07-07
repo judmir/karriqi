@@ -1106,6 +1106,159 @@ export type Database = {
         };
         Relationships: [];
       };
+      apartment_images: {
+        Row: {
+          id: string;
+          user_id: string;
+          storage_path: string;
+          title: string;
+          caption: string | null;
+          is_cover: boolean;
+          sort_order: number;
+          mime_type: string | null;
+          size_bytes: number | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          storage_path: string;
+          title?: string;
+          caption?: string | null;
+          is_cover?: boolean;
+          sort_order?: number;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          storage_path?: string;
+          title?: string;
+          caption?: string | null;
+          is_cover?: boolean;
+          sort_order?: number;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      apartment_notes: {
+        Row: {
+          id: string;
+          user_id: string;
+          content: string;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      apartment_step_states: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: string;
+          step_key: string;
+          status: string;
+          date: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind: string;
+          step_key: string;
+          status: string;
+          date?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          kind?: string;
+          step_key?: string;
+          status?: string;
+          date?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      apartment_rooms: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          area_m2: number | null;
+          width_m: number | null;
+          length_m: number | null;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          area_m2?: number | null;
+          width_m?: number | null;
+          length_m?: number | null;
+          notes?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          area_m2?: number | null;
+          width_m?: number | null;
+          length_m?: number | null;
+          notes?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
