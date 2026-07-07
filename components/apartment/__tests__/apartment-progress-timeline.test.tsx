@@ -29,7 +29,7 @@ describe("ApartmentProgressTimeline", () => {
     useApartmentStore.setState({ progressSteps: APARTMENT_PROGRESS_STEPS });
   });
 
-  it("shows the waiting/spinner icon on the current step", () => {
+  it("shows the waiting icon on the current step", () => {
     render(<ApartmentProgressTimeline />);
     expect(screen.getByTestId("step-waiting-icon")).toBeInTheDocument();
     expect(
@@ -40,10 +40,10 @@ describe("ApartmentProgressTimeline", () => {
 
   it("shows progress percentage from completed steps", () => {
     render(<ApartmentProgressTimeline />);
-    expect(screen.getByText(/7 of 20 steps done · 35%/)).toBeInTheDocument();
+    expect(screen.getByText(/7 of 18 steps done · 39%/)).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
-      "35",
+      "39",
     );
   });
 

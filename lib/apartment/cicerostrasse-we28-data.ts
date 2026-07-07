@@ -185,13 +185,6 @@ export const APARTMENT_PROGRESS_STEPS: ApartmentProgressStep[] = [
     source: "Notary (expected)",
   },
   {
-    id: "kuendigung-rental",
-    title: "Send Kündigung for current rented apartment",
-    description:
-      "Formal written notice for the rental. Check Schriftform requirement and keep delivery proof.",
-    status: "todo",
-  },
-  {
     id: "auszahlungsabruf",
     title: "Fill Auszahlungsabruf from the Fälligkeitsmitteilung",
     description:
@@ -248,13 +241,6 @@ export const APARTMENT_PROGRESS_STEPS: ApartmentProgressStep[] = [
     title: "Handover protocol",
     description:
       "Keys, meter readings, defects, mailbox/cellar, Hausverwaltung contacts.",
-    status: "todo",
-  },
-  {
-    id: "move-in-admin",
-    title: "Move-in admin",
-    description:
-      "Insurance, Anmeldung/address changes, utilities/internet, Hausgeld mandate if needed.",
     status: "todo",
   },
 ];
@@ -340,32 +326,101 @@ export const APARTMENT_EXPECTED_DOCUMENTS: string[] = [
   "Keys / meter readings",
 ];
 
-/** Post-closing checklist (kind = "closing"). */
-export const APARTMENT_CLOSING_CHECKLIST: ApartmentProgressStep[] = [
-  { id: "faelligkeitsmitteilung-received", title: "Fälligkeitsmitteilung received", status: "todo" },
-  { id: "auszahlungsabruf-sent", title: "Auszahlungsabruf filled & sent", status: "todo" },
-  { id: "equity-paid", title: "Equity paid", status: "todo" },
-  { id: "bank-payout-confirmed", title: "Bank payout confirmed", status: "todo" },
-  { id: "grunderwerbsteuer-paid", title: "Grunderwerbsteuer paid", status: "todo" },
-  { id: "notary-paid", title: "Notary paid", status: "todo" },
-  { id: "grundbuch-fee-paid", title: "Grundbuch fee paid", status: "todo" },
-  { id: "handover-booked", title: "Handover appointment booked", status: "todo" },
-  { id: "handover-protocol-done", title: "Handover protocol completed", status: "todo" },
-  { id: "keys-received", title: "Keys received", status: "todo" },
-  { id: "meter-readings", title: "Meter readings captured", status: "todo" },
-  { id: "hausverwaltung-contacted", title: "Hausverwaltung contacted", status: "todo" },
-  { id: "anmeldung", title: "Address changes / Anmeldung", status: "todo" },
-  { id: "internet-utilities", title: "Internet / utilities", status: "todo" },
-  { id: "insurance-reviewed", title: "Insurance reviewed", status: "todo" },
+/** Move-in & relocation checklist (kind = "movein") — after keys. */
+export const APARTMENT_MOVE_IN_CHECKLIST: ApartmentProgressStep[] = [
+  {
+    id: "anmeldung",
+    title: "Anmeldung (Bürgeramt)",
+    description: "Register at Cicerostraße within the legal deadline.",
+    status: "todo",
+  },
+  {
+    id: "nachsendeauftrag",
+    title: "Post forwarding (Nachsendeauftrag)",
+    status: "todo",
+  },
+  {
+    id: "internet-new-address",
+    title: "Internet contract at new address",
+    status: "todo",
+  },
+  {
+    id: "energy-utilities",
+    title: "Energy / utilities at new home",
+    description:
+      "Fernwärme via Hausverwaltung; confirm any tenant-metered services.",
+    status: "todo",
+  },
+  {
+    id: "hausverwaltung-intro",
+    title: "Intro with Hausverwaltung",
+    description: "Hausgeld, repairs, cellar, mailbox, house rules.",
+    status: "todo",
+  },
+  {
+    id: "hausgeld-sepa",
+    title: "Hausgeld SEPA / payment setup",
+    status: "todo",
+  },
+  {
+    id: "hausrat-insurance",
+    title: "Home contents insurance (Hausrat)",
+    status: "todo",
+  },
+  {
+    id: "liability-insurance",
+    title: "Personal liability insurance (Privathaftpflicht)",
+    status: "todo",
+  },
+  {
+    id: "life-insurance-review",
+    title: "Life insurance review / update",
+    status: "todo",
+  },
+  {
+    id: "rundfunkbeitrag",
+    title: "GEZ / Rundfunkbeitrag address update",
+    status: "todo",
+  },
+  {
+    id: "bank-address",
+    title: "Bank & card correspondence address",
+    status: "todo",
+  },
+  {
+    id: "employer-finanzamt",
+    title: "Employer / Finanzamt address if needed",
+    status: "todo",
+  },
+  {
+    id: "mailbox-nameplate",
+    title: "Mailbox nameplate & doorbell",
+    status: "todo",
+  },
+  {
+    id: "furniture-delivery",
+    title: "Plan furniture delivery & access",
+    status: "todo",
+  },
 ];
 
 /** Rental apartment notice checklist (kind = "rental"). */
 export const APARTMENT_RENTAL_CHECKLIST: ApartmentProgressStep[] = [
   {
+    id: "notice-period-check",
+    title: "Check notice period (Kündigungsfrist)",
+    description: "Confirm earliest lawful termination date in the rental contract.",
+    status: "todo",
+  },
+  {
+    id: "schriftform-check",
+    title: "Confirm Schriftform requirement",
+    description: "Some contracts require a signed letter — email alone may not count.",
+    status: "todo",
+  },
+  {
     id: "kuendigung-written",
     title: "Send formal written Kündigung",
-    description:
-      "If the contract requires Schriftform, email alone may not be enough — send a signed letter.",
     status: "todo",
   },
   {
@@ -380,21 +435,26 @@ export const APARTMENT_RENTAL_CHECKLIST: ApartmentProgressStep[] = [
     description: "Deposit return, meter readings, defects/photos.",
     status: "todo",
   },
+  {
+    id: "cancel-rental-utilities",
+    title: "Cancel / transfer rental utilities",
+    description: "Internet, electricity or other contracts tied to the old flat.",
+    status: "todo",
+  },
 ];
 
 /**
- * Editable room list seed — APPROXIMATE values only.
- * The dimensioned floorplan PDF could not be parsed automatically; verify each
- * room against 2026-06 Floorplan_Dimensioned before treating these as exact.
+ * Editable room list seed — dimensions from the 2026-06 dimensioned floorplan PDF.
+ * Geometry for the 3D view lives in we28-floorplan-geometry.ts.
  */
 export const APARTMENT_ROOMS_SEED: Omit<ApartmentRoom, "id">[] = [
-  { name: "Wohnzimmer (living room)", areaM2: 24, widthM: null, lengthM: null, notes: "Estimate", sortOrder: 0, isApproximate: true },
-  { name: "Schlafzimmer (bedroom)", areaM2: 15, widthM: null, lengthM: null, notes: "Estimate", sortOrder: 1, isApproximate: true },
-  { name: "Kinderzimmer (kids room)", areaM2: 12, widthM: null, lengthM: null, notes: "Estimate", sortOrder: 2, isApproximate: true },
-  { name: "Küche (kitchen)", areaM2: 9, widthM: null, lengthM: null, notes: "Estimate", sortOrder: 3, isApproximate: true },
-  { name: "Bad (bathroom)", areaM2: 5.5, widthM: null, lengthM: null, notes: "Estimate", sortOrder: 4, isApproximate: true },
-  { name: "Flur (hallway)", areaM2: 9, widthM: null, lengthM: null, notes: "Estimate", sortOrder: 5, isApproximate: true },
-  { name: "Balkon (balcony)", areaM2: 4, widthM: null, lengthM: null, notes: "Estimate — usually counted ~50% toward living area", sortOrder: 6, isApproximate: true },
+  { name: "Zimmer 1 (living room)", areaM2: 20.9, widthM: 4.52, lengthM: 4.67, notes: "001 · PDF Flächenübersicht", sortOrder: 0, isApproximate: false },
+  { name: "Flur (hallway)", areaM2: 11.3, widthM: 6.72, lengthM: 1.71, notes: "002 · corridor strip", sortOrder: 1, isApproximate: false },
+  { name: "Zimmer 2 (bedroom)", areaM2: 20.2, widthM: 3.45, lengthM: 5.77, notes: "003 · PDF Flächenübersicht", sortOrder: 2, isApproximate: false },
+  { name: "Küche (kitchen)", areaM2: 8.8, widthM: 4.4, lengthM: 2.0, notes: "004 · PDF Flächenübersicht", sortOrder: 3, isApproximate: false },
+  { name: "Bad (bathroom)", areaM2: 5.9, widthM: 2.17, lengthM: 2.72, notes: "005 · PDF Flächenübersicht", sortOrder: 4, isApproximate: false },
+  { name: "Zimmer 3 (kids room)", areaM2: 11.9, widthM: 4.39, lengthM: 2.71, notes: "006 · PDF Flächenübersicht", sortOrder: 5, isApproximate: false },
+  { name: "Balkon (balcony)", areaM2: 6.0, widthM: 4.52, lengthM: 1.37, notes: "007 · 50% rule toward living area", sortOrder: 6, isApproximate: false },
 ];
 
 export const APARTMENT_PAYOUT_WARNING =

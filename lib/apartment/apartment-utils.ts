@@ -31,6 +31,57 @@ export function formatPercent(pct: number): string {
   return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(pct)}%`;
 }
 
+const stepDeadlineFormatter = new Intl.DateTimeFormat("de-DE", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+/** Display an ISO yyyy-mm-dd step deadline in the UI. */
+export function formatStepDeadline(isoDate: string): string {
+  const parsed = parseIsoDate(isoDate);
+  if (!parsed) {
+    return isoDate;
+  }
+  return stepDeadlineFormatter.format(parsed);
+}
+
+function parseIsoDate(isoDate: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+/** True when a non-done step has a deadline before today (local). */
+export function isStepDeadlineOverdue(
+  isoDate: string | undefined,
+  status: ApartmentStepStatus,
+): boolean {
+  if (!isoDate || status === "done") {
+    return false;
+  }
+  const deadline = parseIsoDate(isoDate);
+  if (!deadline) {
+    return false;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return deadline < today;
+}
+
 /** Share of steps completed, rounded to whole percent (0–100). */
 export function calcProgressPercent(steps: ApartmentProgressStep[]): number {
   if (steps.length === 0) {

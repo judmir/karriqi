@@ -14,7 +14,7 @@ import {
   uploadApartmentImageClient,
 } from "@/lib/apartment/apartment-image-client";
 import {
-  APARTMENT_CLOSING_CHECKLIST,
+  APARTMENT_MOVE_IN_CHECKLIST,
   APARTMENT_PROGRESS_STEPS,
   APARTMENT_RENTAL_CHECKLIST,
   APARTMENT_ROOMS_SEED,
@@ -42,7 +42,7 @@ type ApartmentStoreState = {
   images: ApartmentImage[];
   notes: string;
   progressSteps: ApartmentProgressStep[];
-  closingSteps: ApartmentProgressStep[];
+  moveInSteps: ApartmentProgressStep[];
   rentalSteps: ApartmentProgressStep[];
   rooms: ApartmentRoom[];
   persistence: boolean;
@@ -90,7 +90,7 @@ const initialState: ApartmentStoreState = {
   images: [],
   notes: "",
   progressSteps: APARTMENT_PROGRESS_STEPS,
-  closingSteps: APARTMENT_CLOSING_CHECKLIST,
+  moveInSteps: APARTMENT_MOVE_IN_CHECKLIST,
   rentalSteps: APARTMENT_RENTAL_CHECKLIST,
   rooms: seedRooms(),
   persistence: false,
@@ -103,7 +103,7 @@ let loadPromise: Promise<void> | null = null;
 
 const stateKeyByKind = {
   progress: "progressSteps",
-  closing: "closingSteps",
+  movein: "moveInSteps",
   rental: "rentalSteps",
 } as const;
 
@@ -202,9 +202,9 @@ export const useApartmentStore = create<ApartmentStore>((set, get) => {
             APARTMENT_PROGRESS_STEPS,
             result.stepStates.filter((s) => s.kind === "progress"),
           ),
-          closingSteps: mergeStepStates(
-            APARTMENT_CLOSING_CHECKLIST,
-            result.stepStates.filter((s) => s.kind === "closing"),
+          moveInSteps: mergeStepStates(
+            APARTMENT_MOVE_IN_CHECKLIST,
+            result.stepStates.filter((s) => s.kind === "movein"),
           ),
           rentalSteps: mergeStepStates(
             APARTMENT_RENTAL_CHECKLIST,

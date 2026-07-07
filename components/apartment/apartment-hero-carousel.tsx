@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageIcon, ImagePlus } from "lucide-react";
 
@@ -14,13 +14,11 @@ import {
   useApartmentStore,
 } from "@/stores/apartment-store";
 
-const AUTO_ADVANCE_MS = 6000;
 
 export function ApartmentHeroCarousel() {
   const rawImages = useApartmentStore((state) => state.images);
   const images = useMemo(() => orderApartmentImages(rawImages), [rawImages]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
 
   const count = images.length;
@@ -36,25 +34,11 @@ export function ApartmentHeroCarousel() {
     [count],
   );
 
-  useEffect(() => {
-    if (count < 2 || paused || managerOpen) {
-      return;
-    }
-    const timer = setInterval(() => {
-      setActiveIndex((index) => (index + 1) % count);
-    }, AUTO_ADVANCE_MS);
-    return () => clearInterval(timer);
-  }, [count, paused, managerOpen]);
-
   const active = images[safeIndex];
 
   return (
     <section aria-label="Apartment photos">
-      <div
-        className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border bg-muted sm:aspect-[21/9]"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
+      <div className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border bg-muted sm:aspect-[21/9]">
         {active && active.src ? (
           <Image
             key={active.id}

@@ -91,8 +91,14 @@ export function ApartmentPropertySummary() {
 
   return (
     <section aria-label="Apartment overview" className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-lg font-semibold">Overview</h2>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="font-heading text-lg font-semibold">Overview</h2>
+          <p className="text-sm text-muted-foreground">
+            {APARTMENT_PROPERTY.address} · {APARTMENT_PROPERTY.floor} ·{" "}
+            {APARTMENT_PROPERTY.unit}
+          </p>
+        </div>
         <Button variant="outline" size="sm" onClick={() => setDetailsOpen(true)}>
           More details
         </Button>

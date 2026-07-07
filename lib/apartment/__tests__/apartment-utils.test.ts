@@ -5,6 +5,8 @@ import {
   findCurrentStep,
   formatEuro,
   formatEuroWhole,
+  formatStepDeadline,
+  isStepDeadlineOverdue,
   mergeStepStates,
 } from "@/lib/apartment/apartment-utils";
 import {
@@ -37,8 +39,8 @@ describe("calcProgressPercent", () => {
     );
   });
 
-  it("matches the seeded WE28 plan (7 of 20 done = 35%)", () => {
-    expect(calcProgressPercent(APARTMENT_PROGRESS_STEPS)).toBe(35);
+  it("matches the seeded WE28 plan (7 of 18 done = 39%)", () => {
+    expect(calcProgressPercent(APARTMENT_PROGRESS_STEPS)).toBe(39);
   });
 });
 
@@ -58,18 +60,31 @@ describe("mergeStepStates", () => {
     const merged = mergeStepStates(APARTMENT_PROGRESS_STEPS, [
       {
         kind: "progress",
-        stepKey: "kuendigung-rental",
+        stepKey: "handover-appointment",
         status: "done",
-        date: "2026-07-01",
-        notes: "Sent by registered mail",
+        date: "2026-08-01",
+        notes: "Booked with seller",
       },
     ]);
-    const step = merged.find((s) => s.id === "kuendigung-rental");
+    const step = merged.find((s) => s.id === "handover-appointment");
     expect(step?.status).toBe("done");
-    expect(step?.date).toBe("2026-07-01");
-    expect(step?.notes).toBe("Sent by registered mail");
+    expect(step?.date).toBe("2026-08-01");
+    expect(step?.notes).toBe("Booked with seller");
     // Untouched steps keep seed values.
     expect(merged.find((s) => s.id === "postident")?.status).toBe("done");
+  });
+});
+
+describe("formatStepDeadline", () => {
+  it("formats ISO dates for display", () => {
+    expect(formatStepDeadline("2026-08-15")).toMatch(/15/);
+    expect(formatStepDeadline("2026-08-15")).toMatch(/2026/);
+  });
+
+  it("flags overdue deadlines for open steps", () => {
+    expect(isStepDeadlineOverdue("2020-01-01", "todo")).toBe(true);
+    expect(isStepDeadlineOverdue("2020-01-01", "done")).toBe(false);
+    expect(isStepDeadlineOverdue(undefined, "todo")).toBe(false);
   });
 });
 

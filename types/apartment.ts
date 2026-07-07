@@ -1,14 +1,14 @@
 export type ApartmentStepStatus = "done" | "current" | "todo" | "blocked";
 
 /** Which checklist a step belongs to (matches apartment_step_states.kind). */
-export type ApartmentStepKind = "progress" | "closing" | "rental";
+export type ApartmentStepKind = "progress" | "movein" | "rental";
 
 export type ApartmentProgressStep = {
   id: string;
   title: string;
   description?: string;
   status: ApartmentStepStatus;
-  /** ISO date (yyyy-mm-dd) when the step was done / is due. */
+  /** ISO date (yyyy-mm-dd) deadline for this step. */
   date?: string;
   notes?: string;
   /** Human reference to the controlling source document. */
