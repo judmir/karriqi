@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageIcon, ImagePlus } from "lucide-react";
 
@@ -10,14 +10,15 @@ import { Button } from "@/components/ui/button";
 import { APARTMENT_PROPERTY } from "@/lib/apartment/cicerostrasse-we28-data";
 import { cn } from "@/lib/utils";
 import {
-  selectOrderedImages,
+  orderApartmentImages,
   useApartmentStore,
 } from "@/stores/apartment-store";
 
 const AUTO_ADVANCE_MS = 6000;
 
 export function ApartmentHeroCarousel() {
-  const images = useApartmentStore(selectOrderedImages);
+  const rawImages = useApartmentStore((state) => state.images);
+  const images = useMemo(() => orderApartmentImages(rawImages), [rawImages]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);

@@ -70,12 +70,11 @@ create table public.apartment_notes (
   content text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  -- Full unique (not partial): rows are state, never tombstoned, and
+  -- PostgREST upsert (on_conflict=user_id) needs a matching constraint.
+  constraint apartment_notes_user_unique unique (user_id)
 );
-
-create unique index apartment_notes_user_unique
-  on public.apartment_notes (user_id)
-  where deleted_at is null;
 
 create trigger apartment_notes_set_updated_at
   before update on public.apartment_notes
@@ -110,12 +109,11 @@ create table public.apartment_step_states (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
-  constraint apartment_step_states_step_key_not_blank check (length(trim(step_key)) > 0)
+  constraint apartment_step_states_step_key_not_blank check (length(trim(step_key)) > 0),
+  -- Full unique (not partial): rows are state, never tombstoned, and
+  -- PostgREST upsert (on_conflict=user_id,kind,step_key) needs a constraint.
+  constraint apartment_step_states_user_kind_step_unique unique (user_id, kind, step_key)
 );
-
-create unique index apartment_step_states_user_kind_step_unique
-  on public.apartment_step_states (user_id, kind, step_key)
-  where deleted_at is null;
 
 create trigger apartment_step_states_set_updated_at
   before update on public.apartment_step_states

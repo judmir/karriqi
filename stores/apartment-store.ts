@@ -518,9 +518,12 @@ export function selectApartmentReady(state: ApartmentStore): boolean {
   return state.loadedAt !== null;
 }
 
-/** Slideshow order: cover first, then by sortOrder. */
-export function selectOrderedImages(state: ApartmentStore): ApartmentImage[] {
-  return [...state.images].sort((a, b) => {
+/**
+ * Slideshow order: cover first, then by sortOrder.
+ * Not a Zustand selector (returns a new array) — memoize at the call site.
+ */
+export function orderApartmentImages(images: ApartmentImage[]): ApartmentImage[] {
+  return [...images].sort((a, b) => {
     if (Boolean(a.isCover) !== Boolean(b.isCover)) {
       return a.isCover ? -1 : 1;
     }
