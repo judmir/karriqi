@@ -46,6 +46,7 @@ export function AppShell({
       <div className="bg-background flex min-h-0 min-h-[100dvh] flex-1 flex-col md:min-h-0 md:overflow-hidden md:rounded-t-2xl">
         <AppHeader>{userMenu}</AppHeader>
         <div
+          data-app-scroll
           className={cn(
             calendarRoute
               ? CALENDAR_CONTENT_SLOT_CLASS

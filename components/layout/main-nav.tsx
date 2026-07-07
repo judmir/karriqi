@@ -3,21 +3,21 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import { KarriqiLogoMark } from "@/components/brand/karriqi-logo";
+import { MobileSubitemNavbar } from "@/components/layout/mobile-subitem-navbar";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  buildMobileNavTabs,
   devNavItem,
   mainNavItems,
-  mobileNavSectionFromPathname,
   rehabNavItems,
   type MainNavItem,
-  type MobileNavSection,
 } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,10 @@ type NavIcon = MainNavItem["icon"];
 function useIsActive(href: string) {
   const pathname = usePathname();
   return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+}
+
+function navItemsFor(includeDev: boolean) {
+  return includeDev ? [...mainNavItems, devNavItem] : mainNavItems;
 }
 
 function DesktopNavLink({
@@ -94,37 +98,6 @@ function DesktopNavLink({
       </TooltipContent>
     </Tooltip>
   );
-}
-
-function MobileNavLink({
-  href,
-  label,
-  icon: Icon,
-}: {
-  href: string;
-  label: string;
-  icon: NavIcon;
-}) {
-  const active = useIsActive(href);
-
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "flex h-full min-h-0 min-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[0.65rem] font-medium leading-tight transition-colors",
-        active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
-      )}
-    >
-      <Icon className="size-[1.35rem] shrink-0" aria-hidden />
-      <span>{label}</span>
-    </Link>
-  );
-}
-
-function navItemsFor(includeDev: boolean) {
-  return includeDev ? [...mainNavItems, devNavItem] : mainNavItems;
 }
 
 function DesktopNavSection({
@@ -229,26 +202,6 @@ function SidebarBrandHeader({
   );
 }
 
-function MobileNavRow({ items }: { items: MainNavItem[] }) {
-  return (
-    <div className="mx-auto flex h-[3.25rem] w-full max-w-3xl shrink-0 items-stretch justify-between gap-0.5 px-2">
-      {items.map((item) => (
-        <MobileNavLink
-          key={item.href}
-          href={item.href}
-          label={item.shortLabel}
-          icon={item.icon}
-        />
-      ))}
-    </div>
-  );
-}
-
-const MOBILE_NAV_ROW_HEIGHT = "3.25rem";
-
-const MOBILE_NAV_SWIPE_THRESHOLD_PX = 28;
-const MOBILE_NAV_SWIPE_INTENT_PX = 8;
-
 export function MainNavMobile({
   includeDevNav,
   includeRehabNav,
@@ -256,148 +209,17 @@ export function MainNavMobile({
   includeDevNav?: boolean;
   includeRehabNav?: boolean;
 }) {
-  const pathname = usePathname();
-  const familyItems = navItemsFor(includeDevNav ?? false);
-  const showRehabNav = includeRehabNav ?? false;
-  const [section, setSection] = useState<MobileNavSection>(() =>
-    showRehabNav ? mobileNavSectionFromPathname(pathname) : "family",
-  );
-  const dragRef = useRef<{
-    startX: number;
-    startY: number;
-    swiping: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!showRehabNav) {
-      setSection("family");
-      return;
-    }
-    setSection(mobileNavSectionFromPathname(pathname));
-  }, [pathname, showRehabNav]);
-
-  const sectionLabel = section === "rehab" ? "Rehab" : "Family";
-  const otherSectionLabel = section === "rehab" ? "Family" : "Rehab";
-
-  function onPointerDown(e: React.PointerEvent<HTMLElement>) {
-    if (!showRehabNav) return;
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      swiping: false,
-    };
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLElement>) {
-    if (!dragRef.current) return;
-
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-
-    if (!dragRef.current.swiping) {
-      const absY = Math.abs(dy);
-      const absX = Math.abs(dx);
-      if (absY <= MOBILE_NAV_SWIPE_INTENT_PX || absY <= absX) return;
-
-      dragRef.current.swiping = true;
-      e.currentTarget.setPointerCapture(e.pointerId);
-    }
-
-    if (dragRef.current.swiping) {
-      e.preventDefault();
-    }
-  }
-
-  function onPointerUp(e: React.PointerEvent<HTMLElement>) {
-    if (!dragRef.current) return;
-
-    const dy = e.clientY - dragRef.current.startY;
-    const shouldToggle =
-      dragRef.current.swiping &&
-      Math.abs(dy) >= MOBILE_NAV_SWIPE_THRESHOLD_PX;
-
-    if (shouldToggle) {
-      setSection((current) => (current === "rehab" ? "family" : "rehab"));
-    }
-
-    if (dragRef.current.swiping) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-
-    dragRef.current = null;
-  }
-
-  function onPointerCancel(e: React.PointerEvent<HTMLElement>) {
-    if (dragRef.current?.swiping) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-    dragRef.current = null;
-  }
+  const tabs = buildMobileNavTabs({
+    includeDevNav: includeDevNav ?? false,
+    includeRehabNav: includeRehabNav ?? false,
+  });
 
   return (
     <nav
-      className="border-border fixed right-0 bottom-0 left-0 z-40 touch-pan-x border-t bg-[#101011] md:hidden"
-      aria-label={
-        showRehabNav
-          ? `Main navigation, ${sectionLabel} section. Swipe up or down to switch to ${otherSectionLabel}.`
-          : "Main navigation"
-      }
-      onPointerDown={showRehabNav ? onPointerDown : undefined}
-      onPointerMove={showRehabNav ? onPointerMove : undefined}
-      onPointerUp={showRehabNav ? onPointerUp : undefined}
-      onPointerCancel={showRehabNav ? onPointerCancel : undefined}
+      className="pointer-events-none fixed inset-0 z-40 md:hidden"
+      aria-label="Main navigation"
     >
-      <div
-        className="flex flex-col"
-        style={{
-          paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
-        }}
-      >
-        {showRehabNav ? (
-          <div className="text-muted-foreground flex items-center justify-center gap-1.5 px-2 pt-1.5 select-none">
-            <span
-              className={cn(
-                "size-1 rounded-full transition-colors",
-                section === "rehab" ? "bg-foreground/70" : "bg-foreground/25",
-              )}
-              aria-hidden
-            />
-            <p className="text-[0.6rem] font-medium tracking-wide uppercase">
-              {sectionLabel}
-            </p>
-            <span
-              className={cn(
-                "size-1 rounded-full transition-colors",
-                section === "family" ? "bg-foreground/70" : "bg-foreground/25",
-              )}
-              aria-hidden
-            />
-          </div>
-        ) : null}
-
-        <div
-          className="overflow-hidden bg-[#101011]"
-          style={{ height: MOBILE_NAV_ROW_HEIGHT }}
-        >
-          {showRehabNav ? (
-            <div
-              className="bg-[#101011] transition-transform duration-300 ease-out"
-              style={{
-                transform:
-                  section === "rehab"
-                    ? "translateY(0)"
-                    : `translateY(calc(-1 * ${MOBILE_NAV_ROW_HEIGHT}))`,
-              }}
-            >
-              <MobileNavRow items={rehabNavItems} />
-              <MobileNavRow items={familyItems} />
-            </div>
-          ) : (
-            <MobileNavRow items={familyItems} />
-          )}
-        </div>
-      </div>
+      <MobileSubitemNavbar tabs={tabs} />
     </nav>
   );
 }

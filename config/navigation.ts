@@ -26,6 +26,12 @@ export type MainNavItem = {
   icon: LucideIcon;
 };
 
+export type MobileNavTab = {
+  label: string;
+  icon: LucideIcon;
+  items: MainNavItem[];
+};
+
 /** Rehab section (sidebar, above Family). */
 export const rehabNavItems: MainNavItem[] = [
   {
@@ -142,6 +148,64 @@ export type MobileNavSection = "rehab" | "family";
 
 export function mobileNavSectionFromPathname(pathname: string): MobileNavSection {
   return isRehabRoute(pathname) ? "rehab" : "family";
+}
+
+function familyNavItems(includeDevNav: boolean): MainNavItem[] {
+  return includeDevNav ? [...mainNavItems, devNavItem] : mainNavItems;
+}
+
+function pickNavItems(items: MainNavItem[], hrefs: readonly string[]): MainNavItem[] {
+  const order = new Map(hrefs.map((href, index) => [href, index]));
+  return items
+    .filter((item) => order.has(item.href))
+    .sort((a, b) => order.get(a.href)! - order.get(b.href)!);
+}
+
+/** Mobile bottom tabs with expandable sub-item chips. */
+export function buildMobileNavTabs(options: {
+  includeDevNav: boolean;
+  includeRehabNav: boolean;
+}): MobileNavTab[] {
+  const familyItems = familyNavItems(options.includeDevNav);
+
+  if (options.includeRehabNav) {
+    return [
+      { label: "Rehab", icon: Stethoscope, items: rehabNavItems },
+      { label: "Family", icon: LayoutDashboard, items: familyItems },
+    ];
+  }
+
+  const tabs: MobileNavTab[] = [
+    {
+      label: "Home",
+      icon: LayoutDashboard,
+      items: pickNavItems(familyItems, [
+        ROUTES.dashboard,
+        ROUTES.pulse,
+        ROUTES.apartment,
+      ]),
+    },
+    {
+      label: "Tasks",
+      icon: SquareKanban,
+      items: pickNavItems(familyItems, [
+        ROUTES.todo,
+        ROUTES.ruleOfThree,
+        ROUTES.shopping,
+      ]),
+    },
+    {
+      label: "Plan",
+      icon: CalendarDays,
+      items: pickNavItems(familyItems, [ROUTES.calendar, ROUTES.notes]),
+    },
+  ];
+
+  if (options.includeDevNav) {
+    tabs.push({ label: "Dev", icon: Code2, items: [devNavItem] });
+  }
+
+  return tabs.filter((tab) => tab.items.length > 0);
 }
 
 function resolveWikiTitle(pathname: string): string | null {

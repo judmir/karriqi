@@ -135,6 +135,11 @@
     @apply font-sans;
     font-size: 16px;
   }
+
+  /* Reserve scrollbar width so toggling overflow does not shift fixed UI. */
+  [data-app-scroll] {
+    scrollbar-gutter: stable;
+  }
 }
 
 html[data-theme-scale="xs"] {
