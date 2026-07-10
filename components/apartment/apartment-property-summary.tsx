@@ -108,7 +108,7 @@ export function ApartmentPropertySummary() {
         {stats.map((stat) => (
           <Card key={stat.label} size="sm">
             <CardContent className="flex items-start gap-3">
-              <div className="rounded-lg bg-muted p-2 text-muted-foreground">
+              <div className="rounded-lg bg-primary/15 p-2 text-primary">
                 <stat.icon className="size-4" aria-hidden />
               </div>
               <div className="min-w-0">
