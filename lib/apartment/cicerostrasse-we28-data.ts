@@ -10,8 +10,9 @@ import type {
 
 /**
  * Static seed data for the Cicerostraße WE28 purchase.
- * Sources: exposé (2026-06), signed notary contract (SN13), Lloyds
- * Darlehensvertrag FINAL (2026-06) and the 2026-07-04 payment breakdown.
+ * Sources: exposé (2026-06), notary deeds UVZ 1917/2026 S + 1918/2026 S
+ * (30 June 2026), Lloyds Darlehensvertrag FINAL (2026-06) and the
+ * 2026-07-04 payment breakdown.
  * No IBANs, tax IDs or account numbers here on purpose.
  */
 
@@ -113,6 +114,35 @@ export const APARTMENT_ENERGY_FACTS: ApartmentFact[] = [
   { label: "Heating type", value: "Fernwärme (district heating)" },
 ];
 
+/** Notary deed facts for the property "More details" dialog (English). */
+export const APARTMENT_NOTARY_FACTS: ApartmentFact[] = [
+  {
+    label: "Purchase agreement",
+    value:
+      "Condominium purchase agreement dated 30 June 2026 (UVZ-Nr. 1917/2026 S)",
+    hint: "Wohnungseigentumskaufvertrag",
+  },
+  {
+    label: "Land charge deed",
+    value: "Land charge creation dated 30 June 2026 (UVZ-Nr. 1918/2026 S)",
+    hint: "Grundschuldbestellung",
+  },
+  {
+    label: "Seller",
+    value: "Brandenburg Properties 3 S.à r.l.",
+  },
+  {
+    label: "Buyers",
+    value: "Savina Karriqi + Judmir Karriqi",
+  },
+  {
+    label: "Land register object",
+    value:
+      "Condominium land register of Berlin-Wilmersdorf, folio 34860, unit no. 28",
+    hint: "Wohnungsgrundbuch · Blatt 34860 · Einheit Nr. 28",
+  },
+];
+
 export const APARTMENT_DOCUMENT_SOURCES: ApartmentFact[] = [
   {
     label: "Exposé",
@@ -124,7 +154,12 @@ export const APARTMENT_DOCUMENT_SOURCES: ApartmentFact[] = [
   },
   {
     label: "Purchase contract",
-    value: "Signed notary purchase contract SN13 (2026-06)",
+    value:
+      "Condominium purchase agreement 30 June 2026 (UVZ-Nr. 1917/2026 S)",
+  },
+  {
+    label: "Land charge deed",
+    value: "Grundschuldbestellung 30 June 2026 (UVZ-Nr. 1918/2026 S)",
   },
   {
     label: "Loan contract",
@@ -174,7 +209,7 @@ export const APARTMENT_PROGRESS_STEPS: ApartmentProgressStep[] = [
     id: "sign-notary-contract",
     title: "Sign notary agreement / purchase contract",
     status: "done",
-    source: "Signed notary purchase contract SN13",
+    source: "UVZ-Nr. 1917/2026 S (30 June 2026)",
   },
   {
     id: "wait-faelligkeitsmitteilung",
@@ -297,13 +332,20 @@ export const APARTMENT_DOCUMENT_CATEGORIES: ApartmentDocumentCategory[] = [
     title: "Notary",
     description: "Draft and signed purchase contract.",
     status: "available",
-    examples: ["Signed purchase contract SN13 (Fotokopie)"],
+    examples: [
+      "Wohnungseigentumskaufvertrag UVZ-Nr. 1917/2026 S (30 June 2026)",
+      "Grundschuldbestellung UVZ-Nr. 1918/2026 S (30 June 2026)",
+    ],
   },
   {
     id: "grundbuch-grundschuld",
     title: "Grundbuch / Grundschuld",
     description: "Land register entries and mortgage charge documents.",
     status: "available",
+    examples: [
+      "Berlin-Wilmersdorf Blatt 34860, Einheit Nr. 28",
+      "Grundschuldbestellung UVZ-Nr. 1918/2026 S",
+    ],
   },
   {
     id: "payments-invoices-tax",

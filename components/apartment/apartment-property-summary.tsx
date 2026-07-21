@@ -26,6 +26,7 @@ import {
   APARTMENT_DOCUMENT_SOURCES,
   APARTMENT_ENERGY_FACTS,
   APARTMENT_HAUSGELD_FACTS,
+  APARTMENT_NOTARY_FACTS,
   APARTMENT_PROPERTY,
   APARTMENT_PROPERTY_FACTS,
 } from "@/lib/apartment/cicerostrasse-we28-data";
@@ -133,6 +134,8 @@ export function ApartmentPropertySummary() {
           </DialogHeader>
 
           <FactList title="Property facts" facts={APARTMENT_PROPERTY_FACTS} />
+          <Separator />
+          <FactList title="Notary" facts={APARTMENT_NOTARY_FACTS} />
           <Separator />
           <FactList
             title="Hausgeld (monthly owner charge)"
